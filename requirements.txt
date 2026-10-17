@@ -1,0 +1,3 @@
+nicegui>=3.18,<4
+sqlcipher3>=0.6.2,<0.7
+pydantic>=2.10,<3
