@@ -2,7 +2,7 @@
 
 from datetime import timedelta, timezone
 
-from nicegui import run, ui
+from nicegui import events, run, ui
 from pydantic import ValidationError
 
 from database import DatabaseError
@@ -16,7 +16,7 @@ STATUS_LABELS = {'scheduled': '예약', 'completed': '완료', 'cancelled': '취
 FIELD_LABELS = {
     'name': '이름', 'student_number': '학번', 'grade': '학년',
     'classroom': '반', 'birth_date': '생년월일',
-    'guardian_contact': '보호자 연락처', 'notes': '학생 메모',
+    'guardian_contact': '보호자 연락처', 'notes': '학생 메모', 'nickname': '별명',
 }
 
 
@@ -72,9 +72,10 @@ class StudentView:
                                         ('classroom', '반'), ('student_number', '학번')]
                 ]
                 self.table = ui.table(columns=columns, rows=[], row_key='id',
-                                      selection='single', on_select=self.select_student,
                                       pagination=0).classes('w-full').props('flat hide-bottom')
-                ui.label('학생을 선택하면 아래에 상세 프로필과 상담 이력이 표시됩니다.').classes('text-sm text-slate-500')
+                self.table.on('rowClick', self.select_student,
+                              js_handler='(event, row) => emit(row.id)')
+                ui.label('학생 행을 클릭하면 아래에 상세 프로필과 상담 이력이 표시됩니다.').classes('text-sm text-slate-500')
                 with ui.row().classes('w-full items-center justify-end'):
                     self.previous = ui.button('이전', on_click=lambda: self.change_page(-1)).props('flat')
                     self.page_label = ui.label()
@@ -117,7 +118,6 @@ class StudentView:
         request = self.list_request
         self.detail_request += 1
         self.selected = None
-        self.table.selected = []
         self.table.rows = []
         self.show_empty_detail()
         self.previous.disable()
@@ -140,10 +140,9 @@ class StudentView:
         self.next.set_enabled(len(students) > PAGE_SIZE)
         self.list_message.text = f'이 페이지에 {min(len(students), PAGE_SIZE)}명' if students else '검색 조건에 맞는 학생이 없습니다. 학생 추가 또는 검색 초기화를 이용하세요.'
 
-    async def select_student(self) -> None:
-        """선택 변경 시 프로필과 이력을 조회한다."""
-        student_id = self.table.selected[0]['id'] if self.table.selected else None
-        await self.load_profile(student_id)
+    async def select_student(self, event: events.GenericEventArguments) -> None:
+        """클릭한 행의 학생 프로필과 이력을 조회한다."""
+        await self.load_profile(event.args)
 
     async def load_profile(self, student_id: int | None) -> None:
         """다른 학생의 지연 응답이 현재 선택을 덮어쓰지 않도록 요청 번호를 검사한다."""
@@ -235,15 +234,17 @@ class StudentView:
             ui.label('학생 정보 수정' if student else '새 학생 등록').classes('text-2xl font-bold')
             ui.label('이름, 학년, 반은 필수 항목입니다.').classes('text-sm text-slate-500')
             with ui.column().classes('w-full gap-3'):
-                for field in ('name', 'student_number'):
-                    fields[field] = ui.input(FIELD_LABELS[field], value=initial.get(field) or '').props('outlined').classes('w-full')
                 with ui.row().classes('w-full'):
-                    fields['grade'] = ui.select({i: f'{i}학년' for i in range(1, 13)},
-                                                label='학년', value=initial.get('grade', 1)).props('outlined').classes('grow')
-                    fields['classroom'] = ui.input('반', value=initial.get('classroom', '')).props('outlined').classes('grow')
-                fields['birth_date'] = ui.input('생년월일', value=str(initial.get('birth_date') or ''),
-                                                placeholder='YYYY-MM-DD').props('outlined').classes('w-full')
-                fields['guardian_contact'] = ui.input('보호자 연락처', value=initial.get('guardian_contact', '')).props('outlined').classes('w-full')
+                    fields['name'] = ui.input('*이름', value=initial.get('name') or '').props('outlined').classes('grow')
+                    fields['nickname'] = ui.input('별명', value=initial.get('nickname') or '').props('outlined').classes('grow')
+                with ui.row().classes('w-full'):
+                    fields['grade'] = ui.select({i: f'{i}학년' for i in range(1, 4)}, label='*학년', value=initial.get('grade', 1)).props('outlined').classes('grow')
+                    fields['classroom'] = ui.input('*반', value=initial.get('classroom', '')).props('outlined').classes('grow')
+                    fields['student_number'] = ui.input('학번', value=initial.get('student_number') or '').props('outlined').classes('grow')
+                with ui.row().classes('w-full flex-nowrap items-start'):
+                    fields['birth_date'] = ui.date_input('생년월일', value=str(initial.get('birth_date') or '')).props('outlined').classes('flex-1 min-w-0')
+                    fields['student_contact'] = ui.input('학생 연락처', value=initial.get('student_contact', '')).props('outlined mask="###-####-####" inputmode="numeric"').classes('flex-1 min-w-0')
+                    fields['guardian_contact'] = ui.input('보호자 연락처', value=initial.get('guardian_contact', '')).props('outlined mask="###-####-####" inputmode="numeric"').classes('flex-1 min-w-0')
                 fields['notes'] = ui.textarea('학생 메모', value=initial.get('notes', '')).props('outlined').classes('w-full')
             error_label = ui.label().classes('text-red-700 text-sm whitespace-pre-wrap')
 

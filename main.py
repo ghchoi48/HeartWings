@@ -6,6 +6,7 @@ if __name__ == '__main__':
     freeze_support()
 
 import argparse
+import sys
 from pathlib import Path
 
 from nicegui import app, native, run, ui
@@ -108,9 +109,10 @@ def main() -> None:
     port = args.port if args.port is not None else native.find_open_port() if args.native else 8080
     register_page(args.db)
     ui.run(title='마음나래', host='127.0.0.1', port=port,
-           native=args.native, window_size=(1440, 1000), reload=False, language='ko-KR',
+           native=args.native, window_size=(1440, 1000) if args.native else None,
+           reload=not getattr(sys, 'frozen', False), language='ko-KR',
            show=not args.native and not args.no_open)
 
 
-if __name__ == '__main__':
+if __name__ in {'__main__', '__mp_main__'}:
     main()

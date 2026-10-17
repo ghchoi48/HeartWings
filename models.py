@@ -17,11 +17,13 @@ class StudentInput(InputModel):
     """학적 식별 번호는 선택 사항이며 이름은 중복을 허용한다."""
 
     name: str = Field(min_length=1, max_length=100)
+    nickname: str | None = Field(default='', max_length=100)
     student_number: str | None = Field(default=None, min_length=1, max_length=50)
     grade: int = Field(ge=1, le=12)
     classroom: str = Field(min_length=1, max_length=30)
     birth_date: date | None = None
     guardian_contact: str = Field(default='', max_length=200)
+    student_contact: str = Field(default='', max_length=200)
     notes: str = Field(default='', max_length=20000)
 
 

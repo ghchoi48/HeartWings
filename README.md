@@ -83,6 +83,9 @@ python main.py --browser --no-open --port 8081
 ```
 
 브라우저 기본 주소는 `http://127.0.0.1:8080`입니다. 각 탭은 별도로 비밀번호를 입력합니다.
+소스 실행에서는 Python 파일을 저장하면 서버와 화면이 자동으로 다시 로드됩니다.
+재시작 후에는 DB 비밀번호를 다시 입력해야 하며, 저장하지 않은 입력은 사라집니다.
+PyInstaller로 패키징한 앱에서는 자동 재시작을 끕니다.
 네이티브 모드는 pywebview와 OS별 웹뷰 백엔드가 필요합니다. 설치/빌드는 [BUILDING.md](BUILDING.md)를 참고하세요.
 오류 로그는 DB 폴더 안 `logs/maeumnarae.log`에 최대 1MB씩 3개를 보관합니다.
 

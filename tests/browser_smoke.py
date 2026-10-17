@@ -72,7 +72,7 @@ def main() -> None:
             page.get_by_label('이름 또는 학번', exact=True).fill(name)
             page.get_by_role('button', name='검색', exact=True).click()
             row = page.get_by_role('row').filter(has=page.get_by_role('cell', name=name, exact=True))
-            row.get_by_role('checkbox').click()
+            row.click()
             expect(page.get_by_text('수정 후 다시 열기 검증 완료', exact=True)).to_be_visible()
             page.screenshot(path=str(output / 'student.png'), full_page=True)
             assert not errors, errors
