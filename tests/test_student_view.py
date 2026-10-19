@@ -130,6 +130,17 @@ class StudentViewTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn('집단상담 · 사회성 집단 · 60분', texts)
         self.assertIn('첫 회기', texts)
 
+    async def test_special_education_timeline_summary(self):
+        self.students.get.return_value = make_student()
+        self.counseling.list_timeline.return_value = [StudentTimelineEntry(
+            id=1, kind='special_education', starts_at=datetime.now(timezone.utc), title='상담 분야 미지정',
+            education_name='학교생활 특별교육', counseling_target='보호자(가족)', duration_minutes=50)]
+        await self.view.load_profile(1)
+        texts = [element.text for element in self.view.timeline.descendants() if isinstance(element, ui.label)]
+        self.assertIn('특별교육 · 학교생활 특별교육 · 50분', texts)
+        self.assertIn('교육 대상: 보호자(가족)', texts)
+        self.assertNotIn('상담 분야 미지정', texts)
+
     async def test_database_failure_clears_previous_rows(self):
         self.students.list.return_value = [make_student()]
         await self.view.load_students()

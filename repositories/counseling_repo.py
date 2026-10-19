@@ -87,20 +87,27 @@ class CounselingRepository:
                 raise NotFoundError('상담 기록을 찾을 수 없습니다.')
 
     def list_timeline(self, *, student_id: int, limit: int = 100, offset: int = 0) -> list[StudentTimelineEntry]:
-        """현재 연결된 집단의 일지와 개인 상담을 합쳐 정렬한 뒤 페이지를 나눈다."""
+        """개인 상담, 현재 참여 집단 일지, 특별교육 일지를 최신순으로 합쳐 페이지를 나눈다."""
         check_page(limit, offset)
         with self.database.session() as connection:
             rows = connection.execute('''
                 SELECT id, 'individual' AS kind, starts_at, duration_minutes, title,
-                       '' AS group_name, counseling_area, category, counseling_method, counseling_target
+                       '' AS group_name, counseling_area, category, counseling_method, counseling_target,
+                       '' AS education_name
                 FROM counseling WHERE student_id=:student_id
                 UNION ALL
                 SELECT l.id, 'group' AS kind, l.starts_at, l.duration_minutes, l.title,
-                       g.name AS group_name, '', '집단상담', '', ''
+                       g.name AS group_name, '', '집단상담', '', '', ''
                 FROM group_counseling_logs l
                 JOIN counseling_groups g ON g.id=l.group_id
                 JOIN group_counseling_members m ON m.group_id=g.id
                 WHERE m.student_id=:student_id
+                UNION ALL
+                SELECT l.id, 'special_education' AS kind, l.starts_at, l.duration_minutes, l.title,
+                       '', '', '특별교육', '', l.counseling_target, e.title
+                FROM special_education_logs l
+                JOIN special_educations e ON e.id=l.case_id AND e.student_id=l.student_id
+                WHERE l.student_id=:student_id
                 ORDER BY starts_at DESC, kind ASC, id DESC LIMIT :limit OFFSET :offset
             ''', dict(student_id=student_id, limit=limit, offset=offset)).fetchall()
             return [StudentTimelineEntry.model_validate(dict(row)) for row in rows]

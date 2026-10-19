@@ -14,6 +14,44 @@ class InputModel(BaseModel):
     model_config = ConfigDict(extra='forbid', str_strip_whitespace=True, frozen=True)
 
 
+class TeacherInput(InputModel):
+    """교사 연락처와 내선은 앞자리 0을 보존하는 문자열로 저장한다."""
+
+    name: str = Field(min_length=1, max_length=100)
+    contact: str = Field(default='', max_length=200)
+    extension: str = Field(default='', max_length=50)
+    responsibilities: str = Field(default='', max_length=200)
+
+
+class Teacher(TeacherInput):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class ConsultationInput(InputModel):
+    teacher_id: int = Field(gt=0)
+    starts_at: datetime
+    duration_minutes: int = Field(default=30, ge=1, le=1440)
+    status: Literal['scheduled', 'completed', 'cancelled'] = 'completed'
+    title: str = Field(min_length=1, max_length=200)
+    content_html: Annotated[str, StringConstraints(strip_whitespace=False)] = Field(default='', max_length=200000)
+    follow_up: str = Field(default='', max_length=20000)
+
+    @field_validator('starts_at')
+    @classmethod
+    def require_timezone(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError('자문 시각에 시간대를 포함하세요.')
+        return value
+
+
+class Consultation(ConsultationInput):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
+
 class StudentInput(InputModel):
     """학적 식별 번호는 선택 사항이며 이름은 중복을 허용한다."""
 
@@ -59,6 +97,19 @@ class Student(StudentInput, FamilyInput):
     @classmethod
     def decode_family_members(cls, value):
         return json.loads(value) if isinstance(value, str) else value
+
+
+class SpecialEducationInput(InputModel):
+    student_id: int = Field(gt=0)
+    title: str = Field(min_length=1, max_length=200)
+    law: Literal['학교폭력특별법', '교원지위법']
+    case_number: str = Field(default='', max_length=100)
+
+
+class SpecialEducation(SpecialEducationInput):
+    id: int
+    created_at: datetime
+    updated_at: datetime
 
 
 class CounselingCaseInput(InputModel):
@@ -206,10 +257,11 @@ class GroupLog(GroupLogInput):
 
 
 class StudentTimelineEntry(BaseModel):
-    """본문을 제외한 개인·집단 상담 통합 이력."""
+    """본문을 제외한 개인·집단 상담 및 특별교육 통합 이력."""
 
     id: int
-    kind: Literal['individual', 'group'] = 'individual'
+    kind: Literal['individual', 'group', 'special_education'] = 'individual'
+    education_name: str = ''
     starts_at: datetime
     duration_minutes: int
     title: str

@@ -31,21 +31,27 @@ def counseling_input(student_id, **changes):
 
 def test_student_crud_and_duplicate(db):
     repo = StudentRepository(db)
+    assert db.student_revision == 0
     student = repo.create(student_input())
+    assert db.student_revision == 1
     assert repo.get(student.id) == student
     with pytest.raises(ConflictError):
         repo.create(student_input())
+    assert db.student_revision == 1
     assert len(repo.list()) == 1
     updated = repo.update(student.id, student_input(name='수정학생'))
+    assert db.student_revision == 2
     assert updated.created_at == student.created_at
     assert repo.list(search='수정')[0].name == '수정학생'
     assert repo.list(search="' OR 1=1 --") == []
     repo.delete(student.id)
+    assert db.student_revision == 3
     assert repo.get(student.id) is None
     with pytest.raises(NotFoundError):
         repo.update(student.id, student_input())
     with pytest.raises(NotFoundError):
         repo.delete(student.id)
+    assert db.student_revision == 3
 
 
 def test_family_update_preserves_student_fields(db):

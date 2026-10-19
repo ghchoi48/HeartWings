@@ -143,7 +143,10 @@ def test_sidebar_group_page_order_and_reuse():
         layout = AppLayout(Mock(), Mock(), Mock())
         with patch('views.group_counseling_view.ui.timer'):
             layout.build(content, drawer, header)
-            assert list(layout.buttons) == ['home', 'students', 'counseling', 'groups', 'calendar', 'statistics']
+            assert list(layout.buttons) == [
+                'home', 'students', 'counseling', 'groups', 'psychological_tests',
+                'education_events', 'special_education', 'consultation', 'calendar',
+                'statistics', 'settings', 'about']
             layout.navigate('groups')
             view = layout.group_view
             assert layout.panels['groups'].visible
@@ -151,6 +154,13 @@ def test_sidebar_group_page_order_and_reuse():
             assert not layout.panels['groups'].visible
             layout.navigate('groups')
             assert layout.group_view is view
+            layout.navigate('consultation')
+            consultation = layout.consultation_view
+            assert layout.panels['consultation'].visible
+            assert consultation.table.rows == []
+            layout.navigate('home')
+            layout.navigate('consultation')
+            assert layout.consultation_view is consultation
 
 
 def test_membership_and_combined_timeline(tmp_path):
@@ -198,6 +208,10 @@ def test_version_eight_membership_migration_preserves_legacy_text(tmp_path):
         connection.execute('DROP TABLE group_counseling_members')
         connection.execute('ALTER TABLE counseling_groups DROP COLUMN period')
         connection.execute('ALTER TABLE counseling_groups DROP COLUMN counseling_area')
+        connection.execute('DROP TABLE special_education_logs')
+        connection.execute('DROP TABLE special_educations')
+        connection.execute('DROP TABLE consultations')
+        connection.execute('DROP TABLE teachers')
         connection.execute('PRAGMA user_version=8')
     db.initialize()
     db.initialize()
@@ -234,6 +248,10 @@ def test_version_nine_group_fields_migration(tmp_path):
     with db.session(write=True) as connection:
         connection.execute('ALTER TABLE counseling_groups DROP COLUMN period')
         connection.execute('ALTER TABLE counseling_groups DROP COLUMN counseling_area')
+        connection.execute('DROP TABLE special_education_logs')
+        connection.execute('DROP TABLE special_educations')
+        connection.execute('DROP TABLE consultations')
+        connection.execute('DROP TABLE teachers')
         connection.execute('PRAGMA user_version=9')
     db.initialize()
     db.initialize()

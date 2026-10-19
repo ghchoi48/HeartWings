@@ -4,6 +4,8 @@ import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
+ICON_PATH = Path(__file__).resolve().with_name('icon.ico')
+
 
 def configure_logging(database_path: Path) -> Path:
     """콘솔 없는 앱에서도 오류 위치를 확인할 수 있도록 회전 로그를 생성한다."""
@@ -23,7 +25,7 @@ def configure_native() -> None:
     from nicegui import app
     app.native.window_args.update(min_size=(960, 700), confirm_close=True)
     app.native.settings['ALLOW_DOWNLOADS'] = True
-    app.native.start_args.update(private_mode=True, debug=False, localization={
+    app.native.start_args.update(private_mode=True, debug=False, icon=str(ICON_PATH), localization={
         'global.quitConfirmation': '마음나래를 종료할까요? 저장하지 않은 내용은 사라집니다.',
         'global.ok': '확인', 'global.cancel': '취소',
     })

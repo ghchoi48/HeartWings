@@ -50,6 +50,12 @@ def counseling_form_input(student_id: int, values: dict) -> CounselingInput:
 class CounselingView:
     """페이지별 학생 선택과 조회 상태를 관리한다. 편집은 모달에서 격리한다."""
 
+    log_name = '상담 일지'
+
+    def set_case_actions_enabled(self, enabled: bool) -> None:
+        for button in (self.edit_case, self.intake_interview, self.closing_report):
+            button.set_enabled(enabled)
+
     def __init__(self, students: StudentRepository, counseling: CounselingRepository,
                  on_saved: Callable[[int], Awaitable[None]] | None = None):
         self.students = students
@@ -78,7 +84,8 @@ class CounselingView:
                         self.student_heading = ui.label('상담 대상 학생을 선택해 주세요.').classes('text-xl font-bold')
                     with ui.row().classes('w-full items-center justify-between'):
                         ui.label('상담 사례 목록').classes('text-lg font-bold')
-                        self.add_case = ui.button('새 상담 사례', icon='create_new_folder', on_click=lambda: self.open_case_editor())
+                        self.add_case = ui.button('새 상담 사례', icon='create_new_folder',
+                                                  on_click=lambda: self.open_case_editor(report_field='intake_html'))
                         self.add_case.disable()
                     with ui.row().classes('w-full items-center'):
                         self.case_select = ui.select({}, label='상담 사례', on_change=self.change_case).props('outlined dense').classes('grow min-w-0')
@@ -119,9 +126,7 @@ class CounselingView:
         self.case_options = {}
         self.case_select.set_options({}, value=None)
         self.case_select.disable()
-        self.edit_case.disable()
-        self.intake_interview.disable()
-        self.closing_report.disable()
+        self.set_case_actions_enabled(False)
         self.case_message.text = ''
         self.add_case.disable()
         self.logs.clear()
@@ -164,9 +169,7 @@ class CounselingView:
         self.case_options = {}
         self.case_select.set_options({}, value=None)
         self.case_select.disable()
-        self.edit_case.disable()
-        self.intake_interview.disable()
-        self.closing_report.disable()
+        self.set_case_actions_enabled(False)
         self.log_previous.disable()
         self.log_next.disable()
         self.log_page_label.text = ''
@@ -198,9 +201,7 @@ class CounselingView:
         self.selected_case = case
         if case.id in self.case_options:
             self.case_select.set_value(case.id)
-        self.edit_case.enable()
-        self.intake_interview.enable()
-        self.closing_report.enable()
+        self.set_case_actions_enabled(True)
         self.log_offset = 0
         self.add.enable()
         await self.load_logs()
@@ -221,9 +222,9 @@ class CounselingView:
         try:
             with ui.context.client.content:
                 with ui.dialog().props('persistent') as dialog, ui.card().classes('w-full max-w-6xl p-6 gap-4'):
-                    ui.label(report_name if case else '새 상담 사례').classes('text-2xl font-bold')
+                    ui.label(report_name if case else f'새 상담 사례 · {report_name}').classes('text-2xl font-bold')
                     ui.label(student.name).classes('text-slate-500')
-                    title = ui.input('사례명', value=case.title if case else '').props('outlined maxlength=200 disable').classes('w-full')
+                    title = ui.input('사례명', value=case.title if case else '').props('outlined maxlength=200').classes('w-full')
                     ui.label(report_name).classes('font-semibold')
                     report = ui.editor(value=clean_html(getattr(case, report_field)) if case else '',
                                        placeholder=placeholder).classes('w-full').props("""min-height=360px :toolbar='[["bold", "italic", "underline", "strike"], ["unordered", "ordered"], ["left", "center", "right"], ["undo", "redo"]]'""")
@@ -396,7 +397,7 @@ class CounselingView:
             cancel_button.on_click(cancel)
             saved = await dialog
             if saved:
-                ui.notify('상담 일지를 저장했습니다.', type='positive')
+                ui.notify(f'{self.log_name}를 저장했습니다.', type='positive')
                 self.log_offset = 0
                 await self.load_logs()
                 if self.on_saved:

@@ -25,7 +25,9 @@ class StudentRepository:
                 VALUES (:name, :student_number, :grade, :classroom, :birth_date,
                         :guardian_contact, :notes, :created_at, :updated_at)''', data)
             row = connection.execute('SELECT * FROM students WHERE id = ?', (cursor.lastrowid,)).fetchone()
-            return Student.model_validate(dict(row))
+            saved = Student.model_validate(dict(row))
+        self.database.student_revision += 1
+        return saved
 
     def get(self, student_id: int) -> Student | None:
         """ID로 조회한다. 없는 학생은 None을 반환한다."""
@@ -59,7 +61,9 @@ class StudentRepository:
             if cursor.rowcount == 0:
                 raise NotFoundError('학생을 찾을 수 없습니다.')
             row = connection.execute('SELECT * FROM students WHERE id=?', (student_id,)).fetchone()
-            return Student.model_validate(dict(row))
+            saved = Student.model_validate(dict(row))
+        self.database.student_revision += 1
+        return saved
 
     def update_family(self, student_id: int, family: FamilyInput) -> Student:
         """다른 학생 필드를 덮어쓰지 않고 가족 정보만 갱신한다."""
@@ -75,10 +79,13 @@ class StudentRepository:
             if cursor.rowcount == 0:
                 raise NotFoundError('학생을 찾을 수 없습니다.')
             row = connection.execute('SELECT * FROM students WHERE id=?', (student_id,)).fetchone()
-            return Student.model_validate(dict(row))
+            saved = Student.model_validate(dict(row))
+        self.database.student_revision += 1
+        return saved
 
     def delete(self, student_id: int) -> None:
         """상담 기록이 있는 학생은 FK RESTRICT로 삭제를 거부한다. 연쇄 삭제하지 않는다."""
         with self.database.session(write=True) as connection:
             if connection.execute('DELETE FROM students WHERE id=?', (student_id,)).rowcount == 0:
                 raise NotFoundError('학생을 찾을 수 없습니다.')
+        self.database.student_revision += 1

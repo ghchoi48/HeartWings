@@ -76,6 +76,7 @@ class Database:
         self.path = Path(path) if path is not None else default_database_path()
         self._password = password
         self._session_lock = RLock()
+        self.student_revision = 0
         try:
             # OS/CPU/Python 버전에 맞는 SQLCipher 확장 모듈이 필요하다.
             self.driver = import_module('sqlcipher3.dbapi2')
@@ -235,5 +236,61 @@ class Database:
                 connection.execute("ALTER TABLE counseling_groups ADD COLUMN counseling_area TEXT NOT NULL DEFAULT ''")
                 connection.execute('PRAGMA user_version = 10')
                 version = 10
-            if version != 10:
+            if version == 10:
+                connection.execute('''CREATE TABLE teachers (
+                    id INTEGER PRIMARY KEY,
+                    name TEXT NOT NULL CHECK(length(trim(name)) > 0),
+                    contact TEXT NOT NULL DEFAULT '',
+                    extension TEXT NOT NULL DEFAULT '',
+                    responsibilities TEXT NOT NULL DEFAULT '',
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )''')
+                connection.execute('CREATE INDEX teachers_name ON teachers(name)')
+                connection.execute('PRAGMA user_version = 11')
+                version = 11
+            if version == 11:
+                connection.execute('''CREATE TABLE consultations (
+                    id INTEGER PRIMARY KEY,
+                    teacher_id INTEGER NOT NULL REFERENCES teachers(id) ON DELETE RESTRICT,
+                    starts_at TEXT NOT NULL,
+                    duration_minutes INTEGER NOT NULL CHECK(duration_minutes BETWEEN 1 AND 1440),
+                    status TEXT NOT NULL CHECK(status IN ('scheduled', 'completed', 'cancelled')),
+                    title TEXT NOT NULL CHECK(length(trim(title)) > 0),
+                    content_html TEXT NOT NULL DEFAULT '',
+                    follow_up TEXT NOT NULL DEFAULT '',
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )''')
+                connection.execute('CREATE INDEX consultations_teacher_time ON consultations(teacher_id, starts_at)')
+                connection.execute('PRAGMA user_version = 12')
+                version = 12
+            if version == 12:
+                connection.execute('''CREATE TABLE special_educations (
+                    id INTEGER PRIMARY KEY,
+                    student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE RESTRICT,
+                    title TEXT NOT NULL CHECK(length(trim(title)) > 0),
+                    law TEXT NOT NULL CHECK(law IN ('학교폭력특별법', '교원지위법')),
+                    case_number TEXT NOT NULL DEFAULT '',
+                    created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+                    UNIQUE(id, student_id)
+                )''')
+                connection.execute('''CREATE TABLE special_education_logs (
+                    id INTEGER PRIMARY KEY,
+                    student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE RESTRICT,
+                    case_id INTEGER NOT NULL,
+                    starts_at TEXT NOT NULL,
+                    duration_minutes INTEGER NOT NULL CHECK(duration_minutes BETWEEN 1 AND 1440),
+                    category TEXT NOT NULL, status TEXT NOT NULL, title TEXT NOT NULL,
+                    content_markdown TEXT NOT NULL, content_format TEXT NOT NULL,
+                    counseling_method TEXT NOT NULL, counseling_target TEXT NOT NULL,
+                    counseling_area TEXT NOT NULL, follow_up TEXT NOT NULL,
+                    created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+                    FOREIGN KEY(case_id, student_id) REFERENCES special_educations(id, student_id) ON DELETE RESTRICT
+                )''')
+                connection.execute('CREATE INDEX special_education_student ON special_educations(student_id)')
+                connection.execute('CREATE INDEX special_education_logs_time ON special_education_logs(case_id, starts_at)')
+                connection.execute('PRAGMA user_version = 13')
+                version = 13
+            if version != 13:
                 raise DatabaseError('지원하지 않는 DB 버전입니다. 앱 버전을 확인하세요.')

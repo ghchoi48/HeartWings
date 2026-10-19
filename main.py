@@ -16,7 +16,7 @@ from repositories.counseling_repo import CounselingRepository
 from repositories.student_repo import StudentRepository
 from repositories.reporting_repo import ReportingRepository
 from views.app_layout import AppLayout
-from desktop import configure_logging, configure_native
+from desktop import ICON_PATH, configure_logging, configure_native
 
 
 def register_page(path: Path) -> None:
@@ -25,6 +25,19 @@ def register_page(path: Path) -> None:
     @ui.page('/')
     def index():
         ui.colors(primary='#24756b', secondary='#64748b')
+        ui.add_css('''
+            html, body { overflow: hidden; }
+            .q-page-container { height: 100dvh; overflow: hidden; }
+            .q-page {
+                height: 100%;
+                min-height: 0 !important;
+                display: flex;
+                flex-direction: column;
+            }
+            .nicegui-content { flex: 1; min-height: 0; flex-wrap: nowrap; }
+            .app-content > * { flex-shrink: 0; }
+            .nicegui-drawer > .q-btn { flex-shrink: 0; }
+        ''')
         drawer = ui.left_drawer(value=False, bordered=True).props('width=200').classes('bg-white p-4')
         drawer.set_visibility(False)
         with ui.header().classes('items-center justify-between px-6') as header:
@@ -32,7 +45,7 @@ def register_page(path: Path) -> None:
                 menu = ui.button(icon='menu', on_click=drawer.toggle).props('flat color=white aria-label=사이드바').tooltip('사이드바 열기/닫기')
                 menu.set_visibility(False)
                 ui.label('마음나래 · Wee클래스').classes('text-lg font-bold')
-        root = ui.column().classes('w-full min-h-screen bg-slate-50')
+        root = ui.column().classes('app-content w-full flex-1 min-h-0 flex-nowrap overflow-auto bg-slate-50')
         with root:
             with ui.card().classes('w-full max-w-md mx-auto mt-16 p-8 rounded-2xl'):
                 ui.icon('lock_outline', size='40px').classes('text-teal-700')
@@ -108,7 +121,7 @@ def main() -> None:
         configure_native()
     port = args.port if args.port is not None else native.find_open_port() if args.native else 8080
     register_page(args.db)
-    ui.run(title='마음나래', host='127.0.0.1', port=port,
+    ui.run(title='마음나래', favicon=str(ICON_PATH), host='127.0.0.1', port=port,
            native=args.native, window_size=(1440, 1000) if args.native else None,
            reload=not getattr(sys, 'frozen', False), language='ko-KR',
            show=not args.native and not args.no_open)

@@ -1,8 +1,9 @@
 """사이드바와 클라이언트별 화면 전환. 화면 인스턴스를 유지해 검색 상태를 보존한다."""
 
-from nicegui import ui
+from nicegui import run, ui
 from collections.abc import Awaitable, Callable
 
+from database import DatabaseError
 from repositories.counseling_repo import CounselingRepository
 from repositories.student_repo import StudentRepository
 from views.home_view import build_home
@@ -13,6 +14,9 @@ from repositories.group_counseling_repo import GroupCounselingRepository
 from repositories.reporting_repo import ReportingRepository
 from views.calendar_view import CalendarView
 from views.statistics_view import StatisticsView
+from views.special_education_view import SpecialEducationView
+from views.consultation_view import ConsultationView
+from repositories.teacher_repo import TeacherRepository
 
 
 class AppLayout:
@@ -30,9 +34,13 @@ class AppLayout:
         self.group_view: GroupCounselingView | None = None
         self.calendar_view: CalendarView | None = None
         self.statistics_view: StatisticsView | None = None
+        self.consultation_view: ConsultationView | None = None
+        self.special_education_view: SpecialEducationView | None = None
         self.opening_schedule = False
         self.panels = {}
         self.buttons = {}
+        self.student_revision = students.database.student_revision
+        self.refreshing_students = False
 
     def build(self, content: ui.column, drawer: ui.left_drawer, header: ui.header) -> None:
         """최상위 레이아웃 요소는 진입점에서 생성하고 여기서는 내용만 구성한다."""
@@ -64,8 +72,9 @@ class AppLayout:
             self.panels['students'] = ui.column().classes('w-full')
             self.panels['counseling'] = ui.column().classes('w-full')
             self.panels['groups'] = ui.column().classes('w-full')
+            self.panels['special_education'] = ui.column().classes('w-full')
+            self.panels['consultation'] = ui.column().classes('w-full')
             for page, title in [('psychological_tests', '심리검사'), ('education_events', '교육/행사'),
-                                ('special_education', '특별교육'), ('consultation', '자문'),
                                 ('settings', '설정'), ('about', '프로그램 정보')]:
                 self.panels[page] = ui.column().classes('w-full gap-6 p-4 md:p-8')
                 with self.panels[page]:
@@ -73,6 +82,47 @@ class AppLayout:
             self.panels['calendar'] = ui.column().classes('w-full')
             self.panels['statistics'] = ui.column().classes('w-full')
         self.navigate('home')
+        with content:
+            ui.timer(0.5, self.refresh_students)
+
+    async def refresh_students(self) -> None:
+        """커밋된 학생 변경을 숨겨진 화면에도 반영하고 편집 중에는 갱신을 미룬다."""
+        revision = self.students.database.student_revision
+        if self.refreshing_students or revision == self.student_revision:
+            return
+        if any(view and view.editor_open for view in
+               (self.student_view, self.counseling_view, self.group_view, self.special_education_view)):
+            return
+        self.refreshing_students = True
+        try:
+            if self.student_view:
+                await self.student_view.student_list.reload()
+                if self.student_view.selected:
+                    await self.student_view.load_profile(self.student_view.selected.id)
+            for view in (self.counseling_view, self.special_education_view):
+                if view is None:
+                    continue
+                await view.student_list.reload()
+                if view.selected:
+                    selected_id = view.selected.id
+                    student = await run.io_bound(self.students.get, selected_id)
+                    if view.selected and view.selected.id == selected_id:
+                        if student is None:
+                            await view.select_student(None)
+                        else:
+                            view.selected = student
+                            view.student_heading.text = f'{student.name} · {student.grade}학년 {student.classroom}반'
+            if self.group_view and self.group_view.selected:
+                await self.group_view.select_group(self.group_view.selected.id)
+            if self.calendar_view:
+                await self.calendar_view.reload()
+            if self.statistics_view:
+                await self.statistics_view.load()
+            self.student_revision = revision
+        except DatabaseError as error:
+            ui.notify(str(error), type='negative')
+        finally:
+            self.refreshing_students = False
 
     def navigate(self, page: str) -> None:
         """화면을 다시 만들지 않고 전환한다. 학생 화면은 최초 진입 시에만 생성한다."""
@@ -90,10 +140,18 @@ class AppLayout:
             with self.panels['groups']:
                 self.group_view = GroupCounselingView(GroupCounselingRepository(self.counseling.database), self.refresh_group_timeline)
                 self.group_view.build()
+        if page == 'special_education' and self.special_education_view is None:
+            with self.panels['special_education']:
+                self.special_education_view = SpecialEducationView(self.students, self.refresh_student_timeline)
+                self.special_education_view.build()
         if page == 'calendar' and self.calendar_view is None:
             with self.panels['calendar']:
                 self.calendar_view = CalendarView(self.reporting, self.open_schedule)
                 self.calendar_view.build()
+        if page == 'consultation' and self.consultation_view is None:
+            with self.panels['consultation']:
+                self.consultation_view = ConsultationView(TeacherRepository(self.students.database))
+                self.consultation_view.build()
         if page == 'statistics' and self.statistics_view is None:
             with self.panels['statistics']:
                 self.statistics_view = StatisticsView(self.reporting)

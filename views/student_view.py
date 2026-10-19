@@ -153,10 +153,13 @@ class StudentView:
                 for entry in entries[:PAGE_SIZE]:
                     date_label = entry.starts_at.astimezone(KST).strftime('%Y.%m.%d %H:%M')
                     with ui.timeline_entry(title=date_label,
-                                           icon='groups' if entry.kind == 'group' else 'chat_bubble_outline'):
+                                           icon={'group': 'groups', 'special_education': 'menu_book'}.get(entry.kind, 'chat_bubble_outline')):
                         if entry.kind == 'group':
                             ui.label(f'집단상담 · {entry.group_name} · {entry.duration_minutes}분').classes('text-sm text-slate-500')
                             ui.label(entry.title).classes('text-sm text-slate-500')
+                        elif entry.kind == 'special_education':
+                            ui.label(f'특별교육 · {entry.education_name} · {entry.duration_minutes}분').classes('text-sm text-slate-500')
+                            ui.label(f'교육 대상: {entry.counseling_target or "미입력"}').classes('text-sm text-slate-500')
                         else:
                             ui.label(
                                 f'{entry.counseling_area or "미지정"} · {entry.category} · {entry.duration_minutes}분'
