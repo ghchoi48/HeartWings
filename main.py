@@ -25,7 +25,7 @@ def register_page(path: Path) -> None:
     @ui.page('/')
     def index():
         ui.colors(primary='#24756b', secondary='#64748b')
-        drawer = ui.left_drawer(value=False, bordered=True).classes('bg-white p-4')
+        drawer = ui.left_drawer(value=False, bordered=True).props('width=200').classes('bg-white p-4')
         drawer.set_visibility(False)
         with ui.header().classes('items-center justify-between px-6'):
             with ui.row().classes('items-center gap-3'):

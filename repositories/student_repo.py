@@ -1,7 +1,9 @@
 """학생 CRUD 및 검색. SQL은 이 모듈 내부에만 위치한다."""
 
+import json
+
 from database import Database, NotFoundError
-from models import Student, StudentInput
+from models import FamilyInput, Student, StudentInput
 from repositories._support import check_page, now_text, values
 
 
@@ -54,6 +56,22 @@ class StudentRepository:
                 grade=:grade, classroom=:classroom, birth_date=:birth_date,
                 guardian_contact=:guardian_contact, notes=:notes, updated_at=:updated_at
                 WHERE id=:id''', data)
+            if cursor.rowcount == 0:
+                raise NotFoundError('학생을 찾을 수 없습니다.')
+            row = connection.execute('SELECT * FROM students WHERE id=?', (student_id,)).fetchone()
+            return Student.model_validate(dict(row))
+
+    def update_family(self, student_id: int, family: FamilyInput) -> Student:
+        """다른 학생 필드를 덮어쓰지 않고 가족 정보만 갱신한다."""
+        data = values(FamilyInput.model_validate(family.model_dump()))
+        data['family_members'] = json.dumps(data['family_members'], ensure_ascii=False)
+        data.update(id=student_id, updated_at=now_text())
+        with self.database.session(write=True) as connection:
+            cursor = connection.execute(
+                '''UPDATE students SET guardian_contact=:guardian_contact,
+                family_type=:family_type, family_welfare_type=:family_welfare_type,
+                family_members=:family_members,
+                updated_at=:updated_at WHERE id=:id''', data)
             if cursor.rowcount == 0:
                 raise NotFoundError('학생을 찾을 수 없습니다.')
             row = connection.execute('SELECT * FROM students WHERE id=?', (student_id,)).fetchone()

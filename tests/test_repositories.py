@@ -7,7 +7,7 @@ import pytest
 from pydantic import ValidationError
 
 from database import ConflictError, Database, DatabaseOpenError, NotFoundError
-from models import CounselingInput, StudentInput
+from models import CounselingInput, FamilyInput, StudentInput
 from repositories.counseling_repo import CounselingRepository
 from repositories.student_repo import StudentRepository
 
@@ -46,6 +46,21 @@ def test_student_crud_and_duplicate(db):
         repo.update(student.id, student_input())
     with pytest.raises(NotFoundError):
         repo.delete(student.id)
+
+
+def test_family_update_preserves_student_fields(db):
+    repo = StudentRepository(db)
+    student = repo.create(student_input(notes='기존 메모'))
+    updated = repo.update_family(student.id, FamilyInput(guardian_contact=' 02-123-4567 '))
+    assert updated.guardian_contact == '02-123-4567'
+    assert updated.model_dump(exclude={'guardian_contact', 'updated_at'}) == student.model_dump(
+        exclude={'guardian_contact', 'updated_at'})
+    assert repo.get(student.id) == updated
+    assert repo.update_family(student.id, FamilyInput()).guardian_contact == ''
+    with pytest.raises(ValidationError):
+        FamilyInput(guardian_contact='1' * 201)
+    with pytest.raises(NotFoundError):
+        repo.update_family(student.id + 1, FamilyInput())
 
 
 def test_counseling_crud_fk_and_timeline(db):
@@ -130,3 +145,48 @@ def test_lock_revokes_existing_repository_and_allows_fresh_unlock(db):
     reopened = Database("test-only-'비밀번호", db.path)
     reopened.initialize()
     assert StudentRepository(reopened).get(student.id) == student
+
+
+def test_family_members_round_trip_and_student_edit(db):
+    repo = StudentRepository(db)
+    student = repo.create(student_input())
+    family = FamilyInput(
+        guardian_contact='02-123-4567', family_type='직접 입력한 유형',
+        family_welfare_type='직접 입력한 복지 유형',
+        family_members=[
+            dict(lives_together=True, relationship='모', name='가족1', age=42,
+                 occupation='교사', contact='010-1111-2222'),
+            dict(lives_together=False, relationship='형제', name='가족2', age=None),
+        ],
+    )
+    repo.update_family(student.id, family)
+    loaded = repo.get(student.id)
+    assert FamilyInput.model_validate(loaded.model_dump(include=set(FamilyInput.model_fields))) == family
+    repo.update(student.id, student_input(name='학생 수정', guardian_contact=family.guardian_contact))
+    assert repo.get(student.id).family_members == family.family_members
+    assert repo.list()[0].family_type == family.family_type
+    repo.update_family(student.id, FamilyInput())
+    assert repo.get(student.id).family_members == []
+    for age in (-1, 151, 2.5):
+        with pytest.raises(ValidationError):
+            FamilyInput(family_members=[dict(age=age)])
+
+
+def test_version_one_family_migration(tmp_path):
+    from database import SCHEMA
+
+    database = Database('migration-test', tmp_path / 'old.db')
+    with database.session(write=True) as connection:
+        for statement in SCHEMA:
+            connection.execute(statement)
+        connection.execute('PRAGMA user_version=1')
+    repo = StudentRepository(database)
+    student = repo.create(student_input())
+    database.initialize()
+    database.initialize()
+    restored = repo.get(student.id)
+    assert restored.name == student.name
+    assert restored.family_members == []
+    assert restored.family_type == ''
+    repo.update_family(student.id, FamilyInput(family_type='확인'))
+    assert repo.get(student.id).family_type == '확인'

@@ -2,21 +2,20 @@
 
 from datetime import timedelta, timezone
 
-from nicegui import events, run, ui
+from nicegui import run, ui
 from pydantic import ValidationError
 
 from database import DatabaseError
-from models import Student, StudentInput
+from models import FamilyInput, FamilyMember, Student, StudentInput
 from repositories.counseling_repo import CounselingRepository
 from repositories.student_repo import StudentRepository
+from views.student_list import StudentList
 
 KST = timezone(timedelta(hours=9))
-PAGE_SIZE = 20
+PAGE_SIZE = 10
 STATUS_LABELS = {'scheduled': '예약', 'completed': '완료', 'cancelled': '취소'}
 FIELD_LABELS = {
-    'name': '이름', 'student_number': '학번', 'grade': '학년',
-    'classroom': '반', 'birth_date': '생년월일',
-    'guardian_contact': '보호자 연락처', 'notes': '학생 메모', 'nickname': '별명',
+    'name': '이름', 'student_number': '번호', 'grade': '학년', 'classroom': '반', 'birth_date': '생년월일', 'student_contact': '학생 연락처', 'guardian_contact': '보호자 연락처', 'notes': '학생 메모', 'nickname': '별명',
 }
 
 
@@ -36,11 +35,7 @@ class StudentView:
     def __init__(self, students: StudentRepository, counseling: CounselingRepository):
         self.students = students
         self.counseling = counseling
-        self.offset = 0
-        self.query = ''
-        self.grade = None
         self.selected: Student | None = None
-        self.list_request = 0
         self.detail_request = 0
         self.timeline_offset = 0
         self.timeline_busy = False
@@ -49,41 +44,17 @@ class StudentView:
 
     def build(self) -> None:
         """화면을 생성한다. 인스턴스 하나를 여러 클라이언트에서 공유하지 않는다."""
-        with ui.column().classes('w-full max-w-7xl mx-auto gap-6 p-4 md:p-8'):
+        with ui.column().classes('w-full gap-6 p-4 md:p-8'):
             with ui.row().classes('w-full items-center justify-between'):
                 with ui.column().classes('gap-1'):
                     ui.label('학생 관리').classes('text-3xl font-bold text-slate-800')
                     ui.label('학생의 이야기를 차근차근 이어갑니다.').classes('text-slate-500')
                 ui.button('학생 추가', icon='person_add', on_click=lambda: self.open_editor())
-            with ui.card().classes('w-full rounded-2xl shadow-sm p-5'):
-                with ui.row().classes('w-full items-end gap-3'):
-                    self.search = ui.input('이름 또는 학번', placeholder='검색어를 입력하세요').props('outlined clearable').classes('grow')
-                    self.search.on('keydown.enter', self.apply_filters)
-                    self.grade_filter = ui.select(
-                        {0: '전체 학년', **{i: f'{i}학년' for i in range(1, 13)}},
-                        value=0, label='학년',
-                    ).props('outlined').classes('w-36')
-                    ui.button('검색', icon='search', on_click=self.apply_filters)
-                    ui.button('초기화', on_click=self.reset_filters).props('flat')
-                self.list_message = ui.label().classes('text-sm text-slate-500')
-                columns = [
-                    {'name': name, 'label': label, 'field': name, 'align': 'left'}
-                    for name, label in [('name', '이름'), ('grade', '학년'),
-                                        ('classroom', '반'), ('student_number', '학번')]
-                ]
-                self.table = ui.table(columns=columns, rows=[], row_key='id',
-                                      pagination=0).classes('w-full').props('flat hide-bottom')
-                self.table.on('rowClick', self.select_student,
-                              js_handler='(event, row) => emit(row.id)')
-                ui.label('학생 행을 클릭하면 아래에 상세 프로필과 상담 이력이 표시됩니다.').classes('text-sm text-slate-500')
-                with ui.row().classes('w-full items-center justify-end'):
-                    self.previous = ui.button('이전', on_click=lambda: self.change_page(-1)).props('flat')
-                    self.page_label = ui.label()
-                    self.next = ui.button('다음', on_click=lambda: self.change_page(1)).props('flat')
-                self.previous.disable()
-                self.next.disable()
-            self.detail = ui.column().classes('w-full gap-4')
-            self.show_empty_detail()
+            with ui.element('div').classes('w-full grid grid-cols-1 lg:grid-cols-[3fr_7fr] items-stretch gap-6'):
+                self.student_list = StudentList(self.students, on_select=self.load_profile, page_size=PAGE_SIZE)
+                self.student_list.build(autoload=False)
+                self.detail = ui.column().classes('w-full min-w-0 gap-4')
+                self.show_empty_detail()
         ui.timer(0.01, self.load_students, once=True)
 
     def show_empty_detail(self) -> None:
@@ -94,55 +65,12 @@ class StudentView:
                 ui.icon('person_outline', size='36px').classes('text-slate-400')
                 ui.label('목록에서 학생을 선택해 주세요.').classes('text-slate-500')
 
-    async def apply_filters(self) -> None:
-        """검색 조건을 적용하고 첫 페이지부터 조회한다."""
-        self.query = (self.search.value or '').strip()
-        self.grade = self.grade_filter.value or None
-        self.offset = 0
-        await self.load_students()
-
-    async def reset_filters(self) -> None:
-        """검색과 학년 선택을 초기화한다."""
-        self.search.value = ''
-        self.grade_filter.value = 0
-        await self.apply_filters()
-
-    async def change_page(self, direction: int) -> None:
-        """서버 저장소의 페이지를 이동한다."""
-        self.offset = max(0, self.offset + direction * PAGE_SIZE)
-        await self.load_students()
-
     async def load_students(self) -> None:
-        """한 개를 추가 조회해 다음 페이지 유무를 결정한다. 늦은 응답은 무시한다."""
-        self.list_request += 1
-        request = self.list_request
+        """상세 표시를 초기화하고 학생 목록을 다시 조회한다."""
         self.detail_request += 1
         self.selected = None
-        self.table.rows = []
         self.show_empty_detail()
-        self.previous.disable()
-        self.next.disable()
-        self.list_message.text = '학생 목록을 불러오는 중입니다…'
-        try:
-            students = await run.io_bound(self.students.list, search=self.query, grade=self.grade,
-                                          limit=PAGE_SIZE + 1, offset=self.offset)
-        except DatabaseError as error:
-            if request == self.list_request:
-                self.list_message.text = str(error) + ' 검색을 눌러 다시 시도하세요.'
-            return
-        if request != self.list_request:
-            return
-        self.table.rows = [dict(id=s.id, name=s.name, grade=s.grade, classroom=s.classroom,
-                                student_number=s.student_number or '—') for s in students[:PAGE_SIZE]]
-        self.table.update()
-        self.page_label.text = f'{self.offset // PAGE_SIZE + 1} 페이지'
-        self.previous.set_enabled(self.offset > 0)
-        self.next.set_enabled(len(students) > PAGE_SIZE)
-        self.list_message.text = f'이 페이지에 {min(len(students), PAGE_SIZE)}명' if students else '검색 조건에 맞는 학생이 없습니다. 학생 추가 또는 검색 초기화를 이용하세요.'
-
-    async def select_student(self, event: events.GenericEventArguments) -> None:
-        """클릭한 행의 학생 프로필과 이력을 조회한다."""
-        await self.load_profile(event.args)
+        await self.student_list.reload()
 
     async def load_profile(self, student_id: int | None) -> None:
         """다른 학생의 지연 응답이 현재 선택을 덮어쓰지 않도록 요청 번호를 검사한다."""
@@ -166,22 +94,44 @@ class StudentView:
         self.selected = student
         self.detail.clear()
         with self.detail:
-            with ui.card().classes('w-full rounded-2xl shadow-sm p-6'):
-                with ui.row().classes('w-full items-center justify-between'):
-                    ui.label(student.name).classes('text-2xl font-bold')
-                    ui.button('학생 정보 수정', icon='edit', on_click=lambda: self.open_editor(student)).props('outline')
-                ui.label(f'{student.grade}학년 {student.classroom}반 · 학번 {student.student_number or "미입력"}').classes('text-slate-500')
-                ui.separator()
-                ui.label(f'생년월일: {student.birth_date or "미입력"}')
-                ui.label(f'보호자 연락처: {student.guardian_contact or "미입력"}')
-                ui.label('학생 메모').classes('font-semibold mt-2')
-                ui.label(student.notes or '등록된 메모가 없습니다.').classes('whitespace-pre-wrap break-words w-full')
-            with ui.card().classes('w-full rounded-2xl shadow-sm p-6'):
-                ui.label('상담 타임라인').classes('text-xl font-bold')
-                ui.label('최신순 · 한국 표준시(KST) · 예약 및 취소 포함').classes('text-sm text-slate-500')
-                self.timeline = ui.column().classes('w-full gap-3')
-                self.timeline_message = ui.label().classes('text-sm text-slate-500')
-                self.more = ui.button('이력 더 보기', on_click=self.load_timeline).props('flat')
+            with ui.element('div').classes('w-full grid grid-cols-1 xl:grid-cols-2 items-start gap-4'):
+                with ui.column().classes('w-full min-w-0 gap-4'):
+                    with ui.card().classes('w-full rounded-2xl shadow-sm p-6'):
+                        with ui.row().classes('w-full items-center justify-between'):
+                            ui.label(student.name).classes('text-2xl font-bold')
+                            ui.button('학생 정보 수정', icon='edit', on_click=lambda: self.open_editor(student)).props('outline')
+                        ui.label(f'{student.grade}학년 {student.classroom}반 · 번호 {student.student_number or "미입력"}').classes('text-slate-500')
+                        ui.separator()
+                        ui.label(f'생년월일: {student.birth_date or "미입력"}')
+                        ui.label(f'학생 연락처: {student.student_contact or "미입력"}')
+                        ui.label('학생 메모').classes('font-semibold mt-2')
+                        ui.label(student.notes or '등록된 메모가 없습니다.').classes('whitespace-pre-wrap break-words w-full')
+                    with ui.card().classes('w-full rounded-2xl shadow-sm p-6'):
+                        with ui.row().classes('w-full items-center justify-between'):
+                            ui.label('가족 정보').classes('text-xl font-bold')
+                            ui.button('가족 정보 수정', icon='edit', on_click=lambda: self.open_family_editor(student)).props('outline')
+                        ui.label(f'가족 유형: {student.family_type or "미입력"}').classes('break-words w-full')
+                        ui.label(f'가족 복지 유형: {student.family_welfare_type or "미입력"}').classes('break-words w-full')
+                        ui.label('가족 구성원').classes('font-semibold')
+                        if student.family_members:
+                            ui.table(columns=[
+                                {'name': key, 'label': label, 'field': key, 'align': 'left'}
+                                for key, label in [('lives_together', '동거'), ('relationship', '관계'),
+                                                   ('name', '이름'), ('age', '나이'),
+                                                   ('occupation', '직업'), ('contact', '연락처')]
+                            ], rows=[dict(member.model_dump(), id=index,
+                                          lives_together='동거' if member.lives_together else '비동거',
+                                          age=member.age if member.age is not None else '미입력')
+                                     for index, member in enumerate(student.family_members)],
+                                     row_key='id').classes('w-full').props('flat dense')
+                        else:
+                            ui.label('등록된 가족 구성원이 없습니다.').classes('text-slate-500')
+                with ui.card().classes('w-full rounded-2xl shadow-sm p-6'):
+                    ui.label('상담 타임라인').classes('text-xl font-bold')
+                    ui.label('최신순 · 한국 표준시(KST) · 예약 및 취소 포함').classes('text-sm text-slate-500')
+                    self.timeline = ui.column().classes('w-full gap-3')
+                    self.timeline_message = ui.label().classes('text-sm text-slate-500')
+                    self.more = ui.button('이력 더 보기', on_click=self.load_timeline).props('flat')
         self.timeline_offset = 0
         self.timeline_busy = False
         self.timeline_more = True
@@ -222,6 +172,108 @@ class StudentView:
                 self.timeline_busy = False
                 self.more.enable()
 
+    async def open_family_editor(self, student: Student) -> None:
+        """가족 정보 전용 모달. 실패 시 입력을 보존하고 재시도를 허용한다."""
+        if self.editor_open:
+            return
+        self.editor_open = True
+        saving = False
+        with ui.dialog().props('persistent') as dialog, ui.card().classes('w-full max-w-6xl p-6'):
+            ui.label('가족 정보 수정').classes('text-2xl font-bold')
+            with ui.row().classes('w-full'):
+                family_options = ['양부모 가정', '한부모 가정', '조손 가정', '재혼 가정', '다문화 가정', '위탁 가정', '기타']
+                welfare_options = ['해당 없음', '기초생활수급', '차상위계층', '한부모가족 지원', '기타']
+                if student.family_type and student.family_type not in family_options:
+                    family_options.append(student.family_type)
+                if student.family_welfare_type and student.family_welfare_type not in welfare_options:
+                    welfare_options.append(student.family_welfare_type)
+                family_type = ui.select(family_options, label='가족 유형',
+                                        value=student.family_type or None).props('outlined clearable').classes('grow')
+                welfare_type = ui.select(welfare_options, label='가족 복지 유형',
+                                         value=student.family_welfare_type or None).props('outlined clearable').classes('grow')
+            ui.label('가족 구성원 목록').classes('text-lg font-semibold')
+            member_rows = []
+            with ui.element('div').classes('w-full overflow-x-auto'):
+                members_container = ui.column().classes('w-full min-w-[850px] gap-2')
+
+            def add_member(member: FamilyMember | None = None) -> None:
+                if saving:
+                    return
+                member = member or FamilyMember()
+                with members_container:
+                    row = ui.element('div').classes(
+                        'w-full grid grid-cols-[90px_1fr_1fr_80px_1fr_1.5fr_48px] items-center gap-2')
+                    with row:
+                        fields = {
+                            'lives_together': ui.checkbox('동거', value=member.lives_together),
+                            'relationship': ui.input('관계', value=member.relationship).props('outlined dense maxlength=100'),
+                            'name': ui.input('이름', value=member.name).props('outlined dense maxlength=100'),
+                            'age': ui.number('나이', value=member.age, min=0, max=150, step=1).props('outlined dense'),
+                            'occupation': ui.input('직업', value=member.occupation).props('outlined dense maxlength=200'),
+                            'contact': ui.input('연락처', value=member.contact).props(
+                                'outlined dense mask="###-####-####" inputmode="numeric" type=tel'),
+                        }
+                        for field in fields.values():
+                            field.classes('w-full min-w-0')
+
+                        def remove_member() -> None:
+                            if not saving:
+                                member_rows.remove(fields)
+                                row.delete()
+
+                        ui.button(icon='delete_outline', on_click=remove_member).props(
+                            'flat round color=negative aria-label="가족 구성원 삭제"').tooltip('구성원 삭제')
+                member_rows.append(fields)
+
+            for member in student.family_members:
+                add_member(member)
+            ui.button('구성원 추가', icon='person_add', on_click=lambda: add_member()).props('outline')
+            error_label = ui.label().classes('text-red-700 text-sm whitespace-pre-wrap')
+
+            async def save() -> None:
+                nonlocal saving
+                if saving:
+                    return
+                try:
+                    family = FamilyInput(
+                        guardian_contact=student.guardian_contact,
+                        family_type=family_type.value or '',
+                        family_welfare_type=welfare_type.value or '',
+                        family_members=[{key: field.value for key, field in fields.items()}
+                                        for fields in member_rows],
+                    )
+                except ValidationError:
+                    error_label.text = '입력 길이와 나이를 확인해 주세요. 나이는 0~150의 정수 또는 빈칸이어야 합니다.'
+                    return
+                saving = True
+                save_button.disable()
+                cancel.disable()
+                error_label.text = '저장 중입니다…'
+                try:
+                    saved = await run.io_bound(self.students.update_family, student.id, family)
+                except DatabaseError as error:
+                    error_label.text = str(error)
+                else:
+                    dialog.submit(saved)
+                finally:
+                    saving = False
+                    save_button.enable()
+                    cancel.enable()
+
+            with ui.row().classes('w-full justify-end'):
+                cancel = ui.button('취소', on_click=lambda: dialog.submit(None)).props('flat')
+                save_button = ui.button('저장', icon='save', on_click=save)
+        try:
+            saved = await dialog
+            if saved is not None:
+                ui.notify('가족 정보를 저장했습니다.', type='positive')
+                if self.selected is not None and self.selected.id == saved.id:
+                    await self.load_profile(saved.id)
+        finally:
+            self.editor_open = False
+            if not dialog.is_deleted:
+                dialog.delete()
+
     async def open_editor(self, student: Student | None = None) -> None:
         """학생 추가/수정 공통 모달. 저장 실패 시 입력을 유지하며 중복 저장을 막는다."""
         if self.editor_open:
@@ -240,11 +292,10 @@ class StudentView:
                 with ui.row().classes('w-full'):
                     fields['grade'] = ui.select({i: f'{i}학년' for i in range(1, 4)}, label='*학년', value=initial.get('grade', 1)).props('outlined').classes('grow')
                     fields['classroom'] = ui.input('*반', value=initial.get('classroom', '')).props('outlined').classes('grow')
-                    fields['student_number'] = ui.input('학번', value=initial.get('student_number') or '').props('outlined').classes('grow')
+                    fields['student_number'] = ui.input('번호', value=initial.get('student_number') or '').props('outlined').classes('grow')
                 with ui.row().classes('w-full flex-nowrap items-start'):
                     fields['birth_date'] = ui.date_input('생년월일', value=str(initial.get('birth_date') or '')).props('outlined').classes('flex-1 min-w-0')
                     fields['student_contact'] = ui.input('학생 연락처', value=initial.get('student_contact', '')).props('outlined mask="###-####-####" inputmode="numeric"').classes('flex-1 min-w-0')
-                    fields['guardian_contact'] = ui.input('보호자 연락처', value=initial.get('guardian_contact', '')).props('outlined mask="###-####-####" inputmode="numeric"').classes('flex-1 min-w-0')
                 fields['notes'] = ui.textarea('학생 메모', value=initial.get('notes', '')).props('outlined').classes('w-full')
             error_label = ui.label().classes('text-red-700 text-sm whitespace-pre-wrap')
 
@@ -284,7 +335,7 @@ class StudentView:
             if saved is not None:
                 ui.notify('학생 정보를 저장했습니다.', type='positive')
                 await self.load_students()
-                self.table.selected = [row for row in self.table.rows if row['id'] == saved.id]
+                self.student_list.table.selected = [row for row in self.student_list.table.rows if row['id'] == saved.id]
                 await self.load_profile(saved.id)
         finally:
             self.editor_open = False

@@ -4,6 +4,7 @@ SQLCipher 암호화/CRUD 검증은 test_repositories.py의 별도 통합 테스�
 """
 
 import asyncio
+import inspect
 import unittest
 from datetime import datetime, timezone
 from unittest.mock import Mock, patch
@@ -57,23 +58,52 @@ class StudentViewTests(unittest.IsolatedAsyncioTestCase):
         self.io_patch.stop()
         self.host.delete()
 
-    async def test_server_pagination_and_empty_state(self):
-        self.students.list.return_value = [make_student(i) for i in range(1, PAGE_SIZE + 2)]
+    async def test_native_pagination_uses_complete_list(self):
+        self.students.list.side_effect = [
+            [make_student(i) for i in range(1, 1001)],
+            [make_student(1001)],
+        ]
         await self.view.load_students()
-        self.assertEqual(len(self.view.table.rows), PAGE_SIZE)
-        self.assertTrue(self.view.next.enabled)
-        self.assertFalse(self.view.previous.enabled)
-        self.students.list.return_value = []
-        await self.view.change_page(1)
-        self.assertEqual(self.view.table.rows, [])
-        self.assertTrue(self.view.previous.enabled)
-        self.assertFalse(self.view.next.enabled)
+        self.assertEqual(len(self.view.student_list.table.rows), 1001)
+        self.assertEqual(self.view.student_list.table.pagination['rowsPerPage'], PAGE_SIZE)
+        self.students.list.assert_called_with(limit=1000, offset=1000)
+        self.assertFalse(self.view.student_list.table.props.get('hide-pagination'))
+        self.assertNotIn('hide-bottom', self.view.student_list.table.props)
 
-    async def test_search_filters_and_profile_timeline(self):
-        self.view.search.value = ' 가상 '
-        self.view.grade_filter.value = 2
-        await self.view.apply_filters()
-        self.students.list.assert_called_with(search='가상', grade=2, limit=21, offset=0)
+    async def test_family_editor_save_and_retry(self):
+        student = make_student().model_copy(update={'guardian_contact': '02-123-4567'})
+        self.students.update_family.side_effect = [DatabaseError('저장 실패'), student]
+
+        async def interact(dialog):
+            elements = list(dialog.descendants())
+            selects = [element for element in elements if isinstance(element, ui.select)]
+            selects[0].value = '한부모 가정'
+            selects[1].value = '해당 없음'
+            save_button = next(element for element in elements
+                               if isinstance(element, ui.button) and element.text == '저장')
+            save = next(listener.handler for listener in save_button._event_listeners.values()
+                        if listener.type == 'click')
+            save = inspect.getclosurevars(save).nonlocals['callback']
+            await save()
+            self.assertFalse(dialog.submitted.is_set())
+            self.assertTrue(save_button.enabled)
+            self.assertTrue(any(isinstance(element, ui.label) and element.text == '저장 실패'
+                                for element in elements))
+            await save()
+            self.assertTrue(dialog.submitted.is_set())
+            return dialog._result
+
+        with self.host, patch.object(ui.dialog, '__await__', lambda dialog: interact(dialog).__await__()), \
+                patch('views.student_view.ui.notify'):
+            await self.view.open_family_editor(student)
+        student_id, family = self.students.update_family.call_args.args
+        self.assertEqual(student_id, student.id)
+        self.assertEqual(family.guardian_contact, student.guardian_contact)
+        self.assertEqual(family.family_type, '한부모 가정')
+        self.assertEqual(family.family_welfare_type, '해당 없음')
+        self.assertFalse(self.view.editor_open)
+
+    async def test_profile_timeline(self):
         student = make_student()
         self.students.get.return_value = student
         now = datetime.now(timezone.utc)
@@ -92,29 +122,32 @@ class StudentViewTests(unittest.IsolatedAsyncioTestCase):
         self.students.list.return_value = [make_student()]
         await self.view.load_students()
         self.students.list.side_effect = DatabaseError('조회 실패')
-        await self.view.load_students()
-        self.assertEqual(self.view.table.rows, [])
-        self.assertIn('조회 실패', self.view.list_message.text)
+        with patch('views.student_list.ui.notify') as notify:
+            await self.view.load_students()
+        self.assertEqual(self.view.student_list.table.rows, [])
+        notify.assert_called_once_with('조회 실패', type='negative')
 
     async def test_old_search_response_cannot_replace_new_results(self):
         started, release = asyncio.Event(), asyncio.Event()
 
+        calls = 0
+
         async def delayed(function, *args, **kwargs):
-            if kwargs['search'] == 'old':
+            nonlocal calls
+            calls += 1
+            if calls == 1:
                 started.set()
                 await release.wait()
                 return [make_student(1, '이전 결과')]
             return [make_student(2, '현재 결과')]
 
         with patch('views.student_view.run.io_bound', side_effect=delayed):
-            self.view.query = 'old'
             old = asyncio.create_task(self.view.load_students())
             await started.wait()
-            self.view.query = 'new'
             await self.view.load_students()
             release.set()
             await old
-        self.assertEqual(self.view.table.rows[0]['name'], '현재 결과')
+        self.assertEqual(self.view.student_list.table.rows[0]['name'], '현재 결과')
 
 
 if __name__ == '__main__':

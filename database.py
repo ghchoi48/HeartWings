@@ -150,5 +150,11 @@ class Database:
                 for statement in SCHEMA:
                     connection.execute(statement)
                 connection.execute('PRAGMA user_version = 1')
-            elif version != 1:
+                version = 1
+            if version == 1:
+                connection.execute("ALTER TABLE students ADD COLUMN family_type TEXT NOT NULL DEFAULT ''")
+                connection.execute("ALTER TABLE students ADD COLUMN family_welfare_type TEXT NOT NULL DEFAULT ''")
+                connection.execute("ALTER TABLE students ADD COLUMN family_members TEXT NOT NULL DEFAULT '[]'")
+                connection.execute('PRAGMA user_version = 2')
+            elif version != 2:
                 raise DatabaseError('지원하지 않는 DB 버전입니다. 앱 버전을 확인하세요.')

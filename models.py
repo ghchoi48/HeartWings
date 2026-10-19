@@ -1,6 +1,7 @@
 """UI나 DB 드라이버에 의존하지 않는 입력 및 저장 데이터 모델."""
 
 from datetime import date, datetime
+import json
 from dataclasses import dataclass
 from typing import Annotated, Literal
 
@@ -27,12 +28,37 @@ class StudentInput(InputModel):
     notes: str = Field(default='', max_length=20000)
 
 
-class Student(StudentInput):
+class FamilyMember(InputModel):
+    """가족 구성원 한 명의 정보."""
+
+    lives_together: bool = False
+    relationship: str = Field(default='', max_length=100)
+    name: str = Field(default='', max_length=100)
+    age: int | None = Field(default=None, ge=0, le=150)
+    occupation: str = Field(default='', max_length=200)
+    contact: str = Field(default='', max_length=200)
+
+
+class FamilyInput(InputModel):
+    """학생의 가족 정보 수정 항목."""
+
+    guardian_contact: str = Field(default='', max_length=200)
+    family_type: str = Field(default='', max_length=200)
+    family_welfare_type: str = Field(default='', max_length=200)
+    family_members: list[FamilyMember] = Field(default_factory=list)
+
+
+class Student(StudentInput, FamilyInput):
     """DB에서 읽은 학생과 UTC 생성/수정 시각."""
 
     id: int
     created_at: datetime
     updated_at: datetime
+
+    @field_validator('family_members', mode='before')
+    @classmethod
+    def decode_family_members(cls, value):
+        return json.loads(value) if isinstance(value, str) else value
 
 
 class CounselingInput(InputModel):

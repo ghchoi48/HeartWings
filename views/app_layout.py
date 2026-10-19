@@ -34,16 +34,14 @@ class AppLayout:
     def build(self, content: ui.column, drawer: ui.left_drawer) -> None:
         """최상위 레이아웃 요소는 진입점에서 생성하고 여기서는 내용만 구성한다."""
         with drawer:
-            ui.label('마음나래').classes('text-xl font-bold text-teal-800 px-3 pt-2')
-            ui.label('우리 학교 상담 공간').classes('text-sm text-slate-500 px-3 mb-4')
             for page, title, icon in [('home', '홈', 'home'), ('students', '학생 관리', 'school'),
                                       ('counseling', '상담 일지', 'edit_note'), ('calendar', '캘린더', 'calendar_month'),
                                       ('statistics', '통계', 'bar_chart')]:
                 self.buttons[page] = ui.button(
                     title, icon=icon, on_click=lambda page=page: self.navigate(page),
-                ).props('flat align=left').classes('w-full rounded-lg py-3')
+                ).props('flat align=left').classes('w-full rounded-lg')
             ui.separator().classes('my-4')
-            ui.button('DB 잠금', icon='lock', on_click=self.on_lock or (lambda: ui.navigate.to('/'))).props('flat align=left').classes('w-full text-slate-500')
+            ui.button('DB 잠금', icon='lock', on_click=self.on_lock or (lambda: ui.navigate.to('/'))).props('flat align=left').classes('w-full text-slate-500 rounded-lg')
         with content:
             self.panels['home'] = ui.column().classes('w-full')
             with self.panels['home']:

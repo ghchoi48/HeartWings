@@ -283,3 +283,21 @@ Windows/Linux 및 다른 컴퓨터에서의 실행은 아직 검증하지 않았
 4단계 완료: 월간/주간 캘린더, 통계 및 CSV/인쇄용 HTML 보고서 내보내기.
 
 5단계 완료: 전체 기능 통합, 수동 DB 잠금, 네이티브 실행 기본값, macOS 앱 패키징과 실제 실행 검증.
+
+## 학생 목록 재사용
+
+`views/student_list.py`의 `StudentList`는 목록 카드, 검색, 이름순 정렬,
+페이지 이동과 데이터 조회를 제공합니다. 페이지/클라이언트마다 새 인스턴스를 만드세요.
+
+```python
+from views.student_list import StudentList
+
+# 페이지의 UI 컨테이너 안에서 생성합니다.
+# students는 StudentRepository, on_student_selected는 학생 ID를 받는 함수입니다.
+student_list = StudentList(students, on_select=on_student_selected, page_size=10)
+student_list.build()  # 최초 목록 조회도 자동 실행
+```
+
+선택 콜백은 일반 함수와 async 함수를 모두 지원합니다. 데이터 변경 후에는
+`await student_list.reload()`로 갱신합니다. 최초 조회를 직접 제어하려면
+`build(autoload=False)`를 사용한 뒤 `reload()`를 호출하세요.

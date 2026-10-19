@@ -10,6 +10,7 @@ from database import DatabaseError
 from models import Counseling, CounselingInput, Student
 from repositories.counseling_repo import CounselingRepository
 from repositories.student_repo import StudentRepository
+from views.student_list import StudentList
 
 KST = timezone(timedelta(hours=9))
 PAGE_SIZE = 20
@@ -35,92 +36,37 @@ class CounselingView:
         self.counseling = counseling
         self.on_saved = on_saved
         self.selected: Student | None = None
-        self.student_offset = 0
         self.log_offset = 0
-        self.query = ''
         self.student_request = 0
         self.log_request = 0
         self.editor_open = False
 
     def build(self) -> None:
         """학생 검색, 선택 학생의 상담 목록을 구성한다."""
-        with ui.column().classes('w-full max-w-7xl mx-auto gap-5 p-4 md:p-8'):
+        with ui.column().classes('w-full gap-5 p-4 md:p-8'):
             ui.label('상담 일지').classes('text-3xl font-bold text-slate-800')
             ui.label('학생을 선택하고 상담 내용을 기록하세요.').classes('text-slate-500')
-            with ui.card().classes('w-full rounded-2xl shadow-sm p-5'):
-                with ui.row().classes('w-full items-end'):
-                    self.search = ui.input('상담 대상 이름 또는 학번').props('outlined clearable').classes('grow')
-                    self.search.on('keydown.enter', self.search_students)
-                    ui.button('학생 찾기', icon='search', on_click=self.search_students)
-                self.student_message = ui.label().classes('text-sm text-slate-500')
-                columns = [dict(name=key, label=label, field=key, align='left') for key, label in
-                           [('name', '이름'), ('grade', '학년'), ('classroom', '반'), ('student_number', '학번')]]
-                self.table = ui.table(columns=columns, rows=[], row_key='id', selection='single',
-                                      on_select=self.select_student, pagination=0).props('flat hide-bottom').classes('w-full')
-                with ui.row().classes('w-full justify-end items-center'):
-                    self.student_previous = ui.button('학생 이전', on_click=lambda: self.student_page(-1)).props('flat')
-                    self.student_page_label = ui.label()
-                    self.student_next = ui.button('학생 다음', on_click=lambda: self.student_page(1)).props('flat')
-            with ui.card().classes('w-full rounded-2xl shadow-sm p-5'):
-                with ui.row().classes('w-full items-center justify-between'):
-                    self.student_heading = ui.label('상담 대상 학생을 선택해 주세요.').classes('text-xl font-bold')
-                    self.add = ui.button('새 상담 일지', icon='edit_note', on_click=lambda: self.open_editor())
-                    self.add.disable()
-                self.logs = ui.column().classes('w-full gap-3')
-                self.log_message = ui.label().classes('text-sm text-slate-500')
-                with ui.row().classes('w-full items-center justify-end'):
-                    self.log_previous = ui.button('일지 이전', on_click=lambda: self.log_page(-1)).props('flat')
-                    self.log_page_label = ui.label()
-                    self.log_next = ui.button('일지 다음', on_click=lambda: self.log_page(1)).props('flat')
-                    ui.button('일지 새로고침', icon='refresh', on_click=self.load_logs).props('flat')
-                self.log_previous.disable()
-                self.log_next.disable()
-        self.initial_load = ui.timer(0.01, self.load_students, once=True)
+            with ui.element('div').classes('w-full grid grid-cols-1 lg:grid-cols-[3fr_7fr] items-start gap-6'):
+                self.student_list = StudentList(self.students, on_select=self.select_student)
+                self.student_list.build()
+                with ui.card().classes('w-full min-w-0 rounded-2xl shadow-sm p-5'):
+                    with ui.row().classes('w-full items-center justify-between'):
+                        self.student_heading = ui.label('상담 대상 학생을 선택해 주세요.').classes('text-xl font-bold')
+                        self.add = ui.button('새 상담 일지', icon='edit_note', on_click=lambda: self.open_editor())
+                        self.add.disable()
+                    self.logs = ui.column().classes('w-full gap-3')
+                    self.log_message = ui.label().classes('text-sm text-slate-500')
+                    with ui.row().classes('w-full items-center justify-end'):
+                        self.log_previous = ui.button('일지 이전', on_click=lambda: self.log_page(-1)).props('flat')
+                        self.log_page_label = ui.label()
+                        self.log_next = ui.button('일지 다음', on_click=lambda: self.log_page(1)).props('flat')
+                        ui.button('일지 새로고침', icon='refresh', on_click=self.load_logs).props('flat')
+                    self.log_previous.disable()
+                    self.log_next.disable()
 
-    async def search_students(self) -> None:
-        """명시적 검색 시 최신 학생 목록을 다시 읽는다."""
-        self.query = (self.search.value or '').strip()
-        self.student_offset = 0
-        await self.load_students()
-
-    async def student_page(self, direction: int) -> None:
-        """학생 검색 결과 페이지를 이동한다."""
-        self.student_offset = max(0, self.student_offset + direction * PAGE_SIZE)
-        await self.load_students()
-
-    async def load_students(self) -> None:
-        """늦은 검색 응답은 폐기하고 선택 정보는 초기화한다."""
-        self.student_request += 1
-        request = self.student_request
-        self.log_request += 1
-        self.selected = None
-        self.table.rows = []
-        self.table.selected = []
-        self.logs.clear()
-        self.log_message.text = ''
-        self.student_heading.text = '상담 대상 학생을 선택해 주세요.'
-        self.add.disable()
-        for button in (self.student_previous, self.student_next, self.log_previous, self.log_next):
-            button.disable()
-        self.student_message.text = '학생을 불러오는 중입니다…'
-        try:
-            students = await run.io_bound(self.students.list, search=self.query, limit=PAGE_SIZE + 1,
-                                          offset=self.student_offset)
-        except DatabaseError as error:
-            if request == self.student_request:
-                self.student_message.text = str(error)
-            return
-        if request != self.student_request:
-            return
-        self.table.rows = [dict(id=s.id, name=s.name, grade=s.grade, classroom=s.classroom,
-                                student_number=s.student_number or '—') for s in students[:PAGE_SIZE]]
-        self.student_previous.set_enabled(self.student_offset > 0)
-        self.student_next.set_enabled(len(students) > PAGE_SIZE)
-        self.student_page_label.text = f'{self.student_offset // PAGE_SIZE + 1} 페이지'
-        self.student_message.text = '학생을 선택하면 상담 일지를 볼 수 있습니다.' if students else '검색 결과가 없습니다. 학생 관리에서 학생을 먼저 등록해 주세요.'
-
-    async def select_student(self) -> None:
+    async def select_student(self, student_id: int | None) -> None:
         """상담 대상의 최신 프로필을 읽고 다른 학생의 이전 일지를 즉시 숨긴다."""
+        self.student_request += 1
         self.log_request += 1
         request = self.log_request
         self.selected = None
@@ -130,10 +76,10 @@ class CounselingView:
         self.add.disable()
         self.log_previous.disable()
         self.log_next.disable()
-        if not self.table.selected:
+        if student_id is None:
             return
         try:
-            student = await run.io_bound(self.students.get, self.table.selected[0]['id'])
+            student = await run.io_bound(self.students.get, student_id)
         except DatabaseError as error:
             if request == self.log_request:
                 self.log_message.text = str(error)
@@ -141,7 +87,7 @@ class CounselingView:
         if request != self.log_request:
             return
         if student is None:
-            self.log_message.text = '학생이 존재하지 않습니다. 학생 찾기를 다시 실행해 주세요.'
+            self.log_message.text = '학생이 존재하지 않습니다. 학생 목록을 새로고침해 주세요.'
             return
         self.selected = student
         self.student_heading.text = f'{student.name} · {student.grade}학년 {student.classroom}반'
@@ -272,7 +218,6 @@ class CounselingView:
 
     async def open_record(self, entry_id: int) -> None:
         """캘린더에서 전달받은 일지의 학생을 선택하고 기존 편집기를 연다."""
-        self.initial_load.deactivate()
         self.student_request += 1
         self.log_request += 1
         request = self.student_request
@@ -288,20 +233,12 @@ class CounselingView:
             ui.notify('상담 일지 또는 학생이 존재하지 않습니다.', type='warning')
             return
         self.selected = student
-        self.search.value = ''
-        self.query = ''
-        self.table.rows = [dict(id=student.id, name=student.name, grade=student.grade,
-                               classroom=student.classroom, student_number=student.student_number or '—')]
-        self.table.selected = list(self.table.rows)
-        self.student_previous.disable()
-        self.student_next.disable()
-        self.student_page_label.text = '캘린더에서 선택'
-        self.student_message.text = '다른 학생은 학생 찾기를 눌러 검색하세요.'
         self.student_heading.text = f'{student.name} · {student.grade}학년 {student.classroom}반'
         self.add.enable()
         self.log_offset = 0
         await self.load_logs()
-        await self.open_editor(entry_id)
+        if request == self.student_request:
+            await self.open_editor(entry_id)
 
     def build_editor(self, student: Student, entry: Counseling | None):
         """편집 필드와 정화된 HTML 미리보기를 만든다. 저장 내용에는 렌더링 결과를 사용하지 않는다."""
