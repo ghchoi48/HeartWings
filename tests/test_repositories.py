@@ -190,3 +190,126 @@ def test_version_one_family_migration(tmp_path):
     assert restored.family_type == ''
     repo.update_family(student.id, FamilyInput(family_type='확인'))
     assert repo.get(student.id).family_type == '확인'
+
+
+def test_html_counseling_round_trip(db):
+    student = StudentRepository(db).create(student_input())
+    repo = CounselingRepository(db)
+    value = counseling_input(student.id, content_format='html', content_markdown='<p><b>상담</b></p>')
+    entry = repo.create(value)
+    assert repo.get(entry.id).content_format == 'html'
+    assert repo.get(entry.id).content_markdown == value.content_markdown
+    assert repo.update(entry.id, value).content_format == 'html'
+
+
+def test_counseling_method_and_target_persist(db):
+    student = StudentRepository(db).create(student_input())
+    repo = CounselingRepository(db)
+    value = counseling_input(student.id, counseling_method='전화', counseling_target='보호자', counseling_area='학업')
+    entry = repo.create(value)
+    loaded = repo.get(entry.id)
+    assert (loaded.counseling_method, loaded.counseling_target) == ('전화', '보호자')
+    assert loaded.counseling_area == '학업'
+    updated = repo.update(entry.id, counseling_input(
+        student.id, counseling_method='내방', counseling_target='학생본인', counseling_area='진로'))
+    assert (updated.counseling_method, updated.counseling_target) == ('내방', '학생본인')
+    assert repo.get(entry.id).counseling_area == '진로'
+    repo.update(entry.id, counseling_input(student.id))
+    assert repo.get(entry.id).counseling_method == ''
+    assert repo.get(entry.id).counseling_target == ''
+
+
+def test_case_reports_and_log_ownership(db):
+    from models import CounselingCaseInput
+    from repositories.case_repo import CaseRepository
+
+    students, logs, cases = StudentRepository(db), CounselingRepository(db), CaseRepository(db)
+    student = students.create(student_input())
+    other = students.create(student_input(student_number='other'))
+    first = cases.save(CounselingCaseInput(student_id=student.id, title='첫 사례', report_html='<p>개념화</p>'))
+    second = cases.save(CounselingCaseInput(student_id=student.id, title='두 번째 사례'))
+    entry = logs.create(counseling_input(student.id, case_id=first.id))
+    assert logs.list(case_id=first.id) == [entry]
+    assert logs.list(case_id=second.id) == []
+    with pytest.raises(ConflictError):
+        logs.create(counseling_input(other.id, case_id=first.id))
+    with pytest.raises(ConflictError):
+        logs.update(entry.id, counseling_input(other.id, case_id=first.id))
+    saved = cases.save(CounselingCaseInput(student_id=student.id, title='수정', report_html='<p><b>보고서</b></p>'), first.id)
+    assert saved.created_at == first.created_at
+    assert cases.list(student.id)[1] == saved
+    assert logs.get(entry.id) == entry
+    db.initialize()
+    assert cases.list(student.id)[1].report_html == '<p><b>보고서</b></p>'
+
+
+def test_version_five_cases_migration(tmp_path):
+    from database import SCHEMA
+    from repositories.case_repo import CaseRepository
+
+    database = Database('migration-test', tmp_path / 'v5.db')
+    with database.session(write=True) as connection:
+        for statement in SCHEMA:
+            connection.execute(statement)
+        for column in ('family_type', 'family_welfare_type'):
+            connection.execute(f"ALTER TABLE students ADD COLUMN {column} TEXT NOT NULL DEFAULT ''")
+        connection.execute("ALTER TABLE students ADD COLUMN family_members TEXT NOT NULL DEFAULT '[]'")
+        for column, default in [('content_format', 'markdown'), ('counseling_method', ''), ('counseling_target', ''), ('counseling_area', '')]:
+            connection.execute(f"ALTER TABLE counseling ADD COLUMN {column} TEXT NOT NULL DEFAULT '{default}'")
+        connection.execute('PRAGMA user_version=5')
+        connection.execute("""INSERT INTO students (id, name, grade, classroom, guardian_contact, notes, created_at, updated_at)
+            VALUES (1, '학생', 1, '1', '', '', '2026-01-01T00:00:00+00:00', '2026-01-01T00:00:00+00:00')""")
+        connection.execute("""INSERT INTO counseling (student_id, starts_at, duration_minutes, category, status, title,
+            content_markdown, follow_up, created_at, updated_at)
+            VALUES (1, '2026-01-01T00:00:00+00:00', 50, '개인상담', 'completed', '기존',
+            '  원문  ', '', '2026-01-01T00:00:00+00:00', '2026-01-01T00:00:00+00:00')""")
+    database.initialize()
+    database.initialize()
+    cases = CaseRepository(database).list(1)
+    entries = CounselingRepository(database).list(student_id=1)
+    assert len(cases) == 1
+    assert cases[0].title == '기존 상담 사례'
+    assert entries[0].case_id == cases[0].id
+    assert entries[0].content_markdown == '  원문  '
+
+
+def test_case_documents_save_independently(db):
+    from models import CounselingCaseInput
+    from repositories.case_repo import CaseRepository
+
+    student = StudentRepository(db).create(student_input())
+    repo = CaseRepository(db)
+    case = repo.save(CounselingCaseInput(student_id=student.id, title='사례', report_html='<p>개념화</p>'))
+    for field, content in [('intake_html', '<p><b>접수 면접</b></p>'), ('closing_html', '<p>종결 보고서</p>')]:
+        repo.save(CounselingCaseInput(student_id=student.id, title='사례', **{field: content}), case.id, field)
+    db.initialize()
+    saved = repo.list(student.id)[0]
+    assert saved.report_html == '<p>개념화</p>'
+    assert saved.intake_html == '<p><b>접수 면접</b></p>'
+    assert saved.closing_html == '<p>종결 보고서</p>'
+    assert saved.created_at == case.created_at
+    repo.save(CounselingCaseInput(student_id=student.id, title='수정', report_html='<p>수정</p>'), case.id)
+    saved = repo.list(student.id)[0]
+    assert saved.report_html == '<p>수정</p>'
+    assert saved.intake_html == '<p><b>접수 면접</b></p>'
+    assert saved.closing_html == '<p>종결 보고서</p>'
+    with pytest.raises(ValueError):
+        repo.save(CounselingCaseInput(student_id=student.id, title='사례'), case.id, 'unknown')
+
+
+def test_version_six_report_migration(tmp_path):
+    from repositories.case_repo import CaseRepository
+
+    db = Database('migration-test', tmp_path / 'v6.db')
+    with db.session(write=True) as connection:
+        connection.execute('''CREATE TABLE counseling_cases (id INTEGER PRIMARY KEY,
+            student_id INTEGER NOT NULL, title TEXT NOT NULL, report_html TEXT NOT NULL,
+            created_at TEXT NOT NULL, updated_at TEXT NOT NULL)''')
+        connection.execute("""INSERT INTO counseling_cases VALUES
+            (1, 1, '기존 사례', '<p>기존 보고서</p>', '2026-01-01T00:00:00+00:00', '2026-01-01T00:00:00+00:00')""")
+        connection.execute('PRAGMA user_version=6')
+    db.initialize()
+    db.initialize()
+    case = CaseRepository(db).list(1)[0]
+    assert case.report_html == '<p>기존 보고서</p>'
+    assert case.intake_html == case.closing_html == ''

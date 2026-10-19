@@ -3,7 +3,7 @@
 from datetime import datetime
 
 from database import Database, NotFoundError
-from models import Counseling, CounselingInput
+from models import Counseling, CounselingInput, StudentTimelineEntry
 from repositories._support import check_page, now_text, utc_text, values
 
 
@@ -18,12 +18,23 @@ class CounselingRepository:
         data = values(CounselingInput.model_validate(counseling.model_dump(include=set(CounselingInput.model_fields))))
         data['created_at'] = data['updated_at'] = now_text()
         with self.database.session(write=True) as connection:
+            if data['case_id'] is None:
+                row = connection.execute('SELECT id FROM counseling_cases WHERE student_id=? ORDER BY id LIMIT 1',
+                                         (data['student_id'],)).fetchone()
+                if row is None:
+                    cursor = connection.execute(
+                        "INSERT INTO counseling_cases (student_id, title, created_at, updated_at) VALUES (?, '기본 상담 사례', ?, ?)",
+                        (data['student_id'], data['created_at'], data['updated_at']))
+                    data['case_id'] = cursor.lastrowid
+                else:
+                    data['case_id'] = row['id']
             cursor = connection.execute(
                 '''INSERT INTO counseling
-                (student_id, starts_at, duration_minutes, category, status, title,
-                 content_markdown, follow_up, created_at, updated_at)
-                VALUES (:student_id, :starts_at, :duration_minutes, :category, :status, :title,
-                        :content_markdown, :follow_up, :created_at, :updated_at)''', data)
+                (student_id, case_id, starts_at, duration_minutes, category, status, title,
+                 content_markdown, content_format, counseling_method, counseling_target, counseling_area, follow_up, created_at, updated_at)
+                VALUES (:student_id, :case_id, :starts_at, :duration_minutes, :category, :status, :title,
+                        :content_markdown, :content_format, :counseling_method, :counseling_target, :counseling_area,
+                        :follow_up, :created_at, :updated_at)''', data)
             row = connection.execute('SELECT * FROM counseling WHERE id=?', (cursor.lastrowid,)).fetchone()
             return Counseling.model_validate(dict(row))
 
@@ -34,7 +45,7 @@ class CounselingRepository:
             return Counseling.model_validate(dict(row)) if row else None
 
     def list(self, *, student_id: int | None = None, start: datetime | None = None,
-             end: datetime | None = None, limit: int = 100, offset: int = 0) -> list[Counseling]:
+             end: datetime | None = None, case_id: int | None = None, limit: int = 100, offset: int = 0) -> list[Counseling]:
         """시작 시각 기준 [start, end) 범위 조회. 최신순이며 시간대 변환은 UI 책임이다."""
         check_page(limit, offset)
         start_text = utc_text(start) if start is not None else None
@@ -45,10 +56,11 @@ class CounselingRepository:
             rows = connection.execute(
                 '''SELECT * FROM counseling
                 WHERE (:student_id IS NULL OR student_id=:student_id)
+                  AND (:case_id IS NULL OR case_id=:case_id)
                   AND (:start IS NULL OR starts_at >= :start)
                   AND (:end IS NULL OR starts_at < :end)
                 ORDER BY starts_at DESC, id DESC LIMIT :limit OFFSET :offset''',
-                dict(student_id=student_id, start=start_text, end=end_text,
+                dict(student_id=student_id, case_id=case_id, start=start_text, end=end_text,
                      limit=limit, offset=offset)).fetchall()
             return [Counseling.model_validate(dict(row)) for row in rows]
 
@@ -58,9 +70,10 @@ class CounselingRepository:
         data.update(id=counseling_id, updated_at=now_text())
         with self.database.session(write=True) as connection:
             cursor = connection.execute(
-                '''UPDATE counseling SET student_id=:student_id, starts_at=:starts_at,
+                '''UPDATE counseling SET student_id=:student_id, case_id=coalesce(:case_id, case_id), starts_at=:starts_at,
                 duration_minutes=:duration_minutes, category=:category, status=:status,
-                title=:title, content_markdown=:content_markdown, follow_up=:follow_up,
+                title=:title, content_markdown=:content_markdown, content_format=:content_format, follow_up=:follow_up,
+                counseling_method=:counseling_method, counseling_target=:counseling_target, counseling_area=:counseling_area,
                 updated_at=:updated_at WHERE id=:id''', data)
             if cursor.rowcount == 0:
                 raise NotFoundError('상담 기록을 찾을 수 없습니다.')
@@ -72,3 +85,22 @@ class CounselingRepository:
         with self.database.session(write=True) as connection:
             if connection.execute('DELETE FROM counseling WHERE id=?', (counseling_id,)).rowcount == 0:
                 raise NotFoundError('상담 기록을 찾을 수 없습니다.')
+
+    def list_timeline(self, *, student_id: int, limit: int = 100, offset: int = 0) -> list[StudentTimelineEntry]:
+        """현재 연결된 집단의 일지와 개인 상담을 합쳐 정렬한 뒤 페이지를 나눈다."""
+        check_page(limit, offset)
+        with self.database.session() as connection:
+            rows = connection.execute('''
+                SELECT id, 'individual' AS kind, starts_at, duration_minutes, title,
+                       '' AS group_name, counseling_area, category, counseling_method, counseling_target
+                FROM counseling WHERE student_id=:student_id
+                UNION ALL
+                SELECT l.id, 'group' AS kind, l.starts_at, l.duration_minutes, l.title,
+                       g.name AS group_name, '', '집단상담', '', ''
+                FROM group_counseling_logs l
+                JOIN counseling_groups g ON g.id=l.group_id
+                JOIN group_counseling_members m ON m.group_id=g.id
+                WHERE m.student_id=:student_id
+                ORDER BY starts_at DESC, kind ASC, id DESC LIMIT :limit OFFSET :offset
+            ''', dict(student_id=student_id, limit=limit, offset=offset)).fetchall()
+            return [StudentTimelineEntry.model_validate(dict(row)) for row in rows]

@@ -128,8 +128,7 @@ class StudentView:
                             ui.label('등록된 가족 구성원이 없습니다.').classes('text-slate-500')
                 with ui.card().classes('w-full rounded-2xl shadow-sm p-6'):
                     ui.label('상담 타임라인').classes('text-xl font-bold')
-                    ui.label('최신순 · 한국 표준시(KST) · 예약 및 취소 포함').classes('text-sm text-slate-500')
-                    self.timeline = ui.column().classes('w-full gap-3')
+                    self.timeline = ui.timeline(side='right', layout='dense', color='primary').classes('w-full')
                     self.timeline_message = ui.label().classes('text-sm text-slate-500')
                     self.more = ui.button('이력 더 보기', on_click=self.load_timeline).props('flat')
         self.timeline_offset = 0
@@ -138,7 +137,7 @@ class StudentView:
         await self.load_timeline()
 
     async def load_timeline(self) -> None:
-        """상담 이력을 페이지 단위로 추가한다. 원문은 실행되지 않는 텍스트로 표시한다."""
+        """상담 이력을 페이지 단위로 추가하고 요약 항목만 표시한다."""
         if self.selected is None or self.timeline_busy or not self.timeline_more:
             return
         request, student_id = self.detail_request, self.selected.id
@@ -146,19 +145,25 @@ class StudentView:
         self.more.disable()
         self.timeline_message.text = '상담 이력을 불러오는 중입니다…'
         try:
-            entries = await run.io_bound(self.counseling.list, student_id=student_id,
+            entries = await run.io_bound(self.counseling.list_timeline, student_id=student_id,
                                          limit=PAGE_SIZE + 1, offset=self.timeline_offset)
             if request != self.detail_request:
                 return
             with self.timeline:
                 for entry in entries[:PAGE_SIZE]:
                     date_label = entry.starts_at.astimezone(KST).strftime('%Y.%m.%d %H:%M')
-                    with ui.expansion(f'{date_label} · {entry.title}', icon='chat_bubble_outline').classes('w-full border rounded-lg'):
-                        ui.label(f'{STATUS_LABELS[entry.status]} · {entry.category} · {entry.duration_minutes}분').classes('text-sm text-slate-500')
-                        ui.label(entry.content_markdown or '작성된 상담 내용이 없습니다.').classes('whitespace-pre-wrap break-words w-full')
-                        if entry.follow_up:
-                            ui.label('후속 조치').classes('font-semibold mt-3')
-                            ui.label(entry.follow_up).classes('whitespace-pre-wrap break-words w-full')
+                    with ui.timeline_entry(title=date_label,
+                                           icon='groups' if entry.kind == 'group' else 'chat_bubble_outline'):
+                        if entry.kind == 'group':
+                            ui.label(f'집단상담 · {entry.group_name} · {entry.duration_minutes}분').classes('text-sm text-slate-500')
+                            ui.label(entry.title).classes('text-sm text-slate-500')
+                        else:
+                            ui.label(
+                                f'{entry.counseling_area or "미지정"} · {entry.category} · {entry.duration_minutes}분'
+                            ).classes('text-sm text-slate-500')
+                            ui.label(
+                                f'{entry.counseling_method or "미입력"} · {entry.counseling_target or "미입력"}'
+                            ).classes('text-sm text-slate-500')
             self.timeline_offset += min(len(entries), PAGE_SIZE)
             self.timeline_more = len(entries) > PAGE_SIZE
             self.timeline_message.text = f'{self.timeline_offset}건 표시' if self.timeline_offset else '아직 등록된 상담 이력이 없습니다.'

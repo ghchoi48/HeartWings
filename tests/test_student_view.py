@@ -13,7 +13,7 @@ from nicegui import ui
 from pydantic import ValidationError
 
 from database import DatabaseError
-from models import Counseling, Student
+from models import StudentTimelineEntry, Student
 from views.student_view import PAGE_SIZE, StudentView, student_form_input
 
 
@@ -46,7 +46,7 @@ class StudentViewTests(unittest.IsolatedAsyncioTestCase):
         self.students = Mock()
         self.students.list.return_value = []
         self.counseling = Mock()
-        self.counseling.list.return_value = []
+        self.counseling.list_timeline.return_value = []
         self.host = ui.column()
         self.view = StudentView(self.students, self.counseling)
         with self.host, patch('views.student_view.ui.timer'):
@@ -107,16 +107,28 @@ class StudentViewTests(unittest.IsolatedAsyncioTestCase):
         student = make_student()
         self.students.get.return_value = student
         now = datetime.now(timezone.utc)
-        self.counseling.list.return_value = [Counseling(
-            id=1, student_id=student.id, starts_at=now, title='가상 상담',
+        self.counseling.list_timeline.return_value = [StudentTimelineEntry(
+            id=1, student_id=student.id, starts_at=now, title='가상 상담', duration_minutes=50, category='개인상담',
             content_markdown='<script>unsafe()</script>', created_at=now, updated_at=now,
         )]
         await self.view.load_profile(student.id)
         self.assertEqual(self.view.selected, student)
         self.assertEqual(self.view.timeline_offset, 1)
-        # 상담 원문은 ui.label로만 표시하여 HTML 실행 경로를 만들지 않는다.
+        # 타임라인은 상담 본문 없이 요약 항목만 표시한다.
         texts = [element.text for element in self.view.timeline.descendants() if isinstance(element, ui.label)]
-        self.assertIn('<script>unsafe()</script>', texts)
+        self.assertNotIn('<script>unsafe()</script>', texts)
+        self.assertIn('미지정 · 개인상담 · 50분', texts)
+        self.assertIn('미입력 · 미입력', texts)
+
+    async def test_group_timeline_summary(self):
+        self.students.get.return_value = make_student()
+        self.counseling.list_timeline.return_value = [StudentTimelineEntry(
+            id=1, kind='group', starts_at=datetime.now(timezone.utc), title='첫 회기',
+            group_name='사회성 집단', duration_minutes=60)]
+        await self.view.load_profile(1)
+        texts = [element.text for element in self.view.timeline.descendants() if isinstance(element, ui.label)]
+        self.assertIn('집단상담 · 사회성 집단 · 60분', texts)
+        self.assertIn('첫 회기', texts)
 
     async def test_database_failure_clears_previous_rows(self):
         self.students.list.return_value = [make_student()]

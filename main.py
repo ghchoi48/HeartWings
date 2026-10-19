@@ -27,7 +27,7 @@ def register_page(path: Path) -> None:
         ui.colors(primary='#24756b', secondary='#64748b')
         drawer = ui.left_drawer(value=False, bordered=True).props('width=200').classes('bg-white p-4')
         drawer.set_visibility(False)
-        with ui.header().classes('items-center justify-between px-6'):
+        with ui.header().classes('items-center justify-between px-6') as header:
             with ui.row().classes('items-center gap-3'):
                 menu = ui.button(icon='menu', on_click=drawer.toggle).props('flat color=white aria-label=사이드바').tooltip('사이드바 열기/닫기')
                 menu.set_visibility(False)
@@ -81,7 +81,7 @@ def register_page(path: Path) -> None:
                         ui.navigate.to('/')
 
                     AppLayout(StudentRepository(database), CounselingRepository(database),
-                              ReportingRepository(database), on_lock=lock_database).build(root, drawer)
+                              ReportingRepository(database), on_lock=lock_database).build(root, drawer, header)
                     menu.set_visibility(True)
                     drawer.set_visibility(True)
                     drawer.show()

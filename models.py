@@ -61,15 +61,36 @@ class Student(StudentInput, FamilyInput):
         return json.loads(value) if isinstance(value, str) else value
 
 
+class CounselingCaseInput(InputModel):
+    """학생별 상담 사례와 HTML 사례 개념화 보고서."""
+
+    student_id: int = Field(gt=0)
+    title: str = Field(min_length=1, max_length=200)
+    report_html: Annotated[str, StringConstraints(strip_whitespace=False)] = Field(default='', max_length=200000)
+    intake_html: Annotated[str, StringConstraints(strip_whitespace=False)] = Field(default='', max_length=200000)
+    closing_html: Annotated[str, StringConstraints(strip_whitespace=False)] = Field(default='', max_length=200000)
+
+
+class CounselingCase(CounselingCaseInput):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
+
 class CounselingInput(InputModel):
     """상담 예약과 일지를 함께 표현한다. 시각에는 시간대가 필수다."""
 
     student_id: int = Field(gt=0)
+    case_id: int | None = Field(default=None, gt=0)
     starts_at: datetime
     duration_minutes: int = Field(default=50, ge=1, le=1440)
     category: str = Field(default='개인상담', min_length=1, max_length=100)
+    counseling_method: str = Field(default='', max_length=100)
+    counseling_target: str = Field(default='', max_length=200)
+    counseling_area: str = Field(default='', max_length=100)
     status: Literal['scheduled', 'completed', 'cancelled'] = 'scheduled'
     title: str = Field(min_length=1, max_length=200)
+    content_format: Literal['markdown', 'html'] = 'markdown'
     content_markdown: Annotated[str, StringConstraints(strip_whitespace=False)] = Field(default='', max_length=200000)
     follow_up: str = Field(default='', max_length=20000)
 
@@ -125,3 +146,75 @@ class CounselingReport:
     categories: tuple[ReportBucket, ...]
     months: tuple[ReportBucket, ...]
     grades: tuple[ReportBucket, ...]
+
+
+class GroupCounselingInput(InputModel):
+    """집단 상담 프로그램의 기본 정보."""
+
+    name: str = Field(min_length=1, max_length=200)
+    facilitator: str = Field(default='', max_length=100)
+    period: str = Field(default='', max_length=23)
+    counseling_area: str = Field(default='', max_length=100)
+    participants: str = Field(default='', max_length=20000)
+    student_ids: list[Annotated[int, Field(gt=0)]] = Field(default_factory=list)
+    purpose: str = Field(default='', max_length=20000)
+    notes: str = Field(default='', max_length=20000)
+
+    @field_validator('period')
+    @classmethod
+    def validate_period(cls, value: str) -> str:
+        if not value:
+            return ''
+        parts = value.split(' - ')
+        if len(parts) not in (1, 2):
+            raise ValueError('운영 기간은 날짜 또는 시작일 - 종료일 형식으로 입력하세요.')
+        dates = [date.fromisoformat(part.strip()) for part in parts]
+        if dates[0] > dates[-1]:
+            raise ValueError('운영 종료일은 시작일보다 빠를 수 없습니다.')
+        return ' - '.join(day.isoformat() for day in dates)
+
+
+class GroupCounseling(GroupCounselingInput):
+    participant_labels: list[str] = Field(default_factory=list)
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class GroupLogInput(InputModel):
+    """집단에 종속되는 회기별 상담일지."""
+
+    group_id: int = Field(gt=0)
+    title: str = Field(min_length=1, max_length=200)
+    starts_at: datetime
+    duration_minutes: int = Field(default=50, ge=1, le=1440)
+    content_html: Annotated[str, StringConstraints(strip_whitespace=False)] = Field(default='', max_length=200000)
+    follow_up: str = Field(default='', max_length=20000)
+
+    @field_validator('starts_at')
+    @classmethod
+    def require_timezone(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError('상담 시각에 시간대를 포함하세요.')
+        return value
+
+
+class GroupLog(GroupLogInput):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class StudentTimelineEntry(BaseModel):
+    """본문을 제외한 개인·집단 상담 통합 이력."""
+
+    id: int
+    kind: Literal['individual', 'group'] = 'individual'
+    starts_at: datetime
+    duration_minutes: int
+    title: str
+    group_name: str = ''
+    counseling_area: str = ''
+    category: str = ''
+    counseling_method: str = ''
+    counseling_target: str = ''

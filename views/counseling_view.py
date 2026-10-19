@@ -1,29 +1,49 @@
-"""학생별 상담 일지 목록과 마크다운 편집/미리보기. SQL은 저장소에 위임한다."""
+"""학생별 상담 일지 목록과 서식 편집/미리보기. SQL은 저장소에 위임한다."""
 
 from collections.abc import Awaitable, Callable
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 
 from nicegui import run, ui
 from pydantic import ValidationError
 
 from database import DatabaseError
-from models import Counseling, CounselingInput, Student
+from models import Counseling, CounselingInput, Student, CounselingCase, CounselingCaseInput
+from repositories.case_repo import CaseRepository
 from repositories.counseling_repo import CounselingRepository
 from repositories.student_repo import StudentRepository
 from views.student_list import StudentList
+from views.counseling_content import clean_html, editor_html
 
 KST = timezone(timedelta(hours=9))
 PAGE_SIZE = 20
+COUNSELING_AREAS = ['학업', '진로', '성격', '성', '대인관계', '가정 및 가족관계', '일탈 및 비행',
+                    '학교폭력 가해', '학교폭력 피해', '자해 및 자살', '정신건강',
+                    '컴퓨터 및 스마트폰 과사용', '정보제공', '기타']
 STATUSES = {'scheduled': '예약', 'completed': '완료', 'cancelled': '취소'}
 
 
 def counseling_form_input(student_id: int, values: dict) -> CounselingInput:
-    """화면의 한국 시각을 시간대가 포함된 모델로 바꾼다. 마크다운은 가공하지 않는다."""
+    """화면의 한국 시각을 시간대가 포함된 모델로 바꾼다. HTML은 정화한다."""
     data = dict(values)
-    starts_at = datetime.fromisoformat(data['starts_at'])
+    for key in ('counseling_method', 'counseling_target', 'counseling_area'):
+        if key in data:
+            data[key] = data[key] or ''
+    if data.get('content_format') == 'html':
+        data['content_markdown'] = clean_html(data.get('content_markdown') or '')
+    if 'starts_on' in data or 'starts_time' in data:
+        starts_at = datetime.combine(
+            date.fromisoformat(data.pop('starts_on')),
+            time.fromisoformat(data.pop('starts_time')),
+        )
+    else:
+        starts_at = datetime.fromisoformat(data['starts_at'])
     if starts_at.tzinfo is not None:
         raise ValueError('상담 일시는 한국 시각으로 입력해 주세요.')
     data['starts_at'] = starts_at.replace(tzinfo=KST)
+    if 'counseling_area' in data:
+        data['title'] = data['counseling_area'] or '상담 분야 미지정'
+    else:
+        data.setdefault('title', '상담 분야 미지정')
     return CounselingInput(student_id=student_id, **data)
 
 
@@ -34,6 +54,10 @@ class CounselingView:
                  on_saved: Callable[[int], Awaitable[None]] | None = None):
         self.students = students
         self.counseling = counseling
+        self.cases = CaseRepository(counseling.database)
+        self.selected_case: CounselingCase | None = None
+        self.case_request = 0
+        self.case_options: dict[int, CounselingCase] = {}
         self.on_saved = on_saved
         self.selected: Student | None = None
         self.log_offset = 0
@@ -44,7 +68,7 @@ class CounselingView:
     def build(self) -> None:
         """학생 검색, 선택 학생의 상담 목록을 구성한다."""
         with ui.column().classes('w-full gap-5 p-4 md:p-8'):
-            ui.label('상담 일지').classes('text-3xl font-bold text-slate-800')
+            ui.label('개인 상담').classes('text-3xl font-bold text-slate-800')
             ui.label('학생을 선택하고 상담 내용을 기록하세요.').classes('text-slate-500')
             with ui.element('div').classes('w-full grid grid-cols-1 lg:grid-cols-[3fr_7fr] items-start gap-6'):
                 self.student_list = StudentList(self.students, on_select=self.select_student)
@@ -52,6 +76,26 @@ class CounselingView:
                 with ui.card().classes('w-full min-w-0 rounded-2xl shadow-sm p-5'):
                     with ui.row().classes('w-full items-center justify-between'):
                         self.student_heading = ui.label('상담 대상 학생을 선택해 주세요.').classes('text-xl font-bold')
+                    with ui.row().classes('w-full items-center justify-between'):
+                        ui.label('상담 사례 목록').classes('text-lg font-bold')
+                        self.add_case = ui.button('새 상담 사례', icon='create_new_folder', on_click=lambda: self.open_case_editor())
+                        self.add_case.disable()
+                    with ui.row().classes('w-full items-center'):
+                        self.case_select = ui.select({}, label='상담 사례', on_change=self.change_case).props('outlined dense').classes('grow min-w-0')
+                        self.case_select.disable()
+                        self.intake_interview = ui.button('접수 면접', icon='assignment_ind',
+                                                        on_click=lambda: self.open_case_editor(self.selected_case, 'intake_html')).props('outline')
+                        self.intake_interview.disable()
+                        self.edit_case = ui.button('사례 개념화 보고서', icon='description',
+                                                   on_click=lambda: self.open_case_editor(self.selected_case)).props('outline')
+                        self.edit_case.disable()
+                        self.closing_report = ui.button('종결 보고서', icon='task_alt',
+                                                      on_click=lambda: self.open_case_editor(self.selected_case, 'closing_html')).props('outline')
+                        self.closing_report.disable()
+                    self.case_message = ui.label().classes('text-sm text-slate-500')
+                    ui.separator()
+                    with ui.row().classes('w-full items-center justify-between'):
+                        self.log_heading = ui.label('상담 일지 목록').classes('text-lg font-bold')
                         self.add = ui.button('새 상담 일지', icon='edit_note', on_click=lambda: self.open_editor())
                         self.add.disable()
                     self.logs = ui.column().classes('w-full gap-3')
@@ -70,8 +114,19 @@ class CounselingView:
         self.log_request += 1
         request = self.log_request
         self.selected = None
+        self.selected_case = None
+        self.case_request += 1
+        self.case_options = {}
+        self.case_select.set_options({}, value=None)
+        self.case_select.disable()
+        self.edit_case.disable()
+        self.intake_interview.disable()
+        self.closing_report.disable()
+        self.case_message.text = ''
+        self.add_case.disable()
         self.logs.clear()
         self.log_message.text = ''
+        self.log_page_label.text = ''
         self.student_heading.text = '상담 대상 학생을 선택해 주세요.'
         self.add.disable()
         self.log_previous.disable()
@@ -91,9 +146,142 @@ class CounselingView:
             return
         self.selected = student
         self.student_heading.text = f'{student.name} · {student.grade}학년 {student.classroom}반'
-        self.add.enable()
+        self.add_case.enable()
         self.log_offset = 0
+        await self.load_cases()
+
+    async def load_cases(self, preferred_id: int | None = None) -> None:
+        if self.selected is None:
+            return
+        self.case_request += 1
+        request = self.case_request
+        student_id = self.selected.id
+        previous_id = preferred_id or (self.selected_case.id if self.selected_case else None)
+        self.log_request += 1
+        self.selected_case = None
+        self.add.disable()
+        self.logs.clear()
+        self.case_options = {}
+        self.case_select.set_options({}, value=None)
+        self.case_select.disable()
+        self.edit_case.disable()
+        self.intake_interview.disable()
+        self.closing_report.disable()
+        self.log_previous.disable()
+        self.log_next.disable()
+        self.log_page_label.text = ''
+        self.log_message.text = ''
+        self.case_message.text = '상담 사례를 불러오는 중입니다…'
+        try:
+            cases = await run.io_bound(self.cases.list, student_id)
+        except DatabaseError as error:
+            if request == self.case_request:
+                self.case_message.text = str(error)
+            return
+        if request != self.case_request:
+            return
+        self.case_options = {case.id: case for case in cases}
+        self.case_select.set_options({case.id: case.title for case in cases})
+        self.case_select.set_enabled(bool(cases))
+        self.case_message.text = f'{len(cases)}개 사례 · 사례를 선택해 상담 일지를 확인하세요.' if cases else '등록된 사례가 없습니다. 새 상담 사례를 만들어 주세요.'
+        if cases:
+            await self.select_case(next((case for case in cases if case.id == previous_id), cases[0]))
+
+    async def change_case(self) -> None:
+        case = self.case_options.get(self.case_select.value)
+        if case is not None and case != self.selected_case:
+            await self.select_case(case)
+
+    async def select_case(self, case: CounselingCase) -> None:
+        if self.selected is None or case.student_id != self.selected.id:
+            return
+        self.selected_case = case
+        if case.id in self.case_options:
+            self.case_select.set_value(case.id)
+        self.edit_case.enable()
+        self.intake_interview.enable()
+        self.closing_report.enable()
+        self.log_offset = 0
+        self.add.enable()
         await self.load_logs()
+
+    async def open_case_editor(self, case: CounselingCase | None = None, report_field: str = 'report_html') -> None:
+        if self.editor_open or self.selected is None:
+            return
+        if case is not None and case.student_id != self.selected.id:
+            return
+        report_name, placeholder = {
+            'report_html': ('사례 개념화 보고서', '주호소, 배경, 사례 이해, 상담 목표와 개입 계획 등을 작성하세요.'),
+            'intake_html': ('접수 면접', '상담 신청 경위, 주호소, 배경 정보와 초기 면접 내용을 작성하세요.'),
+            'closing_html': ('종결 보고서', '상담 진행 요약, 목표 달성 정도, 종결 사유와 추후 계획을 작성하세요.'),
+        }[report_field]
+        self.editor_open = True
+        student = self.selected
+        dialog = None
+        try:
+            with ui.context.client.content:
+                with ui.dialog().props('persistent') as dialog, ui.card().classes('w-full max-w-6xl p-6 gap-4'):
+                    ui.label(report_name if case else '새 상담 사례').classes('text-2xl font-bold')
+                    ui.label(student.name).classes('text-slate-500')
+                    title = ui.input('사례명', value=case.title if case else '').props('outlined maxlength=200 disable').classes('w-full')
+                    ui.label(report_name).classes('font-semibold')
+                    report = ui.editor(value=clean_html(getattr(case, report_field)) if case else '',
+                                       placeholder=placeholder).classes('w-full').props("""min-height=360px :toolbar='[["bold", "italic", "underline", "strike"], ["unordered", "ordered"], ["left", "center", "right"], ["undo", "redo"]]'""")
+                    message = ui.label().classes('text-sm text-red-700')
+                    with ui.row().classes('w-full justify-end'):
+                        cancel_button = ui.button('작성 닫기').props('flat')
+                        save_button = ui.button('사례 저장', icon='save')
+            original = (title.value, report.value)
+            saving = False
+
+            async def cancel():
+                if saving:
+                    return
+                if (title.value, report.value) != original:
+                    with ui.dialog().props('persistent') as confirm, ui.card():
+                        ui.label('저장하지 않은 내용을 버릴까요?')
+                        ui.button('계속 작성', on_click=lambda: confirm.submit(False))
+                        ui.button('변경 내용 버리기', on_click=lambda: confirm.submit(True))
+                    discard = await confirm
+                    confirm.delete()
+                    if not discard:
+                        return
+                dialog.submit(None)
+
+            async def save():
+                nonlocal saving
+                if saving:
+                    return
+                try:
+                    value = CounselingCaseInput(student_id=student.id, title=title.value,
+                                                **{report_field: clean_html(report.value or '')})
+                except (ValueError, TypeError):
+                    message.text = '사례명(1~200자)과 보고서 길이(최대 200,000자)를 확인해 주세요.'
+                    return
+                saving = True
+                for field in (title, report, save_button, cancel_button):
+                    field.disable()
+                try:
+                    saved = await run.io_bound(self.cases.save, value, case.id if case else None, report_field)
+                    dialog.submit(saved)
+                except DatabaseError as error:
+                    message.text = str(error)
+                finally:
+                    saving = False
+                    for field in (title, report, save_button, cancel_button):
+                        field.enable()
+
+            cancel_button.on_click(cancel)
+            save_button.on_click(save)
+            saved = await dialog
+            if saved:
+                ui.notify(f'상담 사례와 {report_name} 내용을 저장했습니다.', type='positive')
+                if self.selected and self.selected.id == student.id:
+                    await self.load_cases(preferred_id=saved.id)
+        finally:
+            self.editor_open = False
+            if dialog is not None and not dialog.is_deleted:
+                dialog.delete()
 
     async def log_page(self, direction: int) -> None:
         """선택 학생의 상담 목록 페이지를 이동한다."""
@@ -102,7 +290,7 @@ class CounselingView:
 
     async def load_logs(self) -> None:
         """선택 학생의 상담 목록을 최신순으로 읽는다."""
-        if self.selected is None:
+        if self.selected is None or self.selected_case is None:
             return
         self.log_request += 1
         request = self.log_request
@@ -112,7 +300,7 @@ class CounselingView:
         self.log_message.text = '상담 일지를 불러오는 중입니다…'
         try:
             entries = await run.io_bound(self.counseling.list, student_id=self.selected.id,
-                                         limit=PAGE_SIZE + 1, offset=self.log_offset)
+                                         case_id=self.selected_case.id, limit=PAGE_SIZE + 1, offset=self.log_offset)
         except DatabaseError as error:
             if request == self.log_request:
                 self.log_message.text = str(error)
@@ -123,7 +311,7 @@ class CounselingView:
             for entry in entries[:PAGE_SIZE]:
                 with ui.row().classes('w-full items-center justify-between border rounded-xl p-4'):
                     with ui.column().classes('gap-1'):
-                        ui.label(entry.title).classes('font-semibold')
+                        ui.label(entry.counseling_area or '상담 분야 미지정').classes('font-semibold')
                         ui.label(f'{entry.starts_at.astimezone(KST):%Y.%m.%d %H:%M} · {STATUSES[entry.status]} · {entry.category} · {entry.duration_minutes}분').classes('text-sm text-slate-500')
                     ui.button('열기 / 수정', icon='edit', on_click=lambda entry_id=entry.id: self.open_editor(entry_id)).props('outline')
         self.log_message.text = f'이 페이지에 {min(len(entries), PAGE_SIZE)}건 · 한국 표준시' if entries else '등록된 상담 일지가 없습니다. 새 상담 일지를 작성해 보세요.'
@@ -133,10 +321,11 @@ class CounselingView:
 
     async def open_editor(self, entry_id: int | None = None) -> None:
         """원문을 유지하는 편집 모달. 실패 시 입력을 보존하며 미저장 취소를 확인한다."""
-        if self.editor_open or self.selected is None:
+        if self.editor_open or self.selected is None or self.selected_case is None:
             return
         self.editor_open = True
         student = self.selected
+        case = self.selected_case
         dialog = None
         try:
             entry = None
@@ -146,7 +335,7 @@ class CounselingView:
                 except DatabaseError as error:
                     ui.notify(str(error), type='negative')
                     return
-                if entry is None or entry.student_id != student.id:
+                if entry is None or entry.student_id != student.id or entry.case_id != case.id:
                     ui.notify('상담 일지를 찾을 수 없습니다. 목록을 새로고침해 주세요.', type='warning')
                     return
             # 모달을 목록 하위가 아닌 클라이언트 루트에 붙여 목록 재조회와 수명을 분리한다.
@@ -176,9 +365,10 @@ class CounselingView:
                 if saving:
                     return
                 try:
-                    value = counseling_form_input(student.id, {key: field.value for key, field in fields.items()})
+                    value = counseling_form_input(student.id, dict(
+                        {key: field.value for key, field in fields.items()}, content_format='html', case_id=case.id))
                 except (ValueError, ValidationError, TypeError):
-                    message.text = '제목·유형을 입력하고 일시와 상담 시간(1~1440분)을 확인해 주세요. 본문은 최대 200,000자입니다.'
+                    message.text = '상담 유형, 날짜·시각, 상담 시간(1~1440분)을 확인해 주세요. 입력 길이 제한도 확인해 주세요.'
                     return
                 saving = True
                 for field in fields.values():
@@ -234,36 +424,52 @@ class CounselingView:
             return
         self.selected = student
         self.student_heading.text = f'{student.name} · {student.grade}학년 {student.classroom}반'
-        self.add.enable()
+        self.add_case.enable()
         self.log_offset = 0
-        await self.load_logs()
+        await self.load_cases(preferred_id=entry.case_id)
         if request == self.student_request:
             await self.open_editor(entry_id)
 
     def build_editor(self, student: Student, entry: Counseling | None):
-        """편집 필드와 정화된 HTML 미리보기를 만든다. 저장 내용에는 렌더링 결과를 사용하지 않는다."""
+        """상담 입력 필드와 WYSIWYG 에디터를 구성한다."""
         initial = entry.model_dump() if entry else dict(title='', category='개인상담', status='completed',
             duration_minutes=50, content_markdown='', follow_up='', starts_at=datetime.now(KST).replace(second=0, microsecond=0))
         fields = {}
+        local_start = initial['starts_at'].astimezone(KST)
         with ui.dialog().props('persistent') as dialog, ui.card().classes('w-full max-w-6xl p-6 gap-4'):
             ui.label('상담 일지 수정' if entry else '새 상담 일지 작성').classes('text-2xl font-bold')
             ui.label(f'{student.name} · {student.grade}학년 {student.classroom}반 · 학번 {student.student_number or "미입력"}').classes('text-slate-500')
-            fields['title'] = ui.input('상담 제목', value=initial['title']).props('outlined maxlength=200').classes('w-full')
             with ui.row().classes('w-full items-start'):
-                fields['starts_at'] = ui.input('상담 일시 (한국 시각)', value=initial['starts_at'].astimezone(KST).replace(tzinfo=None).isoformat()).props('outlined type=datetime-local step=any').classes('grow')
+                fields['starts_on'] = ui.date_input('상담 날짜', value=local_start.date().isoformat()).props('outlined').classes('grow')
+                fields['starts_time'] = ui.time_input('시작 시각 (한국 시각)', value=local_start.time().isoformat()).props('outlined').classes('grow')
+                fields['starts_time'].picker.props('format24h with-seconds mask="HH:mm:ss"')
                 fields['duration_minutes'] = ui.number('상담 시간 (분)', value=initial['duration_minutes'], min=1, max=1440, step=1).props('outlined').classes('w-36')
                 fields['category'] = ui.input('상담 유형', value=initial['category']).props('outlined maxlength=100').classes('grow')
                 fields['status'] = ui.select(STATUSES, label='상담 상태', value=initial['status']).props('outlined').classes('w-36')
-            with ui.row().classes('w-full items-stretch gap-4 flex-col md:flex-row'):
-                with ui.column().classes('flex-1 min-w-0'):
-                    ui.label('마크다운 편집').classes('font-semibold')
-                    fields['content_markdown'] = ui.textarea('상담 내용', value=initial['content_markdown'],
-                        placeholder='## 상담 내용\n\n- 학생이 이야기한 내용\n- 상담 중 관찰한 내용').props('outlined rows=14 maxlength=200000').classes('w-full')
-                    ui.label('## 제목 · **강조** · - 목록').classes('text-sm text-slate-500')
-                with ui.column().classes('flex-1 min-w-0 border rounded-xl p-4'):
-                    ui.label('실시간 미리보기').classes('font-semibold')
-                    preview = ui.markdown(initial['content_markdown'], sanitize=True).classes('w-full break-words overflow-auto')
-                    fields['content_markdown'].on_value_change(lambda event: preview.set_content(event.value or ''))
+            with ui.row().classes('w-full items-start'):
+                method = initial.get('counseling_method', '')
+                methods = ['면담', '전화상담', '사이버상담']
+                if method and method not in methods:
+                    methods.append(method)
+                fields['counseling_method'] = ui.select(
+                    methods, label='상담 방법', value=method or None,
+                ).props('outlined clearable').classes('grow')
+                targets = ['학생본인', '보호자(가족)', '교사', '친구']
+                target = initial.get('counseling_target', '')
+                if target and target not in targets:
+                    targets.append(target)
+                fields['counseling_target'] = ui.select(
+                    targets, label='상담 대상', value=target or None,
+                ).props('outlined clearable').classes('grow')
+                fields['counseling_area'] = ui.select(
+                    COUNSELING_AREAS, label='상담 분야', value=initial.get('counseling_area') or None,
+                ).props('outlined clearable').classes('grow')
+            with ui.column().classes('w-full gap-3'):
+                ui.label('상담 내용').classes('font-semibold')
+                fields['content_markdown'] = ui.editor(
+                    value=editor_html(initial['content_markdown'], initial.get('content_format', 'markdown')),
+                    placeholder='상담 내용을 입력하세요.',
+                ).classes('w-full').props("""min-height=320px :toolbar='[["bold", "italic", "underline", "strike"], ["unordered", "ordered"], ["left", "center", "right"], ["undo", "redo"]]'""")
             fields['follow_up'] = ui.textarea('후속 조치', value=initial['follow_up']).props('outlined rows=2 maxlength=20000').classes('w-full')
             message = ui.label().classes('text-sm text-red-700')
             for field in fields.values():

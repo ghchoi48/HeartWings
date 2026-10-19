@@ -71,9 +71,9 @@ def test_exports_and_empty_report(setup):
 def test_no_thousand_row_truncation(setup):
     db, repo = setup
     with db.session(write=True) as connection:
-        connection.executemany('''INSERT INTO counseling(student_id, starts_at, duration_minutes, category,
+        connection.executemany('''INSERT INTO counseling(student_id, case_id, starts_at, duration_minutes, category,
             status, title, content_markdown, follow_up, created_at, updated_at)
-            VALUES(1, '2026-10-19T15:00:00.000000+00:00', 1, '대량', 'completed', '테스트', '', '', '2026', '2026')''',
+            VALUES(1, (SELECT id FROM counseling_cases WHERE student_id=1 LIMIT 1), '2026-10-19T15:00:00.000000+00:00', 1, '대량', 'completed', '테스트', '', '', '2026', '2026')''',
             [()] * 1005)
     report = repo.statistics(date(2026, 10, 20), date(2026, 10, 20))
     assert report.completed == report.total == report.minutes == 1005

@@ -156,5 +156,84 @@ class Database:
                 connection.execute("ALTER TABLE students ADD COLUMN family_welfare_type TEXT NOT NULL DEFAULT ''")
                 connection.execute("ALTER TABLE students ADD COLUMN family_members TEXT NOT NULL DEFAULT '[]'")
                 connection.execute('PRAGMA user_version = 2')
-            elif version != 2:
+                version = 2
+            if version == 2:
+                connection.execute("ALTER TABLE counseling ADD COLUMN content_format TEXT NOT NULL DEFAULT 'markdown'")
+                connection.execute('PRAGMA user_version = 3')
+                version = 3
+            if version == 3:
+                connection.execute("ALTER TABLE counseling ADD COLUMN counseling_method TEXT NOT NULL DEFAULT ''")
+                connection.execute("ALTER TABLE counseling ADD COLUMN counseling_target TEXT NOT NULL DEFAULT ''")
+                connection.execute('PRAGMA user_version = 4')
+                version = 4
+            if version == 4:
+                connection.execute("ALTER TABLE counseling ADD COLUMN counseling_area TEXT NOT NULL DEFAULT ''")
+                connection.execute('PRAGMA user_version = 5')
+                version = 5
+            if version == 5:
+                connection.execute("""CREATE TABLE counseling_cases (
+                    id INTEGER PRIMARY KEY,
+                    student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+                    title TEXT NOT NULL CHECK(length(trim(title)) > 0),
+                    report_html TEXT NOT NULL DEFAULT '',
+                    created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+                )""")
+                connection.execute('CREATE INDEX cases_student ON counseling_cases(student_id, id)')
+                connection.execute('ALTER TABLE counseling ADD COLUMN case_id INTEGER REFERENCES counseling_cases(id) ON DELETE RESTRICT')
+                connection.execute("""INSERT INTO counseling_cases (student_id, title, created_at, updated_at)
+                    SELECT student_id, '기존 상담 사례', min(created_at), max(updated_at)
+                    FROM counseling GROUP BY student_id""")
+                connection.execute('UPDATE counseling SET case_id=(SELECT id FROM counseling_cases WHERE student_id=counseling.student_id)')
+                connection.execute('CREATE INDEX counseling_case_time ON counseling(case_id, starts_at)')
+                for event in ('INSERT', 'UPDATE'):
+                    connection.execute(f"""CREATE TRIGGER counseling_case_{event.lower()}
+                        BEFORE {event} ON counseling
+                        WHEN NEW.case_id IS NULL OR NOT EXISTS (
+                            SELECT 1 FROM counseling_cases WHERE id=NEW.case_id AND student_id=NEW.student_id)
+                        BEGIN SELECT RAISE(ABORT, 'Invalid counseling case'); END""")
+                connection.execute("""CREATE TRIGGER case_student_update BEFORE UPDATE OF student_id ON counseling_cases
+                    WHEN NEW.student_id != OLD.student_id
+                    BEGIN SELECT RAISE(ABORT, 'Case student cannot change'); END""")
+                connection.execute('PRAGMA user_version = 6')
+                version = 6
+            if version == 6:
+                connection.execute("ALTER TABLE counseling_cases ADD COLUMN intake_html TEXT NOT NULL DEFAULT ''")
+                connection.execute("ALTER TABLE counseling_cases ADD COLUMN closing_html TEXT NOT NULL DEFAULT ''")
+                connection.execute('PRAGMA user_version = 7')
+                version = 7
+            if version == 7:
+                connection.execute("""CREATE TABLE counseling_groups (
+                    id INTEGER PRIMARY KEY,
+                    name TEXT NOT NULL CHECK(length(trim(name)) > 0),
+                    facilitator TEXT NOT NULL, participants TEXT NOT NULL,
+                    purpose TEXT NOT NULL, notes TEXT NOT NULL,
+                    created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+                )""")
+                connection.execute("""CREATE TABLE group_counseling_logs (
+                    id INTEGER PRIMARY KEY,
+                    group_id INTEGER NOT NULL REFERENCES counseling_groups(id) ON DELETE RESTRICT,
+                    title TEXT NOT NULL CHECK(length(trim(title)) > 0),
+                    starts_at TEXT NOT NULL,
+                    duration_minutes INTEGER NOT NULL CHECK(duration_minutes BETWEEN 1 AND 1440),
+                    content_html TEXT NOT NULL, follow_up TEXT NOT NULL,
+                    created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+                )""")
+                connection.execute('CREATE INDEX group_logs_time ON group_counseling_logs(group_id, starts_at)')
+                connection.execute('PRAGMA user_version = 8')
+                version = 8
+            if version == 8:
+                connection.execute("""CREATE TABLE group_counseling_members (
+                    group_id INTEGER NOT NULL REFERENCES counseling_groups(id) ON DELETE CASCADE,
+                    student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE RESTRICT,
+                    PRIMARY KEY (group_id, student_id)
+                )""")
+                connection.execute('CREATE INDEX group_members_student ON group_counseling_members(student_id, group_id)')
+                connection.execute('PRAGMA user_version = 9')
+                version = 9
+            if version == 9:
+                connection.execute("ALTER TABLE counseling_groups ADD COLUMN period TEXT NOT NULL DEFAULT ''")
+                connection.execute("ALTER TABLE counseling_groups ADD COLUMN counseling_area TEXT NOT NULL DEFAULT ''")
+                connection.execute('PRAGMA user_version = 10')
+                version = 10
+            if version != 10:
                 raise DatabaseError('지원하지 않는 DB 버전입니다. 앱 버전을 확인하세요.')
