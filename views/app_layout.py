@@ -17,6 +17,8 @@ from views.statistics_view import StatisticsView
 from views.special_education_view import SpecialEducationView
 from views.consultation_view import ConsultationView
 from repositories.teacher_repo import TeacherRepository
+from repositories.education_event_repo import EducationEventRepository
+from views.education_event_view import EducationEventView
 
 
 class AppLayout:
@@ -36,6 +38,7 @@ class AppLayout:
         self.statistics_view: StatisticsView | None = None
         self.consultation_view: ConsultationView | None = None
         self.special_education_view: SpecialEducationView | None = None
+        self.education_event_view: EducationEventView | None = None
         self.opening_schedule = False
         self.panels = {}
         self.buttons = {}
@@ -74,7 +77,8 @@ class AppLayout:
             self.panels['groups'] = ui.column().classes('w-full')
             self.panels['special_education'] = ui.column().classes('w-full')
             self.panels['consultation'] = ui.column().classes('w-full')
-            for page, title in [('psychological_tests', '심리검사'), ('education_events', '교육/행사'),
+            self.panels['education_events'] = ui.column().classes('w-full')
+            for page, title in [('psychological_tests', '심리검사'),
                                 ('settings', '설정'), ('about', '프로그램 정보')]:
                 self.panels[page] = ui.column().classes('w-full gap-6 p-4 md:p-8')
                 with self.panels[page]:
@@ -152,6 +156,10 @@ class AppLayout:
             with self.panels['consultation']:
                 self.consultation_view = ConsultationView(TeacherRepository(self.students.database))
                 self.consultation_view.build()
+        if page == 'education_events' and self.education_event_view is None:
+            with self.panels['education_events']:
+                self.education_event_view = EducationEventView(EducationEventRepository(self.students.database))
+                self.education_event_view.build()
         if page == 'statistics' and self.statistics_view is None:
             with self.panels['statistics']:
                 self.statistics_view = StatisticsView(self.reporting)

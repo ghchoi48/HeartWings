@@ -28,13 +28,13 @@ class ConsultationRepository:
         with self.database.session(write=True) as connection:
             if entry_id is None:
                 cursor = connection.execute('''INSERT INTO consultations
-                    (teacher_id, starts_at, duration_minutes, status, title, content_html, follow_up, created_at, updated_at)
-                    VALUES (:teacher_id, :starts_at, :duration_minutes, :status, :title, :content_html,
+                    (teacher_id, consultation_area, starts_at, duration_minutes, status, title, content_html, follow_up, created_at, updated_at)
+                    VALUES (:teacher_id, :consultation_area, :starts_at, :duration_minutes, :status, :title, :content_html,
                             :follow_up, :updated_at, :updated_at)''', data)
                 entry_id = cursor.lastrowid
             else:
                 data['id'] = entry_id
-                cursor = connection.execute('''UPDATE consultations SET starts_at=:starts_at,
+                cursor = connection.execute('''UPDATE consultations SET starts_at=:starts_at, consultation_area=:consultation_area,
                     duration_minutes=:duration_minutes, status=:status, title=:title, content_html=:content_html,
                     follow_up=:follow_up, updated_at=:updated_at WHERE id=:id AND teacher_id=:teacher_id''', data)
                 if not cursor.rowcount:

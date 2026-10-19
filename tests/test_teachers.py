@@ -23,6 +23,7 @@ def test_teacher_storage_and_migration(tmp_path):
         connection.execute('DROP TABLE special_educations')
         connection.execute('DROP TABLE consultations')
         connection.execute('DROP TABLE teachers')
+        connection.execute('DROP TABLE IF EXISTS education_events')
         connection.execute('PRAGMA user_version=10')
         connection.execute("""INSERT INTO students
             (name, grade, classroom, guardian_contact, notes, created_at, updated_at)
@@ -48,7 +49,7 @@ def test_teacher_storage_and_migration(tmp_path):
     assert len(repo.list()) == 2
     with db.session() as connection:
         assert connection.execute('SELECT name FROM students').fetchone()[0] == '기존 학생'
-        assert connection.execute('PRAGMA user_version').fetchone()[0] == 13
+        assert connection.execute('PRAGMA user_version').fetchone()[0] == 17
 
 
 class ConsultationViewTests(unittest.IsolatedAsyncioTestCase):

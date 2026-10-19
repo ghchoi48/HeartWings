@@ -11,7 +11,7 @@ from nicegui import Client, ui
 from nicegui.page import page
 
 from database import Database, DatabaseError, NotFoundError
-from models import ConsultationInput, TeacherInput, Teacher
+from models import Consultation, ConsultationInput, TeacherInput, Teacher
 from repositories.consultation_repo import ConsultationRepository
 from repositories.teacher_repo import TeacherRepository
 from views.consultation_view import ConsultationView
@@ -27,22 +27,25 @@ def test_migration_and_teacher_isolation(tmp_path):
         connection.execute('DROP TABLE special_education_logs')
         connection.execute('DROP TABLE special_educations')
         connection.execute('DROP TABLE consultations')
+        connection.execute('DROP TABLE IF EXISTS education_events')
         connection.execute('PRAGMA user_version=11')
     db.initialize()
     db.initialize()
     assert teachers.get(first.id) == first
     repo = ConsultationRepository(db)
     value = ConsultationInput(teacher_id=first.id, title='자문', starts_at=datetime.now(timezone.utc),
-                              content_html='<div><b>내용</b></div>', follow_up='후속 조치')
+                              content_html='<div><b>내용</b></div>', follow_up='후속 조치', consultation_area='학교학습')
     saved = repo.save(value)
     assert repo.get(saved.id, first.id) == saved
+    assert saved.consultation_area == '학교학습'
     assert repo.get(saved.id, second.id) is None
     assert repo.list(second.id) == []
     with pytest.raises(NotFoundError):
         repo.save(value.model_copy(update={'teacher_id': second.id}), saved.id)
-    updated = repo.save(value.model_copy(update={'title': '수정'}), saved.id)
+    updated = repo.save(value.model_copy(update={'title': '수정', 'consultation_area': '기타'}), saved.id)
     assert updated.created_at == saved.created_at
     assert updated.title == '수정'
+    assert updated.consultation_area == '기타'
     later = repo.save(value)
     assert repo.list(first.id, limit=1) == [later]
     assert repo.list(first.id, limit=1, offset=1) == [updated]
@@ -82,15 +85,22 @@ class ConsultationEditorTests(unittest.IsolatedAsyncioTestCase):
             save = inspect.getclosurevars(handler).nonlocals['callback']
             await save()
             self.view.consultations.save.assert_not_called()
-            fields['title'].value = '교사 자문'
+            self.assertNotIn('title', fields)
+            self.assertEqual(message.text, '자문 분야를 선택해 주세요.')
+            self.assertIsInstance(fields['consultation_area'], ui.select)
+            self.assertEqual(fields['consultation_area'].options,
+                             ['학교학습', '사회성발달', '정서발달', '진로발달', '행동발달', '기타'])
+            fields['consultation_area'].value = '정서발달'
             fields['content_html'].value = '<b>내용</b><script>alert(1)</script>'
             await save()
             self.assertEqual(message.text, '저장 실패')
-            self.assertEqual(fields['title'].value, '교사 자문')
+            self.assertEqual(fields['consultation_area'].value, '정서발달')
             self.assertTrue(save_button.enabled)
             await save()
             value = self.view.consultations.save.call_args.args[0]
             self.assertEqual(value.teacher_id, 1)
+            self.assertEqual(value.consultation_area, '정서발달')
+            self.assertEqual(value.title, '정서발달')
             self.assertNotIn('<script', value.content_html)
             self.assertEqual(value.starts_at.utcoffset().total_seconds(), 9 * 3600)
             return True
@@ -104,6 +114,25 @@ class ConsultationEditorTests(unittest.IsolatedAsyncioTestCase):
             await self.view.open_log_editor()
         self.assertFalse(self.view.editor_open)
         self.view.load_logs.assert_awaited_once()
+
+    async def test_list_uses_area_instead_of_legacy_title(self):
+        now = datetime.now(timezone.utc)
+        entry = Consultation(id=1, teacher_id=1, title='이전 제목', starts_at=now,
+                             consultation_area='학교학습', created_at=now, updated_at=now)
+        self.view.consultations.list.return_value = [entry]
+
+        async def invoke(function, *args, **kwargs):
+            return function(*args, **kwargs)
+
+        with patch('views.consultation_view.run.io_bound', side_effect=invoke):
+            await self.view.load_logs()
+            labels = [e.text for e in self.view.logs.descendants() if isinstance(e, ui.label)]
+            self.assertIn('학교학습', labels)
+            self.assertNotIn('이전 제목', labels)
+            self.view.consultations.list.return_value = [entry.model_copy(update={'consultation_area': ''})]
+            await self.view.load_logs()
+            labels = [e.text for e in self.view.logs.descendants() if isinstance(e, ui.label)]
+            self.assertIn('자문 분야 미지정', labels)
 
     async def test_old_teacher_logs_cannot_replace_new_selection(self):
         started, release = asyncio.Event(), asyncio.Event()
@@ -123,3 +152,25 @@ class ConsultationEditorTests(unittest.IsolatedAsyncioTestCase):
             await task
         self.assertEqual(self.view.log_message.text, '')
         self.assertFalse(self.view.add_log.enabled)
+
+
+def test_consultation_area_migration(tmp_path):
+    db = Database('test-only', tmp_path / 'area.db')
+    db.initialize()
+    teacher = TeacherRepository(db).save(TeacherInput(name='교사'))
+    repo = ConsultationRepository(db)
+    saved = repo.save(ConsultationInput(teacher_id=teacher.id, title='기존 자문', starts_at=datetime.now(timezone.utc)))
+    with db.session(write=True) as connection:
+        connection.execute('ALTER TABLE consultations DROP COLUMN consultation_area')
+        connection.execute('PRAGMA user_version=15')
+    db.initialize()
+    db.initialize()
+    assert repo.get(saved.id, teacher.id) == saved
+    updated = repo.save(ConsultationInput(teacher_id=teacher.id, title=saved.title,
+                        starts_at=saved.starts_at, consultation_area='진로발달'), saved.id)
+    with Client(page('/consultation-area-edit')):
+        view = ConsultationView(Mock())
+        dialog, fields, *_ = view.build_log_editor(teacher, updated)
+        assert fields['consultation_area'].value == '진로발달'
+        assert 'title' not in fields
+        dialog.delete()

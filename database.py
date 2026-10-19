@@ -292,5 +292,57 @@ class Database:
                 connection.execute('CREATE INDEX special_education_logs_time ON special_education_logs(case_id, starts_at)')
                 connection.execute('PRAGMA user_version = 13')
                 version = 13
-            if version != 13:
+            if version == 13:
+                connection.execute('''CREATE TABLE education_events (
+                    id INTEGER PRIMARY KEY,
+                    title TEXT NOT NULL CHECK(length(trim(title)) > 0),
+                    category TEXT NOT NULL CHECK(category IN ('교육', '행사')),
+                    event_date TEXT NOT NULL,
+                    location TEXT NOT NULL DEFAULT '',
+                    audience TEXT NOT NULL DEFAULT '',
+                    facilitator TEXT NOT NULL DEFAULT '',
+                    content TEXT NOT NULL DEFAULT '',
+                    created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+                )''')
+                connection.execute('PRAGMA user_version = 14')
+                version = 14
+            if version == 14:
+                connection.execute("ALTER TABLE education_events ADD COLUMN event_time TEXT NOT NULL DEFAULT ''")
+                connection.execute("ALTER TABLE education_events ADD COLUMN duration_minutes INTEGER CHECK(duration_minutes BETWEEN 1 AND 1440)")
+                connection.execute('PRAGMA user_version = 15')
+                version = 15
+            if version == 15:
+                connection.execute("ALTER TABLE consultations ADD COLUMN consultation_area TEXT NOT NULL DEFAULT ''")
+                connection.execute('PRAGMA user_version = 16')
+                version = 16
+            if version == 16:
+                # 자식 일지를 보존한 채 부모 테이블의 법령 CHECK 제약을 교체한다.
+                log_schema = connection.execute(
+                    "SELECT sql FROM sqlite_master WHERE type='table' AND name='special_education_logs'"
+                ).fetchone()[0]
+                connection.execute('CREATE TEMP TABLE education_logs_backup AS SELECT * FROM special_education_logs')
+                connection.execute('DROP TABLE special_education_logs')
+                connection.execute('''CREATE TABLE special_educations_new (
+                    id INTEGER PRIMARY KEY,
+                    student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE RESTRICT,
+                    title TEXT NOT NULL CHECK(length(trim(title)) > 0),
+                    law TEXT NOT NULL CHECK(law IN ('학교폭력예방법', '교원지위법')),
+                    case_number TEXT NOT NULL DEFAULT '',
+                    created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+                    UNIQUE(id, student_id)
+                )''')
+                connection.execute('''INSERT INTO special_educations_new
+                    SELECT id, student_id, title,
+                        CASE law WHEN '학교폭력특별법' THEN '학교폭력예방법' ELSE law END,
+                        case_number, created_at, updated_at FROM special_educations''')
+                connection.execute('DROP TABLE special_educations')
+                connection.execute('ALTER TABLE special_educations_new RENAME TO special_educations')
+                connection.execute('CREATE INDEX special_education_student ON special_educations(student_id)')
+                connection.execute(log_schema)
+                connection.execute('INSERT INTO special_education_logs SELECT * FROM education_logs_backup')
+                connection.execute('DROP TABLE education_logs_backup')
+                connection.execute('CREATE INDEX special_education_logs_time ON special_education_logs(case_id, starts_at)')
+                connection.execute('PRAGMA user_version = 17')
+                version = 17
+            if version != 17:
                 raise DatabaseError('지원하지 않는 DB 버전입니다. 앱 버전을 확인하세요.')

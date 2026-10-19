@@ -6,7 +6,7 @@ from nicegui import run, ui
 from pydantic import ValidationError
 
 from database import DatabaseError
-from models import Teacher, TeacherInput, Consultation, ConsultationInput
+from models import CONSULTATION_AREAS, Teacher, TeacherInput, Consultation, ConsultationInput
 from repositories.teacher_repo import TeacherRepository
 from repositories.consultation_repo import ConsultationRepository
 from views.counseling_content import clean_html
@@ -148,7 +148,7 @@ class ConsultationView:
             for entry in entries[:PAGE_SIZE]:
                 with ui.row().classes('w-full items-center justify-between border rounded-xl p-4'):
                     with ui.column().classes('gap-1'):
-                        ui.label(entry.title).classes('font-semibold')
+                        ui.label(entry.consultation_area or '자문 분야 미지정').classes('font-semibold')
                         ui.label(f'{entry.starts_at.astimezone(KST):%Y.%m.%d %H:%M} · {STATUSES[entry.status]} · 자문 · {entry.duration_minutes}분').classes('text-sm text-slate-500')
                     ui.button('열기 / 수정', icon='edit', on_click=lambda entry_id=entry.id: self.open_log_editor(entry_id)).props('outline')
         self.log_message.text = f'이 페이지에 {min(len(entries), PAGE_SIZE)}건 · 한국 표준시' if entries else '등록된 자문 일지가 없습니다. 새 자문 일지를 작성해 보세요.'
@@ -203,10 +203,14 @@ class ConsultationView:
                                                  time.fromisoformat(data.pop('starts_time')))
                     if starts_at.tzinfo is not None:
                         raise ValueError('한국 시각으로 입력해 주세요.')
+                    if data['consultation_area'] not in CONSULTATION_AREAS:
+                        message.text = '자문 분야를 선택해 주세요.'
+                        return
+                    data['title'] = data['consultation_area']
                     data['content_html'] = clean_html(data['content_html'] or '')
                     value = ConsultationInput(teacher_id=teacher.id, starts_at=starts_at.replace(tzinfo=KST), **data)
                 except (ValueError, TypeError):
-                    message.text = '제목, 날짜·시각, 자문 시간(1~1440분)과 입력 길이를 확인해 주세요.'
+                    message.text = '자문 분야, 날짜·시각, 자문 시간(1~1440분)과 입력 길이를 확인해 주세요.'
                     return
                 saving = True
                 for field in (*fields.values(), save_button, cancel_button):
@@ -234,14 +238,15 @@ class ConsultationView:
                 dialog.delete()
 
     def build_log_editor(self, teacher: Teacher, entry: Consultation | None):
-        initial = entry.model_dump() if entry else dict(title='', starts_at=datetime.now(KST).replace(second=0, microsecond=0),
-            duration_minutes=30, status='completed', content_html='', follow_up='')
+        initial = entry.model_dump() if entry else dict(starts_at=datetime.now(KST).replace(second=0, microsecond=0),
+            duration_minutes=30, status='completed', consultation_area='', content_html='', follow_up='')
         local_start = initial['starts_at'].astimezone(KST)
         fields = {}
         with ui.dialog().props('persistent') as dialog, ui.card().classes('w-full max-w-6xl p-6 gap-4'):
             ui.label('자문 일지 수정' if entry else '새 자문 일지 작성').classes('text-2xl font-bold')
             ui.label(f'{teacher.name} 선생님').classes('text-slate-500')
-            fields['title'] = ui.input('제목', value=initial['title']).props('outlined maxlength=200').classes('w-full')
+            fields['consultation_area'] = ui.select(CONSULTATION_AREAS, label='자문 분야',
+                value=initial['consultation_area'] or None).props('outlined').classes('w-full')
             with ui.row().classes('w-full items-start'):
                 fields['starts_on'] = ui.date_input('자문 날짜', value=local_start.date().isoformat()).props('outlined').classes('grow')
                 fields['starts_time'] = ui.time_input('시작 시각 (한국 시각)', value=local_start.time().isoformat()).props('outlined').classes('grow')

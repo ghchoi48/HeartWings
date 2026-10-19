@@ -26,11 +26,13 @@ def test_special_education_storage_and_migration(tmp_path):
     with db.session(write=True) as connection:
         connection.execute('DROP TABLE special_education_logs')
         connection.execute('DROP TABLE special_educations')
+        connection.execute('DROP TABLE IF EXISTS education_events')
+        connection.execute('ALTER TABLE consultations DROP COLUMN consultation_area')
         connection.execute('PRAGMA user_version=12')
     db.initialize()
     db.initialize()
     cases = SpecialEducationRepository(db)
-    value = SpecialEducationInput(student_id=student.id, title='특별교육', law='학교폭력특별법', case_number='001')
+    value = SpecialEducationInput(student_id=student.id, title='특별교육', law='학교폭력예방법', case_number='001')
     case = cases.save(value)
     second = cases.save(value.model_copy(update={'title': '두 번째 교육'}))
     assert cases.list(other.id) == []
@@ -86,7 +88,7 @@ async def test_special_editor_fields_and_save():
             elements = list(dialog.descendants())
             fields = {element.label: element for element in elements if isinstance(element, (ui.input, ui.select))}
             assert set(fields) == {'특별교육명', '관련 법령', '사례번호'}
-            assert fields['관련 법령'].options == ['학교폭력특별법', '교원지위법']
+            assert fields['관련 법령'].options == ['학교폭력예방법', '교원지위법']
             fields['특별교육명'].value = '교육명'
             fields['관련 법령'].value = '교원지위법'
             fields['사례번호'].value = '001'
@@ -117,7 +119,7 @@ async def test_student_selection_and_log_editor():
         with patch('views.special_education_view.ui.timer'):
             view.build()
         view.cases = Mock()
-        view.cases.list.return_value = [SpecialEducation(id=1, student_id=1, title='교육', law='학교폭력특별법',
+        view.cases.list.return_value = [SpecialEducation(id=1, student_id=1, title='교육', law='학교폭력예방법',
                                                         created_at=now, updated_at=now)]
         view.counseling = Mock()
         view.counseling.list.return_value = []
@@ -138,3 +140,34 @@ async def test_student_selection_and_log_editor():
         await view.select_student(None)
         assert not view.add.enabled
         assert not view.edit_case.enabled
+
+
+def test_law_migration_preserves_cases_and_logs(tmp_path):
+    db = Database('test-only', tmp_path / 'law-migration.db')
+    db.initialize()
+    student = StudentRepository(db).create(StudentInput(name='학생', grade=1, classroom='1'))
+    cases = SpecialEducationRepository(db)
+    case = cases.save(SpecialEducationInput(student_id=student.id, title='기존 교육',
+                                            law='학교폭력예방법', case_number='001'))
+    other = cases.save(SpecialEducationInput(student_id=student.id, title='교원 교육', law='교원지위법'))
+    logs = SpecialEducationLogRepository(db)
+    entry = logs.create(CounselingInput(student_id=student.id, case_id=case.id, title='기존 일지',
+                                        starts_at=datetime.now(timezone.utc), content_markdown='보존할 내용'))
+    with db.session(write=True) as connection:
+        connection.execute('PRAGMA ignore_check_constraints=ON')
+        connection.execute("UPDATE special_educations SET law='학교폭력특별법' WHERE id=?", (case.id,))
+        connection.execute('PRAGMA ignore_check_constraints=OFF')
+        connection.execute('PRAGMA user_version=16')
+    db.initialize()
+    db.initialize()
+    assert cases.list(student.id) == [other, case]
+    assert logs.get(entry.id) == entry
+    cases.save(SpecialEducationInput(student_id=student.id, title='새 교육', law='학교폭력예방법'))
+    with db.session() as connection:
+        assert connection.execute('PRAGMA foreign_key_check').fetchall() == []
+        schema = connection.execute("SELECT sql FROM sqlite_master WHERE name='special_educations'").fetchone()[0]
+        assert '학교폭력예방법' in schema
+        assert '학교폭력특별법' not in schema
+    with pytest.raises(ConflictError):
+        with db.session(write=True) as connection:
+            connection.execute('DELETE FROM special_educations WHERE id=?', (case.id,))

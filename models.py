@@ -29,8 +29,12 @@ class Teacher(TeacherInput):
     updated_at: datetime
 
 
+CONSULTATION_AREAS = ['학교학습', '사회성발달', '정서발달', '진로발달', '행동발달', '기타']
+
+
 class ConsultationInput(InputModel):
     teacher_id: int = Field(gt=0)
+    consultation_area: Literal['', '학교학습', '사회성발달', '정서발달', '진로발달', '행동발달', '기타'] = ''
     starts_at: datetime
     duration_minutes: int = Field(default=30, ge=1, le=1440)
     status: Literal['scheduled', 'completed', 'cancelled'] = 'completed'
@@ -102,7 +106,7 @@ class Student(StudentInput, FamilyInput):
 class SpecialEducationInput(InputModel):
     student_id: int = Field(gt=0)
     title: str = Field(min_length=1, max_length=200)
-    law: Literal['학교폭력특별법', '교원지위법']
+    law: Literal['학교폭력예방법', '교원지위법']
     case_number: str = Field(default='', max_length=100)
 
 
@@ -270,3 +274,21 @@ class StudentTimelineEntry(BaseModel):
     category: str = ''
     counseling_method: str = ''
     counseling_target: str = ''
+
+
+class EducationEventInput(InputModel):
+    title: str = Field(min_length=1, max_length=200)
+    category: Literal['교육', '행사'] = '교육'
+    event_date: date
+    event_time: str = Field(default='', pattern=r'^$|^(?:[01][0-9]|2[0-3]):[0-5][0-9]$')
+    duration_minutes: int | None = Field(default=None, ge=1, le=1440)
+    location: str = Field(default='', max_length=200)
+    audience: str = Field(default='', max_length=200)
+    facilitator: str = Field(default='', max_length=100)
+    content: str = Field(default='', max_length=20000)
+
+
+class EducationEvent(EducationEventInput):
+    id: int
+    created_at: datetime
+    updated_at: datetime
