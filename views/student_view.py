@@ -106,7 +106,7 @@ class StudentView:
                         ui.label(f'학생 연락처: {student.student_contact or "미입력"}')
                         ui.label('학생 메모').classes('font-semibold mt-2')
                         ui.label(student.notes or '등록된 메모가 없습니다.').classes('whitespace-pre-wrap break-words w-full')
-                    with ui.card().classes('w-full rounded-2xl shadow-sm p-6'):
+                        ui.separator()
                         with ui.row().classes('w-full items-center justify-between'):
                             ui.label('가족 정보').classes('text-xl font-bold')
                             ui.button('가족 정보 수정', icon='edit', on_click=lambda: self.open_family_editor(student)).props('outline')
@@ -125,7 +125,7 @@ class StudentView:
                                      for index, member in enumerate(student.family_members)],
                                      row_key='id').classes('w-full').props('flat dense')
                         else:
-                            ui.label('등록된 가족 구성원이 없습니다.').classes('text-slate-500')
+                            ui.label('등록된 가족 구성원이 없습니다. 가족 정보 수정에서 구성원을 추가해 주세요.').classes('text-slate-500')
                 with ui.card().classes('w-full rounded-2xl shadow-sm p-6'):
                     ui.label('상담 타임라인').classes('text-xl font-bold')
                     self.timeline = ui.timeline(side='right', layout='dense', color='primary').classes('w-full')
@@ -198,6 +198,9 @@ class StudentView:
                                          value=student.family_welfare_type or None).props('outlined clearable').classes('grow')
             ui.label('가족 구성원 목록').classes('text-lg font-semibold')
             member_rows = []
+            empty_members_message = ui.label(
+                '등록된 가족 구성원이 없습니다. 아래 구성원 추가 버튼을 눌러 가족 정보를 입력해 주세요.'
+            ).classes('text-sm text-slate-500')
             with ui.element('div').classes('w-full overflow-x-auto'):
                 members_container = ui.column().classes('w-full min-w-[850px] gap-2')
 
@@ -225,10 +228,12 @@ class StudentView:
                             if not saving:
                                 member_rows.remove(fields)
                                 row.delete()
+                                empty_members_message.set_visibility(not member_rows)
 
                         ui.button(icon='delete_outline', on_click=remove_member).props(
                             'flat round color=negative aria-label="가족 구성원 삭제"').tooltip('구성원 삭제')
                 member_rows.append(fields)
+                empty_members_message.set_visibility(False)
 
             for member in student.family_members:
                 add_member(member)

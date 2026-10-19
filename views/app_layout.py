@@ -36,14 +36,25 @@ class AppLayout:
 
     def build(self, content: ui.column, drawer: ui.left_drawer, header: ui.header) -> None:
         """최상위 레이아웃 요소는 진입점에서 생성하고 여기서는 내용만 구성한다."""
+        drawer.classes('flex flex-col flex-nowrap')
         with drawer:
             for page, title, icon in [('home', '홈', 'home'), ('students', '학생 관리', 'school'),
                                       ('counseling', '개인 상담', 'chat_bubble'), ('groups', '집단 상담', 'groups'),
+                                      ('psychological_tests', '심리검사', 'psychology'),
+                                      ('education_events', '교육/행사', 'event'),
+                                      ('special_education', '특별교육', 'menu_book'),
+                                      ('consultation', '자문', 'forum'),
                                       ('calendar', '캘린더', 'calendar_month'),
-                                      ('statistics', '통계', 'bar_chart')]:
+                                      ('statistics', '통계', 'bar_chart'),
+                                      ('settings', '설정', 'settings'),
+                                      ('about', '프로그램 정보', 'info_outline')]:
+                if page == 'settings':
+                    ui.space().classes('min-h-4')
                 self.buttons[page] = ui.button(
                     title, icon=icon, on_click=lambda page=page: self.navigate(page),
                 ).props('flat align=left').classes('w-full rounded-lg')
+                if page in ('students', 'consultation'):
+                    ui.separator()
         with header:
             ui.button('DB 잠금', icon='lock', on_click=self.on_lock or (lambda: ui.navigate.to('/'))).props('flat color=white').classes('ml-auto rounded-lg')
         with content:
@@ -53,6 +64,12 @@ class AppLayout:
             self.panels['students'] = ui.column().classes('w-full')
             self.panels['counseling'] = ui.column().classes('w-full')
             self.panels['groups'] = ui.column().classes('w-full')
+            for page, title in [('psychological_tests', '심리검사'), ('education_events', '교육/행사'),
+                                ('special_education', '특별교육'), ('consultation', '자문'),
+                                ('settings', '설정'), ('about', '프로그램 정보')]:
+                self.panels[page] = ui.column().classes('w-full gap-6 p-4 md:p-8')
+                with self.panels[page]:
+                    ui.label(title).classes('text-3xl font-bold text-slate-800')
             self.panels['calendar'] = ui.column().classes('w-full')
             self.panels['statistics'] = ui.column().classes('w-full')
         self.navigate('home')
