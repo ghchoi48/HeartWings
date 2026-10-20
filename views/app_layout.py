@@ -19,17 +19,27 @@ from views.consultation_view import ConsultationView
 from repositories.teacher_repo import TeacherRepository
 from repositories.education_event_repo import EducationEventRepository
 from views.education_event_view import EducationEventView
+from views.psychological_test_view import PsychologicalTestView
+from views.settings_view import build_settings
+from views.display_settings import DisplaySettings
+from models import SchoolSettings
+from repositories.school_settings_repo import SchoolSettingsRepository
 
 
 class AppLayout:
     """DB를 연 클라이언트 안에서 홈, 학생 관리, 상담 일지를 조립한다."""
 
     def __init__(self, students: StudentRepository, counseling: CounselingRepository, reporting: ReportingRepository,
-                 on_lock: Callable[[], Awaitable[None]] | None = None):
+                 on_lock: Callable[[], Awaitable[None]] | None = None,
+                 display: DisplaySettings | None = None,
+                 on_school_change: Callable[[SchoolSettings], None] | None = None):
         self.students = students
         self.counseling = counseling
         self.reporting = reporting
         self.on_lock = on_lock
+        self.display = display
+        self.on_school_change = on_school_change
+        self.school = SchoolSettingsRepository(students.database)
         self.active_page = 'home'
         self.student_view: StudentView | None = None
         self.counseling_view: CounselingView | None = None
@@ -39,6 +49,7 @@ class AppLayout:
         self.consultation_view: ConsultationView | None = None
         self.special_education_view: SpecialEducationView | None = None
         self.education_event_view: EducationEventView | None = None
+        self.psychological_test_view: PsychologicalTestView | None = None
         self.opening_schedule = False
         self.panels = {}
         self.buttons = {}
@@ -78,8 +89,11 @@ class AppLayout:
             self.panels['special_education'] = ui.column().classes('w-full')
             self.panels['consultation'] = ui.column().classes('w-full')
             self.panels['education_events'] = ui.column().classes('w-full')
-            for page, title in [('psychological_tests', '심리검사'),
-                                ('settings', '설정'), ('about', '프로그램 정보')]:
+            self.panels['psychological_tests'] = ui.column().classes('w-full')
+            self.panels['settings'] = ui.column().classes('w-full')
+            with self.panels['settings']:
+                build_settings(self.display, self.school, self.students.database, self.on_school_change)
+            for page, title in [('about', '프로그램 정보')]:
                 self.panels[page] = ui.column().classes('w-full gap-6 p-4 md:p-8')
                 with self.panels[page]:
                     ui.label(title).classes('text-3xl font-bold text-slate-800')
@@ -95,7 +109,7 @@ class AppLayout:
         if self.refreshing_students or revision == self.student_revision:
             return
         if any(view and view.editor_open for view in
-               (self.student_view, self.counseling_view, self.group_view, self.special_education_view)):
+               (self.student_view, self.counseling_view, self.group_view, self.special_education_view, self.psychological_test_view)):
             return
         self.refreshing_students = True
         try:
@@ -103,7 +117,7 @@ class AppLayout:
                 await self.student_view.student_list.reload()
                 if self.student_view.selected:
                     await self.student_view.load_profile(self.student_view.selected.id)
-            for view in (self.counseling_view, self.special_education_view):
+            for view in (self.counseling_view, self.special_education_view, self.psychological_test_view):
                 if view is None:
                     continue
                 await view.student_list.reload()
@@ -134,12 +148,16 @@ class AppLayout:
             raise ValueError(f'지원하지 않는 화면: {page}')
         if page == 'students' and self.student_view is None:
             with self.panels['students']:
-                self.student_view = StudentView(self.students, self.counseling)
+                self.student_view = StudentView(self.students, self.counseling, self.school)
                 self.student_view.build()
         if page == 'counseling' and self.counseling_view is None:
             with self.panels['counseling']:
                 self.counseling_view = CounselingView(self.students, self.counseling, self.refresh_student_timeline)
                 self.counseling_view.build()
+        if page == 'psychological_tests' and self.psychological_test_view is None:
+            with self.panels['psychological_tests']:
+                self.psychological_test_view = PsychologicalTestView(self.students)
+                self.psychological_test_view.build()
         if page == 'groups' and self.group_view is None:
             with self.panels['groups']:
                 self.group_view = GroupCounselingView(GroupCounselingRepository(self.counseling.database), self.refresh_group_timeline)

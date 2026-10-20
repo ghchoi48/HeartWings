@@ -13,7 +13,7 @@ from nicegui import ui
 from pydantic import ValidationError
 
 from database import DatabaseError
-from models import StudentTimelineEntry, Student
+from models import SchoolSettings, StudentTimelineEntry, Student
 from views.student_view import PAGE_SIZE, StudentView, student_form_input
 
 
@@ -57,6 +57,23 @@ class StudentViewTests(unittest.IsolatedAsyncioTestCase):
     def tearDown(self):
         self.io_patch.stop()
         self.host.delete()
+
+    async def test_editor_reads_current_school_level_each_time(self):
+        self.view.school = Mock()
+        for level, count, existing_grade in [('초등학교', 6, 6), ('중학교', 3, 6), ('고등학교', 3, 2)]:
+            self.view.school.get.return_value = SchoolSettings(school_level=level)
+
+            async def interact(dialog):
+                select = next(e for e in dialog.descendants()
+                              if isinstance(e, ui.select) and e.props.get('label') == '*학년')
+                self.assertEqual(list(select.options), list(range(1, count + 1)))
+                self.assertEqual(select.value, existing_grade if existing_grade <= count else None)
+                return None
+
+            student = make_student().model_copy(update={'grade': existing_grade})
+            with self.host, patch.object(ui.dialog, '__await__', lambda dialog: interact(dialog).__await__()):
+                await self.view.open_editor(student)
+            self.assertFalse(self.view.editor_open)
 
     async def test_native_pagination_uses_complete_list(self):
         self.students.list.side_effect = [

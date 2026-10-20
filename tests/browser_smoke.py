@@ -30,7 +30,11 @@ def main() -> None:
             confirmation = page.get_by_label('새 DB 비밀번호 확인', exact=True)
             if confirmation.is_visible():
                 confirmation.fill(password)
-            page.get_by_role('button', name='DB 열기', exact=True).click()
+                page.get_by_label('학교명', exact=True).fill('테스트학교')
+                page.get_by_label('상담교사 이름', exact=True).fill('테스트교사')
+                page.get_by_role('button', name='시작하기', exact=True).click()
+            else:
+                page.get_by_role('button', name='DB 열기', exact=True).click()
             expect(page.get_by_text('오늘도, 마음을 잇는 시간', exact=True)).to_be_visible()
             page.screenshot(path=str(output / 'home.png'), full_page=True)
             print('PASS: HTTP 200, DB 열기, 홈 화면', flush=True)
@@ -139,7 +143,7 @@ def main() -> None:
             item_label = f'13:30 · {name} · 학교 적응 상담 수정'
             expect(page.get_by_text(item_label, exact=True)).to_be_visible()
             page.get_by_role('button', name='주간', exact=True).click()
-            expect(page.get_by_text('2026.10.12 ~ 10.18', exact=True)).to_be_visible()
+            expect(page.get_by_text('2026.10.11 ~ 10.17', exact=True)).to_be_visible()
             page.get_by_role('button', name='월간', exact=True).click()
             expect(page.get_by_text('2026년 10월', exact=True)).to_be_visible()
             expect(page.get_by_text(item_label, exact=True)).to_be_visible()

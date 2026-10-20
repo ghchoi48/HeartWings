@@ -86,5 +86,5 @@ def test_date_validation_and_calendar_boundaries():
     with pytest.raises(ValueError):
         date_bounds(date.max, date.max)
     month = visible_days(date(2024, 2, 29), 'month')
-    assert date(2024, 2, 29) in month and month[0].weekday() == 0 and len(month) % 7 == 0
-    assert visible_days(date(2026, 1, 1), 'week')[0] == date(2025, 12, 29)
+    assert date(2024, 2, 29) in month and month[0].weekday() == 6 and len(month) % 7 == 0
+    assert visible_days(date(2026, 1, 1), 'week')[0] == date(2025, 12, 28)

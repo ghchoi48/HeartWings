@@ -1,11 +1,13 @@
 """SQLCipher 연결, 트랜잭션 및 스키마 관리. 평문 SQLite 대체는 금지한다."""
 
 import os
+import hmac
 import sys
 from contextlib import contextmanager
 from importlib import import_module
 from pathlib import Path
 from threading import RLock
+from models import SchoolSettings
 
 
 class DatabaseError(RuntimeError):
@@ -123,6 +125,46 @@ class Database:
         with self._session_lock:
             self._password = None
 
+    def change_password(self, current_password: str, new_password: str) -> None:
+        """SQLCipher의 자체 rekey 트랜잭션으로 키를 바꾸고 성공 후 메모리 키를 갱신한다."""
+        if not new_password or '\x00' in new_password:
+            raise ValueError('새 비밀번호는 비어 있거나 NUL 문자를 포함할 수 없습니다.')
+        with self._session_lock:
+            if self._password is None:
+                raise DatabaseOpenError('DB가 잠겨 있습니다. 비밀번호를 입력해 다시 열어 주세요.')
+            if not hmac.compare_digest(current_password.encode('utf-8'), self._password.encode('utf-8')):
+                raise DatabaseError('현재 비밀번호가 올바르지 않습니다.')
+            if current_password == new_password:
+                raise ValueError('새 비밀번호는 현재 비밀번호와 다르게 입력해 주세요.')
+            connection = self._connect()
+            try:
+                # 다른 연결의 읽기/쓰기와 충돌하면 rekey 전에 중단한다.
+                # EXCLUSIVE 모드는 COMMIT 이후에도 이 연결이 잠금을 유지한다.
+                connection.execute('PRAGMA locking_mode = EXCLUSIVE')
+                connection.execute('BEGIN EXCLUSIVE')
+                connection.commit()
+                # rekey는 자체 트랜잭션을 사용하므로 session() 안에서 실행하지 않는다.
+                escaped = new_password.replace("'", "''")
+                connection.execute("PRAGMA rekey = '" + escaped + "'")
+            except self.driver.DatabaseError:
+                raise DatabaseError('비밀번호를 변경하지 못했습니다. 잠시 후 다시 시도해 주세요.') from None
+            finally:
+                connection.close()
+            # 일부 드라이버는 rekey 실패를 예외로 전달하지 않는다.
+            # 열린 연결의 캐시가 아닌 새 연결로 실제 파일의 키를 확인한다.
+            try:
+                verification = Database(new_password, self.path)._connect()
+                verification.close()
+            except DatabaseError:
+                try:
+                    original = self._connect()
+                    original.close()
+                except DatabaseError:
+                    self._password = None
+                    raise DatabaseError('DB 비밀번호 변경 결과를 확인할 수 없습니다. DB를 다시 열어 확인해 주세요.') from None
+                raise DatabaseError('비밀번호를 변경하지 못했습니다. 기존 비밀번호가 유지됩니다.') from None
+            self._password = new_password
+
     @contextmanager
     def _transaction(self, *, write: bool = False):
         """잠금으로 보호된 세션 내부에서만 사용한다."""
@@ -143,10 +185,11 @@ class Database:
         finally:
             connection.close()
 
-    def initialize(self) -> None:
+    def initialize(self, school: SchoolSettings | None = None) -> None:
         """원자적으로 최초 스키마를 만든다. 미래 버전 DB의 묵시적 다운그레이드는 막는다."""
         with self.session(write=True) as connection:
             version = connection.execute('PRAGMA user_version').fetchone()[0]
+            new_database = version == 0
             if version == 0:
                 for statement in SCHEMA:
                     connection.execute(statement)
@@ -344,5 +387,107 @@ class Database:
                 connection.execute('CREATE INDEX special_education_logs_time ON special_education_logs(case_id, starts_at)')
                 connection.execute('PRAGMA user_version = 17')
                 version = 17
-            if version != 17:
+            if version == 17:
+                connection.execute('''CREATE TABLE IF NOT EXISTS psychological_tests (
+                    id INTEGER PRIMARY KEY,
+                    student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE RESTRICT,
+                    title TEXT NOT NULL,
+                    test_date TEXT NOT NULL,
+                    content TEXT NOT NULL DEFAULT '',
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )''')
+                connection.execute('CREATE INDEX IF NOT EXISTS psychological_tests_student_date ON psychological_tests(student_id, test_date)')
+                connection.execute('PRAGMA user_version = 18')
+                version = 18
+            if version == 18:
+                connection.execute('''CREATE TABLE education_events_new (
+                    id INTEGER PRIMARY KEY,
+                    title TEXT NOT NULL CHECK(length(trim(title)) > 0),
+                    category TEXT NOT NULL CHECK(category IN ('교육', '행사', '단체심리검사')),
+                    event_date TEXT NOT NULL,
+                    location TEXT NOT NULL DEFAULT '',
+                    audience TEXT NOT NULL DEFAULT '',
+                    facilitator TEXT NOT NULL DEFAULT '',
+                    content TEXT NOT NULL DEFAULT '',
+                    created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+                    event_time TEXT NOT NULL DEFAULT '',
+                    duration_minutes INTEGER CHECK(duration_minutes BETWEEN 1 AND 1440)
+                )''')
+                connection.execute('''INSERT INTO education_events_new
+                    (id, title, category, event_date, location, audience, facilitator, content,
+                     created_at, updated_at, event_time, duration_minutes)
+                    SELECT id, title, category, event_date, location, audience, facilitator, content,
+                           created_at, updated_at, event_time, duration_minutes FROM education_events''')
+                connection.execute('DROP TABLE education_events')
+                connection.execute('ALTER TABLE education_events_new RENAME TO education_events')
+                connection.execute('PRAGMA user_version = 19')
+                version = 19
+            if version == 19:
+                columns = {row['name'] for row in connection.execute('PRAGMA table_info(psychological_tests)')}
+                if 'target' not in columns:
+                    connection.execute("ALTER TABLE psychological_tests ADD COLUMN target TEXT NOT NULL DEFAULT '학생' CHECK(target IN ('학생', '보호자(학부모)'))")
+                if 'test_time' not in columns:
+                    connection.execute("ALTER TABLE psychological_tests ADD COLUMN test_time TEXT NOT NULL DEFAULT ''")
+                if 'duration_minutes' not in columns:
+                    connection.execute('ALTER TABLE psychological_tests ADD COLUMN duration_minutes INTEGER CHECK(duration_minutes BETWEEN 1 AND 1440)')
+                connection.execute('PRAGMA user_version = 20')
+                version = 20
+            if version == 20:
+                for table in ('education_events', 'psychological_tests'):
+                    columns = {row['name'] for row in connection.execute(f'PRAGMA table_info({table})')}
+                    if 'content_format' not in columns:
+                        connection.execute(f"ALTER TABLE {table} ADD COLUMN content_format TEXT NOT NULL DEFAULT 'text' CHECK(content_format IN ('text', 'html'))")
+                connection.execute('PRAGMA user_version = 21')
+                version = 21
+            if version == 21:
+                connection.execute("""CREATE TABLE IF NOT EXISTS calendars (
+                    id INTEGER PRIMARY KEY,
+                    name TEXT NOT NULL CHECK(length(trim(name)) > 0),
+                    color TEXT NOT NULL,
+                    source TEXT NOT NULL CHECK(source IN ('counseling', 'custom')),
+                    visible INTEGER NOT NULL DEFAULT 1 CHECK(visible IN (0, 1))
+                )""")
+                connection.execute("""INSERT INTO calendars (name, color, source)
+                    SELECT '개인 상담', '#0d9488', 'counseling'
+                    WHERE NOT EXISTS (SELECT 1 FROM calendars WHERE source='counseling')""")
+                connection.execute("""CREATE TABLE IF NOT EXISTS calendar_events (
+                    id INTEGER PRIMARY KEY,
+                    calendar_id INTEGER NOT NULL REFERENCES calendars(id) ON DELETE RESTRICT,
+                    title TEXT NOT NULL CHECK(length(trim(title)) > 0),
+                    starts_at TEXT NOT NULL,
+                    duration_minutes INTEGER NOT NULL CHECK(duration_minutes BETWEEN 1 AND 1440),
+                    status TEXT NOT NULL CHECK(status IN ('scheduled', 'completed', 'cancelled')),
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )""")
+                connection.execute('CREATE INDEX IF NOT EXISTS calendar_events_time ON calendar_events(calendar_id, starts_at)')
+                connection.execute('PRAGMA user_version = 22')
+                version = 22
+            if version == 22:
+                connection.execute("""CREATE TABLE IF NOT EXISTS calendar_preferences (
+                    name TEXT PRIMARY KEY,
+                    visible INTEGER NOT NULL CHECK(visible IN (0, 1))
+                )""")
+                connection.execute("INSERT OR IGNORE INTO calendar_preferences VALUES ('holidays', 1)")
+                connection.execute('PRAGMA user_version = 23')
+                version = 23
+            if version == 23:
+                connection.execute("""CREATE TABLE IF NOT EXISTS school_settings (
+                    id INTEGER PRIMARY KEY CHECK(id = 1),
+                    school_name TEXT NOT NULL DEFAULT '',
+                    school_level TEXT NOT NULL DEFAULT '중학교'
+                        CHECK(school_level IN ('초등학교', '중학교', '고등학교')),
+                    counselor_name TEXT NOT NULL DEFAULT '',
+                    office_number TEXT NOT NULL DEFAULT ''
+                )""")
+                connection.execute('INSERT OR IGNORE INTO school_settings (id) VALUES (1)')
+                connection.execute('PRAGMA user_version = 24')
+                version = 24
+            if version != 24:
                 raise DatabaseError('지원하지 않는 DB 버전입니다. 앱 버전을 확인하세요.')
+            if new_database and school is not None:
+                school = SchoolSettings.model_validate(school.model_dump())
+                connection.execute('''UPDATE school_settings SET school_name=:school_name,
+                    school_level=:school_level, counselor_name=:counselor_name,
+                    office_number=:office_number WHERE id=1''', school.model_dump())

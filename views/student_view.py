@@ -6,9 +6,10 @@ from nicegui import run, ui
 from pydantic import ValidationError
 
 from database import DatabaseError
-from models import FamilyInput, FamilyMember, Student, StudentInput
+from models import FamilyInput, FamilyMember, SchoolSettings, Student, StudentInput
 from repositories.counseling_repo import CounselingRepository
 from repositories.student_repo import StudentRepository
+from repositories.school_settings_repo import SchoolSettingsRepository
 from views.student_list import StudentList
 
 KST = timezone(timedelta(hours=9))
@@ -32,9 +33,11 @@ def student_form_input(values: dict) -> StudentInput:
 class StudentView:
     """클라이언트별 상태를 유지한다. DB 호출은 작업 스레드에서 수행한다."""
 
-    def __init__(self, students: StudentRepository, counseling: CounselingRepository):
+    def __init__(self, students: StudentRepository, counseling: CounselingRepository,
+                 school: SchoolSettingsRepository | None = None):
         self.students = students
         self.counseling = counseling
+        self.school = school
         self.selected: Student | None = None
         self.detail_request = 0
         self.timeline_offset = 0
@@ -49,10 +52,9 @@ class StudentView:
                 with ui.column().classes('gap-1'):
                     ui.label('학생 관리').classes('text-3xl font-bold text-slate-800')
                     ui.label('학생의 이야기를 차근차근 이어갑니다.').classes('text-slate-500')
-                ui.button('학생 추가', icon='person_add', on_click=lambda: self.open_editor())
             with ui.element('div').classes('w-full grid grid-cols-1 lg:grid-cols-[3fr_7fr] items-stretch gap-6'):
                 self.student_list = StudentList(self.students, on_select=self.load_profile, page_size=PAGE_SIZE)
-                self.student_list.build(autoload=False)
+                self.student_list.build(autoload=False, on_add=lambda: self.open_editor())
                 self.detail = ui.column().classes('w-full min-w-0 gap-4')
                 self.show_empty_detail()
         ui.timer(0.01, self.load_students, once=True)
@@ -292,6 +294,13 @@ class StudentView:
         if self.editor_open:
             return
         self.editor_open = True
+        try:
+            school = await run.io_bound(self.school.get) if self.school is not None else SchoolSettings()
+        except DatabaseError as error:
+            self.editor_open = False
+            ui.notify(str(error), type='negative')
+            return
+        grade_options = school.grade_options
         initial = student.model_dump() if student else {}
         fields = {}
         saving = False
@@ -303,9 +312,13 @@ class StudentView:
                     fields['name'] = ui.input('*이름', value=initial.get('name') or '').props('outlined').classes('grow')
                     fields['nickname'] = ui.input('별명', value=initial.get('nickname') or '').props('outlined').classes('grow')
                 with ui.row().classes('w-full'):
-                    fields['grade'] = ui.select({i: f'{i}학년' for i in range(1, 4)}, label='*학년', value=initial.get('grade', 1)).props('outlined').classes('grow')
+                    grade = initial.get('grade', 1)
+                    fields['grade'] = ui.select(grade_options, label='*학년',
+                                                value=grade if grade in grade_options else None).props('outlined').classes('grow')
                     fields['classroom'] = ui.input('*반', value=initial.get('classroom', '')).props('outlined').classes('grow')
                     fields['student_number'] = ui.input('번호', value=initial.get('student_number') or '').props('outlined').classes('grow')
+                if grade not in grade_options:
+                    ui.label(f'기존 학년은 {grade}학년입니다. 현재 학교급에 맞는 학년을 선택해야 저장할 수 있습니다.').classes('text-sm text-amber-700')
                 with ui.row().classes('w-full flex-nowrap items-start'):
                     fields['birth_date'] = ui.date_input('생년월일', value=str(initial.get('birth_date') or '')).props('outlined').classes('flex-1 min-w-0')
                     fields['student_contact'] = ui.input('학생 연락처', value=initial.get('student_contact', '')).props('outlined mask="###-####-####" inputmode="numeric"').classes('flex-1 min-w-0')

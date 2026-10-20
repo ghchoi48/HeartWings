@@ -49,7 +49,7 @@ def test_teacher_storage_and_migration(tmp_path):
     assert len(repo.list()) == 2
     with db.session() as connection:
         assert connection.execute('SELECT name FROM students').fetchone()[0] == '기존 학생'
-        assert connection.execute('PRAGMA user_version').fetchone()[0] == 17
+        assert connection.execute('PRAGMA user_version').fetchone()[0] == 24
 
 
 class ConsultationViewTests(unittest.IsolatedAsyncioTestCase):

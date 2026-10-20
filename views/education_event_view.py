@@ -8,6 +8,7 @@ from database import DatabaseError
 from models import EducationEvent, EducationEventInput
 from repositories.education_event_repo import EducationEventRepository
 from views.counseling_view import KST
+from views.counseling_content import clean_html, editor_html
 
 
 class EducationEventView:
@@ -111,7 +112,10 @@ class EducationEventView:
                         ui.label(value or '미입력').classes('whitespace-pre-wrap break-words w-full')
             ui.separator()
             ui.label('상세 내용').classes('font-bold')
-            ui.label(entry.content or '등록된 상세 내용이 없습니다.').classes('w-full whitespace-pre-wrap break-words leading-relaxed')
+            if entry.content:
+                ui.html(editor_html(entry.content, entry.content_format)).classes('w-full break-words leading-relaxed')
+            else:
+                ui.label('등록된 상세 내용이 없습니다.').classes('text-slate-500')
 
     def open_editor(self, entry=None):
         initial = entry.model_dump() if entry else dict(title='', category='교육',
@@ -121,13 +125,15 @@ class EducationEventView:
             fields = {}
             fields['title'] = ui.input('교육/행사명 *', value=initial['title']).props('outlined maxlength=200').classes('w-full')
             with ui.row().classes('w-full items-start'):
-                fields['category'] = ui.select(['교육', '행사'], label='구분', value=initial['category']).props('outlined').classes('w-32')
+                fields['category'] = ui.select(['교육', '행사', '단체심리검사'], label='구분', value=initial['category']).props('outlined').classes('w-40')
                 fields['event_date'] = ui.date_input('날짜 *', value=initial['event_date'].isoformat()).props('outlined').classes('grow min-w-40')
                 fields['event_time'] = ui.time_input('시각', value=initial['event_time']).props('outlined').classes('w-32')
                 fields['duration_minutes'] = ui.number('운영 시간(분)', value=initial['duration_minutes'], min=1, max=1440, step=1).props('outlined').classes('w-36')
             for key, label, maximum in [('location', '장소', 200), ('audience', '대상', 200), ('facilitator', '담당자 / 강사', 100)]:
                 fields[key] = ui.input(label, value=initial[key]).props(f'outlined maxlength={maximum}').classes('w-full')
-            fields['content'] = ui.textarea('상세 내용', value=initial['content']).props('outlined maxlength=20000 rows=6').classes('w-full')
+            ui.label('상세 내용').classes('font-semibold')
+            fields['content'] = ui.editor(value=editor_html(initial['content'], initial.get('content_format', 'text')),
+                                          placeholder='상세 내용을 입력하세요.').classes('w-full').props("""min-height=320px :toolbar='[["bold", "italic", "underline", "strike"], ["unordered", "ordered"], ["left", "center", "right"], ["undo", "redo"]]'""")
             message = ui.label().classes('text-sm text-red-700')
             with ui.row().classes('w-full justify-end'):
                 ui.button('취소', on_click=dialog.close).props('flat')
@@ -135,9 +141,11 @@ class EducationEventView:
 
         async def save():
             try:
-                value = EducationEventInput(**{key: field.value for key, field in fields.items()})
+                data = {key: field.value for key, field in fields.items()}
+                data['content'] = clean_html(data['content'] or '')
+                value = EducationEventInput(**data, content_format='html')
             except ValidationError:
-                message.text = '교육/행사명, 날짜, 시각(HH:MM), 운영 시간(1~1440분 정수)을 확인해 주세요.'
+                message.text = '교육/행사명, 날짜, 시각(HH:MM), 운영 시간(1~1440분 정수), 내용 길이(서식 포함 최대 20,000자)를 확인해 주세요.'
                 return
             save_button.disable()
             try:

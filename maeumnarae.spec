@@ -7,7 +7,11 @@ from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs, co
 
 root = Path(SPECPATH)
 datas = [(str(Path(nicegui.__file__).parent), 'nicegui'), (str(root / 'icon.ico'), '.')]
+datas += [(str(root / name), '.') for name in ('icon-dark.ico', 'icon-dark.png')]
+datas += [(str(root / 'fonts'), 'fonts')]
 datas += collect_data_files('webview')
+datas += collect_data_files('holidays')
+datas += copy_metadata('holidays')
 datas += copy_metadata('nicegui') + copy_metadata('pywebview')
 datas += copy_metadata('sqlcipher3')
 binaries = collect_dynamic_libs('sqlcipher3')

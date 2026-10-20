@@ -20,10 +20,14 @@ class StudentList:
         self.page_size = page_size
         self.list_request = 0
 
-    def build(self, *, autoload: bool = True) -> None:
+    def build(self, *, autoload: bool = True,
+              on_add: Callable[[], Awaitable[None] | None] | None = None) -> None:
         """현재 컨테이너에 목록 카드를 만들고 기본적으로 최초 조회를 예약한다."""
         with ui.card().classes('w-full h-full min-w-0 rounded-2xl shadow-sm p-5'):
-            ui.label('학생 목록').classes('text-xl font-bold')
+            with ui.row().classes('w-full items-center justify-between'):
+                ui.label('학생 목록').classes('text-xl font-bold')
+                if on_add is not None:
+                    ui.button('학생 추가', icon='person_add', on_click=on_add)
             columns = [
                 {'name': name, 'label': label, 'field': name, 'align': 'left'}
                 for name, label in [('name', '이름'), ('nickname', '별명'), ('grade', '학년'), ('classroom', '반')]

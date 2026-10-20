@@ -108,14 +108,42 @@ def test_invalid_time_and_duration(changes):
 def test_editor_restores_time_and_duration():
     with Client(page('/education-event-editor-test')):
         now = datetime.now(timezone.utc)
-        entry = EducationEvent(id=1, title='행사', event_date='2026-10-20',
+        entry = EducationEvent(id=1, title='행사', category='단체심리검사', event_date='2026-10-20',
                                event_time='15:30', duration_minutes=75,
                                created_at=now, updated_at=now)
         view = EducationEventView(Mock())
         view.open_editor(entry)
         elements = list(ui.context.client.elements.values())
         fields = {element.label: element for element in elements
-                  if isinstance(element, (ui.input, ui.number, ui.time_input))}
+                  if isinstance(element, (ui.input, ui.number, ui.time_input, ui.select))}
+        assert fields['구분'].options == ['교육', '행사', '단체심리검사']
+        assert fields['구분'].value == '단체심리검사'
         assert fields['시각'].value == '15:30'
         assert fields['운영 시간(분)'].value == 75
         assert fields['시각'].parent_slot is fields['운영 시간(분)'].parent_slot
+
+
+def test_group_test_category_migration_and_storage(tmp_path):
+    db = Database('test-only', tmp_path / 'category.db')
+    db.initialize()
+    repo = EducationEventRepository(db)
+    value = EducationEventInput(title='기존 교육', event_date='2026-10-20',
+                                event_time='10:30', duration_minutes=45, content='내용')
+    saved = repo.save(value)
+    with db.session(write=True) as connection:
+        schema = connection.execute("SELECT sql FROM sqlite_master WHERE name='education_events'").fetchone()[0]
+        legacy_schema = schema.replace('education_events', 'education_events_legacy').replace(
+            "'교육', '행사', '단체심리검사'", "'교육', '행사'")
+        connection.execute(legacy_schema)
+        connection.execute('INSERT INTO education_events_legacy SELECT * FROM education_events')
+        connection.execute('DROP TABLE education_events')
+        connection.execute('ALTER TABLE education_events_legacy RENAME TO education_events')
+        connection.execute('PRAGMA user_version=18')
+    db.initialize()
+    db.initialize()
+    assert repo.get(saved.id) == saved
+    updated = repo.save(value.model_copy(update={'category': '단체심리검사'}), saved.id)
+    assert updated.category == '단체심리검사'
+    created = repo.save(value.model_copy(update={'category': '단체심리검사'}))
+    assert repo.get(created.id) == created
+    assert repo.list() == [created, updated]

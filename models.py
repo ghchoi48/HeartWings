@@ -14,6 +14,17 @@ class InputModel(BaseModel):
     model_config = ConfigDict(extra='forbid', str_strip_whitespace=True, frozen=True)
 
 
+class SchoolSettings(InputModel):
+    school_name: str = Field(default='', max_length=100)
+    school_level: Literal['초등학교', '중학교', '고등학교'] = '중학교'
+    counselor_name: str = Field(default='', max_length=100)
+    office_number: str = Field(default='', max_length=50)
+
+    @property
+    def grade_options(self) -> dict[int, str]:
+        return {grade: f'{grade}학년' for grade in range(1, 7 if self.school_level == '초등학교' else 4)}
+
+
 class TeacherInput(InputModel):
     """교사 연락처와 내선은 앞자리 0을 보존하는 문자열로 저장한다."""
 
@@ -278,7 +289,7 @@ class StudentTimelineEntry(BaseModel):
 
 class EducationEventInput(InputModel):
     title: str = Field(min_length=1, max_length=200)
-    category: Literal['교육', '행사'] = '교육'
+    category: Literal['교육', '행사', '단체심리검사'] = '교육'
     event_date: date
     event_time: str = Field(default='', pattern=r'^$|^(?:[01][0-9]|2[0-3]):[0-5][0-9]$')
     duration_minutes: int | None = Field(default=None, ge=1, le=1440)
@@ -286,9 +297,61 @@ class EducationEventInput(InputModel):
     audience: str = Field(default='', max_length=200)
     facilitator: str = Field(default='', max_length=100)
     content: str = Field(default='', max_length=20000)
+    content_format: Literal['text', 'html'] = 'text'
 
 
 class EducationEvent(EducationEventInput):
     id: int
     created_at: datetime
     updated_at: datetime
+
+
+class PsychologicalTestInput(InputModel):
+    student_id: int = Field(gt=0)
+    title: str = Field(min_length=1, max_length=200)
+    test_date: date
+    target: Literal['학생', '보호자(학부모)'] = '학생'
+    test_time: str = Field(default='', pattern=r'^$|^(?:[01][0-9]|2[0-3]):[0-5][0-9]$')
+    duration_minutes: int | None = Field(default=None, ge=1, le=1440)
+    content: str = Field(default='', max_length=20000)
+    content_format: Literal['text', 'html'] = 'text'
+
+
+class PsychologicalTest(PsychologicalTestInput):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class CalendarInput(InputModel):
+    name: str = Field(min_length=1, max_length=100)
+    color: str = Field(default='#0d9488', pattern=r'^#[0-9a-fA-F]{6}$')
+
+
+class Calendar(CalendarInput):
+    id: int
+    source: Literal['counseling', 'custom', 'holidays'] = 'custom'
+    visible: bool = True
+
+
+class CalendarEventInput(InputModel):
+    calendar_id: int = Field(gt=0)
+    title: str = Field(min_length=1, max_length=200)
+    starts_at: datetime
+    duration_minutes: int = Field(default=60, ge=1, le=1440)
+    status: Literal['scheduled', 'completed', 'cancelled'] = 'scheduled'
+
+    @field_validator('starts_at')
+    @classmethod
+    def require_timezone(cls, value):
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError('시간대가 포함된 시각이 필요합니다.')
+        return value
+
+
+class CalendarEvent(CalendarEventInput):
+    id: int
+    source: Literal['counseling', 'custom'] = 'custom'
+    calendar_name: str
+    color: str
+    student_name: str = ''

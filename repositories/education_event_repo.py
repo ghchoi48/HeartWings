@@ -27,8 +27,8 @@ class EducationEventRepository:
         with self.database.session(write=True) as connection:
             if event_id is None:
                 cursor = connection.execute('''INSERT INTO education_events
-                    (title, category, event_date, event_time, duration_minutes, location, audience, facilitator, content, created_at, updated_at)
-                    VALUES (:title, :category, :event_date, :event_time, :duration_minutes, :location, :audience, :facilitator, :content,
+                    (title, category, event_date, event_time, duration_minutes, location, audience, facilitator, content, content_format, created_at, updated_at)
+                    VALUES (:title, :category, :event_date, :event_time, :duration_minutes, :location, :audience, :facilitator, :content, :content_format,
                             :updated_at, :updated_at)''', data)
                 event_id = cursor.lastrowid
             else:
@@ -36,7 +36,7 @@ class EducationEventRepository:
                 cursor = connection.execute('''UPDATE education_events SET title=:title, category=:category,
                     event_date=:event_date, event_time=:event_time, duration_minutes=:duration_minutes,
                     location=:location, audience=:audience, facilitator=:facilitator,
-                    content=:content, updated_at=:updated_at WHERE id=:id''', data)
+                    content=:content, content_format=:content_format, updated_at=:updated_at WHERE id=:id''', data)
                 if not cursor.rowcount:
                     raise NotFoundError('교육/행사를 찾을 수 없습니다.')
             row = connection.execute('SELECT * FROM education_events WHERE id=?', (event_id,)).fetchone()
