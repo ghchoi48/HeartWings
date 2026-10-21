@@ -27,8 +27,13 @@ class HomeView:
             .home-widget { min-width: 0; width: 100%; align-self: start; min-height: 290px; position: relative; overflow: auto; }
             .home-drag-handle { cursor: grab; touch-action: none; user-select: none; }
             .home-drag-handle:active { cursor: grabbing; }
-            .home-resize-handle { position: absolute; right: 5px; bottom: 5px;
-                cursor: nwse-resize; touch-action: none; padding: 6px; border-radius: 6px; }
+            .home-resize-handle { position: absolute; z-index: 2; touch-action: none;
+                border: 0; padding: 0; border-radius: 6px; background: #e6f4f1;
+                display: flex; align-items: center; justify-content: center; }
+            .home-resize-x { right: 0; top: 25%; width: 12px; height: 50%; cursor: ew-resize; }
+            .home-resize-y { bottom: 0; left: 25%; width: 50%; height: 12px; cursor: ns-resize; }
+            .home-resize-xy { right: 0; bottom: 0; width: 28px; height: 28px; cursor: nwse-resize; }
+            .home-resize-handle:hover { background: #b8e2d9; }
             .home-resize-handle:focus-visible { outline: 2px solid #24756b; }
             .home-resizing { outline: 2px solid #24756b; user-select: none; }
             .home-drop-placeholder { opacity: .35; outline: 2px dashed #24756b; }
@@ -84,7 +89,7 @@ class HomeView:
         self.widget_views = []
         self.sortable.enable() if self.editing else self.sortable.disable()
         self.edit_button.text = '편집 완료' if self.editing else '배치 편집'
-        self.status.text = ('제목을 끌어 배치하고 오른쪽 아래 모서리를 끌어 크기를 조절하세요. 변경 즉시 저장됩니다.'
+        self.status.text = ('제목을 끌어 배치하고 오른쪽·아래쪽 가장자리 또는 모서리로 크기를 조절하세요. 변경 즉시 저장됩니다.'
                             if self.editing else '배치는 자동 저장됩니다.')
         with self.grid:
             if not self.layout:
@@ -112,13 +117,17 @@ class HomeView:
                             ui.space()
                             ui.button(icon='delete_outline', on_click=lambda index=index: self.remove(index)).props(
                                 f'flat round color=negative aria-label="{widget.title} 위젯 삭제"').tooltip('위젯 삭제 (데이터는 보존)')
-                        ui.label('제목을 드래그해 이동 · 모서리를 드래그해 크기 조절').classes('text-sm text-slate-400 py-8')
-                        handle = ui.icon('drag_handle').classes('home-resize-handle text-teal-700').props(
-                            f'role=button tabindex=0 aria-label="{widget.title} 크기 조절"')
-                        handle.on('pointerdown', lambda e, instance_id=item['id']: self.resize_drag(instance_id, e.args),
-                                  js_handler=RESIZE_POINTER)
-                        handle.on('keydown', lambda e, instance_id=item['id']: self.resize_drag(instance_id, e.args),
-                                  js_handler=RESIZE_KEYBOARD)
+                        ui.label('오른쪽: 너비 · 아래쪽: 높이 · 모서리: 가로·세로').classes('text-sm text-slate-400 py-8')
+                        for axis, label, icon in (('x', '너비 조절', 'drag_indicator'),
+                                                  ('y', '높이 조절', 'drag_handle'),
+                                                  ('xy', '크기 조절', 'open_in_full')):
+                            with ui.element('button').classes(f'home-resize-handle home-resize-{axis} text-teal-700').props(
+                                    f'type=button data-resize-axis={axis} aria-label="{widget.title} {label}"') as handle:
+                                ui.icon(icon, size='16px').classes('pointer-events-none')
+                            handle.on('pointerdown', lambda e, instance_id=item['id']: self.resize_drag(instance_id, e.args),
+                                      js_handler=RESIZE_POINTER)
+                            handle.on('keydown', lambda e, instance_id=item['id']: self.resize_drag(instance_id, e.args),
+                                      js_handler=RESIZE_KEYBOARD)
                     else:
                         view = widget(self.repository, self.teachers, item['id'], self.refresh_todos)
                         self.widget_views.append(view)
