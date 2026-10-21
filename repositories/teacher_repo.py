@@ -17,6 +17,27 @@ class TeacherRepository:
                 (limit, offset)).fetchall()
             return [Teacher.model_validate(dict(row)) for row in rows]
 
+    def search(self, query: str, *, limit: int = 50) -> list[Teacher]:
+        """이름·담당 업무를 전체 명부에서 검색한다. LIKE 패턴 문자는 문자로 취급한다."""
+        check_page(limit, 0)
+        exact = query.strip()
+        query = exact.replace('!', '!!').replace('%', '!%').replace('_', '!_')
+        with self.database.session() as connection:
+            rows = connection.execute(
+                """SELECT * FROM teachers WHERE name LIKE ? ESCAPE '!'
+                OR responsibilities LIKE ? ESCAPE '!'
+                ORDER BY CASE
+                    WHEN name = ? COLLATE NOCASE THEN 0
+                    WHEN name LIKE ? ESCAPE '!' THEN 1
+                    WHEN name LIKE ? ESCAPE '!' THEN 2
+                    WHEN responsibilities = ? COLLATE NOCASE THEN 3
+                    WHEN responsibilities LIKE ? ESCAPE '!' THEN 4
+                    ELSE 5 END,
+                    length(name), name, id LIMIT ?""",
+                (f'%{query}%', f'%{query}%', exact, f'{query}%', f'%{query}%',
+                 exact, f'{query}%', limit)).fetchall()
+            return [Teacher.model_validate(dict(row)) for row in rows]
+
     def get(self, teacher_id: int) -> Teacher | None:
         with self.database.session() as connection:
             row = connection.execute('SELECT * FROM teachers WHERE id=?', (teacher_id,)).fetchone()

@@ -49,7 +49,7 @@ def test_teacher_storage_and_migration(tmp_path):
     assert len(repo.list()) == 2
     with db.session() as connection:
         assert connection.execute('SELECT name FROM students').fetchone()[0] == '기존 학생'
-        assert connection.execute('PRAGMA user_version').fetchone()[0] == 24
+        assert connection.execute('PRAGMA user_version').fetchone()[0] == 26
 
 
 class ConsultationViewTests(unittest.IsolatedAsyncioTestCase):
@@ -87,3 +87,41 @@ class ConsultationViewTests(unittest.IsolatedAsyncioTestCase):
                     self.assertIsNone(view.selected)
             finally:
                 host.delete()
+
+
+def test_teacher_search_ranks_best_match_before_alphabetical_order(tmp_path):
+    db = Database('test-only-password', tmp_path / 'ranked.db')
+    db.initialize()
+    repo = TeacherRepository(db)
+    repo.save(TeacherInput(name='가나다', responsibilities='김민수'))
+    repo.save(TeacherInput(name='김민수 선생님'))
+    exact = repo.save(TeacherInput(name='김민수'))
+    assert repo.search('김민수', limit=1) == [exact]
+    assert repo.search('김민', limit=1) == [exact]
+    assert repo.search('민수', limit=1) == [exact]
+    assert repo.search('없는 검색어', limit=1) == []
+
+
+class TeacherSearchWidgetTests(unittest.IsolatedAsyncioTestCase):
+    async def test_initial_empty_blank_and_single_search_result(self):
+        from widgets.teacher_search import TeacherSearch
+        with Client(page('/teacher-widget-test')):
+            repo = Mock()
+            repo.search.return_value = []
+            widget = TeacherSearch(None, repo)
+            host = ui.column()
+            with host:
+                widget.build()
+            repo.search.assert_not_called()
+
+            async def invoke(function, *args, **kwargs):
+                return function(*args, **kwargs)
+
+            with patch('widgets.teacher_search.run.io_bound', side_effect=invoke):
+                widget.query.value = '   '
+                await widget.search()
+                repo.search.assert_not_called()
+                widget.query.value = ' 김민수 '
+                await widget.search()
+                repo.search.assert_called_once_with('김민수', limit=1)
+            host.delete()

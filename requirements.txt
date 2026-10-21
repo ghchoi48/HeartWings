@@ -4,3 +4,4 @@ pydantic>=2.10,<3
 nh3>=0.3,<0.4
 markdown2>=2.4,<3
 holidays>=0.107,<1
+certifi>=2024.8.30

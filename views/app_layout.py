@@ -6,7 +6,8 @@ from collections.abc import Awaitable, Callable
 from database import DatabaseError
 from repositories.counseling_repo import CounselingRepository
 from repositories.student_repo import StudentRepository
-from views.home_view import build_home
+from views.home_view import HomeView
+from repositories.home_repo import HomeRepository
 from views.student_view import StudentView
 from views.counseling_view import CounselingView
 from views.group_counseling_view import GroupCounselingView
@@ -82,7 +83,11 @@ class AppLayout:
         with content:
             self.panels['home'] = ui.column().classes('w-full')
             with self.panels['home']:
-                build_home(lambda: self.navigate('students'))
+                self.home_view = HomeView(HomeRepository(self.students.database,
+                                                          self.display.store if self.display else None),
+                                          TeacherRepository(self.students.database),
+                                          lambda: self.navigate('students'))
+                self.home_view.build()
             self.panels['students'] = ui.column().classes('w-full')
             self.panels['counseling'] = ui.column().classes('w-full')
             self.panels['groups'] = ui.column().classes('w-full')
@@ -182,6 +187,11 @@ class AppLayout:
             with self.panels['statistics']:
                 self.statistics_view = StatisticsView(self.reporting)
                 self.statistics_view.build()
+        if page == 'home' and hasattr(self, 'home_view'):
+            with self.panels['home']:
+                for widget in self.home_view.widget_views:
+                    if widget.kind == 'meal':
+                        ui.timer(0, widget.reload, once=True)
         self.active_page = page
         for name, panel in self.panels.items():
             panel.set_visibility(name == page)

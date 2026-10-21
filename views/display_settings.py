@@ -6,6 +6,7 @@ from pathlib import Path
 
 from nicegui import ui
 
+from settings_store import SettingsStore
 from desktop import update_native_icon
 from app_fonts import FONTS, FONT_FAMILIES, font_face_css
 
@@ -15,6 +16,7 @@ MODES = {'auto': '자동 (기본값)', 'dark': '다크', 'light': '라이트'}
 class DisplaySettings:
     def __init__(self, path: Path | None = None):
         self.path = path
+        self.store = SettingsStore(path)
         self.values = {'mode': 'auto', 'size': 16, 'font': 'system'}
         if path and path.exists():
             try:
@@ -98,11 +100,8 @@ class DisplaySettings:
             return
         if self.path:
             try:
-                self.path.parent.mkdir(parents=True, exist_ok=True)
-                temporary = self.path.with_suffix('.tmp')
-                temporary.write_text(json.dumps(self.values, ensure_ascii=False), encoding='utf-8')
-                temporary.replace(self.path)
-            except OSError:
+                self.store.update(lambda data: data.update({key: self.values[key]}))
+            except (OSError, ValueError):
                 ui.notify('화면에는 적용했지만 설정을 저장하지 못했습니다. 저장 폴더의 권한을 확인해 주세요.', type='negative')
 
     def build_controls(self) -> None:

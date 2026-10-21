@@ -19,6 +19,9 @@ class SchoolSettings(InputModel):
     school_level: Literal['초등학교', '중학교', '고등학교'] = '중학교'
     counselor_name: str = Field(default='', max_length=100)
     office_number: str = Field(default='', max_length=50)
+    neis_office_code: str = Field(default='', pattern=r'^(?:[B-HIJKMNPQRST]10)?$')
+    neis_school_code: str = Field(default='', pattern=r'^(?:[0-9]{7})?$')
+    neis_api_key: str = Field(default='', max_length=200)
 
     @property
     def grade_options(self) -> dict[int, str]:

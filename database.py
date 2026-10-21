@@ -484,10 +484,30 @@ class Database:
                 connection.execute('INSERT OR IGNORE INTO school_settings (id) VALUES (1)')
                 connection.execute('PRAGMA user_version = 24')
                 version = 24
-            if version != 24:
+            if version == 24:
+                connection.execute("""CREATE TABLE IF NOT EXISTS home_preferences (
+                    id INTEGER PRIMARY KEY CHECK(id = 1),
+                    layout TEXT NOT NULL
+                )""")
+                connection.execute("""CREATE TABLE IF NOT EXISTS home_todos (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT NOT NULL CHECK(length(trim(title)) BETWEEN 1 AND 300),
+                    done INTEGER NOT NULL DEFAULT 0 CHECK(done IN (0, 1))
+                )""")
+                connection.execute('PRAGMA user_version = 25')
+                version = 25
+            if version == 25:
+                columns = {row[1] for row in connection.execute('PRAGMA table_info(school_settings)')}
+                for column in ('neis_office_code', 'neis_school_code', 'neis_api_key'):
+                    if column not in columns:
+                        connection.execute(f"ALTER TABLE school_settings ADD COLUMN {column} TEXT NOT NULL DEFAULT ''")
+                connection.execute('PRAGMA user_version = 26')
+                version = 26
+            if version != 26:
                 raise DatabaseError('지원하지 않는 DB 버전입니다. 앱 버전을 확인하세요.')
             if new_database and school is not None:
                 school = SchoolSettings.model_validate(school.model_dump())
                 connection.execute('''UPDATE school_settings SET school_name=:school_name,
                     school_level=:school_level, counselor_name=:counselor_name,
-                    office_number=:office_number WHERE id=1''', school.model_dump())
+                    office_number=:office_number, neis_office_code=:neis_office_code,
+                    neis_school_code=:neis_school_code, neis_api_key=:neis_api_key WHERE id=1''', school.model_dump())
