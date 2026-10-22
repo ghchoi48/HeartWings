@@ -35,7 +35,7 @@ def test_backup_is_encrypted_complete_and_does_not_change_original(tmp_path):
         student_names(Database('wrong', path))
     info = database_info(database)
     assert info['students'] == 1
-    assert info['schema_version'] == 28
+    assert info['schema_version'] == 29
     assert info['size'] == database.path.stat().st_size
     assert Path(info['path']) == database.path.resolve()
 
@@ -126,10 +126,12 @@ def test_restore_from_older_schema_migrates_only_copy(tmp_path):
     current = make_database(tmp_path / 'current.db')
     source = make_database(tmp_path / 'source.db', 'backup-key', 'Restored')
     with source.session(write=True) as connection:
+        connection.execute('DROP TABLE student_enrollments')
+        connection.execute('ALTER TABLE students DROP COLUMN school_year')
         connection.execute('PRAGMA user_version=25')
     recovery = restore_backup(current, source.path.read_bytes(), 'backup-key')
     assert recovery.exists()
-    assert database_info(Database('backup-key', current.path))['schema_version'] == 28
+    assert database_info(Database('backup-key', current.path))['schema_version'] == 29
     assert database_info(source)['schema_version'] == 25
 
 

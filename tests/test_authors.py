@@ -105,6 +105,8 @@ def test_all_records_snapshot_author_and_preserve_it_on_edit(db):
 def test_version_26_migration_backfills_once(db):
     student = StudentRepository(db).create(StudentInput(name='학생', grade=1, classroom='1'))
     with db.session(write=True) as connection:
+        connection.execute('DROP TABLE student_enrollments')
+        connection.execute('ALTER TABLE students DROP COLUMN school_year')
         for table in tables(connection):
             connection.execute(f'DROP TRIGGER "{table}_snapshot_author"')
             connection.execute(f'ALTER TABLE "{table}" DROP COLUMN author')

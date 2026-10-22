@@ -90,6 +90,7 @@ class IntegratedCounselingTests(unittest.IsolatedAsyncioTestCase):
         from models import Student
         now = datetime.now(timezone.utc)
         students = Mock(database=SimpleNamespace(student_revision=0))
+        students.enrollments.return_value = []
         students.get.side_effect = lambda student_id: Student(
             id=student_id, name=f'학생 {student_id}', grade=1, classroom='1',
             created_at=now, updated_at=now)

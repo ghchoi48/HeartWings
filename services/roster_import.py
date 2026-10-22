@@ -27,7 +27,8 @@ COLUMNS = {
     'students': [('name', '이름', True), ('grade', '학년', True), ('classroom', '반', True),
                  ('student_number', '번호', False), ('nickname', '별명', False),
                  ('birth_date', '생년월일', False), ('student_contact', '학생 연락처', False),
-                 ('guardian_contact', '보호자 연락처', False), ('notes', '메모', False)],
+                 ('guardian_contact', '보호자 연락처', False), ('notes', '메모', False),
+                 ('school_year', '학년도', False)],
     'teachers': [('name', '이름', True), ('contact', '연락처', False),
                  ('extension', '내선번호', False), ('responsibilities', '담당업무', False)],
 }
@@ -66,7 +67,7 @@ def import_template(kind: ImportKind) -> bytes:
         header.alignment = Alignment(vertical='center')
         header.comment = Comment('필수 입력 항목입니다.' if required else '선택 입력 항목입니다.', '마음나래')
         # 번호·연락처 앞자리 0을 보존한다. 날짜와 학년만 형식을 구분한다.
-        number_format = '0' if key == 'grade' else 'yyyy-mm-dd' if key == 'birth_date' else '@'
+        number_format = '0' if key in ('grade', 'school_year') else 'yyyy-mm-dd' if key == 'birth_date' else '@'
         for row in range(2, MAX_ROWS + 2):
             sheet.cell(row, index).number_format = number_format
     if kind == 'students':
@@ -87,7 +88,9 @@ def import_template(kind: ImportKind) -> bytes:
     ]
     if kind == 'students':
         instructions += ['학년은 1~12 사이 정수, 생년월일은 YYYY-MM-DD 또는 Excel 날짜로 입력하세요.',
-                         '번호는 전체 학생 간 중복될 수 없습니다. 미입력은 허용합니다. 동명이인은 허용합니다.']
+                         '학년도는 4자리 연도입니다. 미입력 시 현재 학년도(3월 시작)를 사용합니다.',
+                         '같은 학년도·학년·반 안에서 번호는 중복될 수 없습니다. 번호 미입력과 동명이인은 허용합니다.',
+                         '기존 학생의 학적 추가는 학생 정보 수정에서 학년도를 변경해 저장하세요. 이 서식은 신규 학생 등록용입니다.']
     else:
         instructions += ['이름·연락처·내선번호·담당업무가 모두 같은 교사는 중복 등록할 수 없습니다.',
                          '동명이인은 나머지 정보로 구분하여 등록할 수 있습니다.']
@@ -170,8 +173,10 @@ def parse_import(content: bytes, kind: ImportKind) -> ImportBatch:
                 if kind == 'students':
                     data['student_number'] = data.get('student_number') or None
                     data['birth_date'] = data.get('birth_date') or None
+                    if not data.get('school_year'):
+                        data.pop('school_year', None)
                     value = StudentInput(**data)
-                    identity = value.student_number
+                    identity = (value.school_year, value.grade, value.classroom, value.student_number) if value.student_number else None
                 else:
                     value = TeacherInput(**data)
                     identity = (value.name, value.contact, value.extension, value.responsibilities)

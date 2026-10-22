@@ -27,11 +27,16 @@ class RosterImportView:
                                     on_rejected=lambda: ui.notify('10MB 이하의 XLSX 파일 하나를 선택해 주세요.', type='warning')
                                     ).props('accept=.xlsx').classes('w-full')
             self.upload.on('removed', lambda: self.clear(False))
-            self.preview = ui.column().classes('w-full gap-2')
-            with ui.row().classes('w-full justify-end gap-2'):
-                self.reset = ui.button('파일 초기화', on_click=self.clear).props('flat')
-                self.register = ui.button(f'{title} 등록', icon='person_add', on_click=self.save)
-            self.register.disable()
+            self.status = ui.label().classes('text-sm text-teal-700')
+        with ui.dialog().props('persistent') as self.dialog:
+            with ui.card().classes('w-full max-w-4xl max-h-[85vh] p-6 gap-4'):
+                ui.label(f'{title} 일괄 등록 미리보기').classes('text-xl font-bold')
+                self.filename = ui.label().classes('text-sm text-slate-500 break-all')
+                self.preview = ui.column().classes('w-full min-h-0 overflow-auto gap-2')
+                with ui.row().classes('w-full justify-end gap-2 shrink-0'):
+                    self.reset = ui.button('취소', on_click=self.clear).props('flat')
+                    self.register = ui.button(f'{title} 등록', icon='person_add', on_click=self.save)
+                self.register.disable()
 
     def apply_busy(self, value):
         for control in (self.download, self.upload, self.reset):
@@ -44,6 +49,7 @@ class RosterImportView:
         self.batch = None
         self.preview.clear()
         self.register.disable()
+        self.dialog.close()
         if reset_upload:
             self.upload.reset()
 
@@ -65,6 +71,9 @@ class RosterImportView:
         if self.is_busy():
             return
         self.clear(False)
+        self.status.text = ''
+        self.filename.text = event.file.name
+        self.dialog.open()
         with self.preview:
             ui.label('파일을 검사하는 중입니다…').classes('text-sm text-slate-500')
         self.set_busy(True)
@@ -82,7 +91,7 @@ class RosterImportView:
                         ui.label(error).classes('text-sm text-red-700 break-words')
                     if len(self.batch.errors) > 50:
                         ui.label(f'오류 중 50건을 표시했습니다. 전체 오류 {len(self.batch.errors):,}건').classes('text-sm text-red-700')
-                keys = ['name', 'grade', 'classroom', 'student_number'] if self.kind == 'students' else [key for key, _, _ in COLUMNS[self.kind]]
+                keys = ['name', 'school_year', 'grade', 'classroom', 'student_number'] if self.kind == 'students' else [key for key, _, _ in COLUMNS[self.kind]]
                 columns = [{'name': key, 'field': key, 'label': label, 'align': 'left'}
                            for key, label, _ in COLUMNS[self.kind] if key in keys]
                 rows = [dict(row.value.model_dump(mode='json'), _row=row.number) for row in self.batch.rows[:20]]
@@ -107,8 +116,8 @@ class RosterImportView:
             count = await run.io_bound(self.repository.save, self.batch)
             self.batch = None  # 같은 파일이 등록 버튼 연타로 재등록되지 않게 한다.
             self.preview.clear()
-            with self.preview:
-                ui.label(f'{TITLES[self.kind]} {count:,}명을 등록했습니다.').classes('font-semibold text-teal-700')
+            self.dialog.close()
+            self.status.text = f'{TITLES[self.kind]} {count:,}명을 등록했습니다.'
             self.upload.reset()
             ui.notify(f'{TITLES[self.kind]} {count:,}명을 등록했습니다.', type='positive')
             succeeded = True

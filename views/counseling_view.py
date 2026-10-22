@@ -48,7 +48,7 @@ def counseling_form_input(student_id: int, values: dict) -> CounselingInput:
 
 
 class CounselingView:
-    """페이지별 학생 선택과 조회 상태를 관리한다. 편집은 모달에서 격리한다."""
+    """학생과 사례 선택, 상담 일지 목록과 인라인 편집 상태를 관리한다."""
 
     log_name = '상담 일지'
 
@@ -71,7 +71,43 @@ class CounselingView:
         self.log_offset = 0
         self.student_request = 0
         self.log_request = 0
-        self.editor_open = False
+        self.report_open = False
+        self.editor_saving = False
+        self.editor_request = 0
+        self.editor_fields = {}
+        self.editor_original = {}
+
+    @property
+    def editor_open(self) -> bool:
+        return self.report_open or self.editor_saving or self.editor_dirty()
+
+    def editor_dirty(self) -> bool:
+        return self.editor_original != {key: field.value for key, field in self.editor_fields.items()}
+
+    async def confirm_editor_discard(self) -> bool:
+        if self.editor_saving or self.report_open:
+            return False
+        if not self.editor_dirty():
+            return True
+        with ui.context.client.content:
+            with ui.dialog().props('persistent') as confirm, ui.card():
+                ui.label('저장하지 않은 내용을 버릴까요?')
+                with ui.row():
+                    ui.button('계속 작성', on_click=lambda: confirm.submit(False)).props('flat')
+                    ui.button('변경 내용 버리기', on_click=lambda: confirm.submit(True)).props('color=negative')
+        try:
+            return bool(await confirm)
+        finally:
+            if not confirm.is_deleted:
+                confirm.delete()
+
+    def clear_editor(self) -> None:
+        self.editor_request += 1
+        self.editor_fields = {}
+        self.editor_original = {}
+        self.editor_container.clear()
+        with self.editor_container:
+            ui.label('사례를 선택한 뒤 새 상담 일지를 작성하거나 목록에서 일지를 열어 주세요.').classes('text-slate-500')
 
     def build(self) -> None:
         """선택 학생의 상담 사례 목록과 사례별 일지를 구성한다."""
@@ -84,20 +120,9 @@ class CounselingView:
                         self.add_case = ui.button('새 상담 사례', icon='create_new_folder',
                                                   on_click=lambda: self.open_case_editor(report_field='intake_html'))
                         self.add_case.disable()
-                    self.case_select = ui.radio({}, on_change=self.change_case).classes('w-full break-words')
+                    self.case_select = ui.select({}, label='상담 사례', on_change=self.change_case).props('outlined').classes('w-full')
                     self.case_select.disable()
                     self.case_message = ui.label().classes('text-sm text-slate-500')
-                with ui.card().classes('w-full min-w-0 rounded-2xl shadow-sm p-5'):
-                    with ui.row().classes('w-full items-center'):
-                        self.intake_interview = ui.button('접수 면접', icon='assignment_ind',
-                                                        on_click=lambda: self.open_case_editor(self.selected_case, 'intake_html')).props('outline')
-                        self.intake_interview.disable()
-                        self.edit_case = ui.button('사례 개념화 보고서', icon='description',
-                                                   on_click=lambda: self.open_case_editor(self.selected_case)).props('outline')
-                        self.edit_case.disable()
-                        self.closing_report = ui.button('종결 보고서', icon='task_alt',
-                                                      on_click=lambda: self.open_case_editor(self.selected_case, 'closing_html')).props('outline')
-                        self.closing_report.disable()
                     ui.separator()
                     with ui.row().classes('w-full items-center justify-between'):
                         self.log_heading = ui.label('상담 일지 목록').classes('text-lg font-bold')
@@ -112,9 +137,26 @@ class CounselingView:
                         ui.button('일지 새로고침', icon='refresh', on_click=self.load_logs).props('flat')
                     self.log_previous.disable()
                     self.log_next.disable()
+                with ui.card().classes('w-full min-w-0 rounded-2xl shadow-sm p-5'):
+                    with ui.row().classes('w-full items-center'):
+                        self.intake_interview = ui.button('접수 면접', icon='assignment_ind',
+                                                        on_click=lambda: self.open_case_editor(self.selected_case, 'intake_html')).props('outline')
+                        self.intake_interview.disable()
+                        self.edit_case = ui.button('사례 개념화 보고서', icon='description',
+                                                   on_click=lambda: self.open_case_editor(self.selected_case)).props('outline')
+                        self.edit_case.disable()
+                        self.closing_report = ui.button('종결 보고서', icon='task_alt',
+                                                      on_click=lambda: self.open_case_editor(self.selected_case, 'closing_html')).props('outline')
+                        self.closing_report.disable()
+                    ui.separator()
+                    self.editor_container = ui.column().classes('w-full min-w-0 gap-4')
+                    self.clear_editor()
 
     async def select_student(self, student_id: int | None) -> None:
         """상담 대상의 최신 프로필을 읽고 다른 학생의 이전 일지를 즉시 숨긴다."""
+        if not await self.confirm_editor_discard():
+            return
+        self.clear_editor()
         self.student_request += 1
         self.log_request += 1
         request = self.log_request
@@ -160,6 +202,9 @@ class CounselingView:
     async def load_cases(self, preferred_id: int | None = None) -> None:
         if self.selected is None:
             return
+        if not await self.confirm_editor_discard():
+            return
+        self.clear_editor()
         self.case_request += 1
         request = self.case_request
         student_id = self.selected.id
@@ -200,6 +245,10 @@ class CounselingView:
     async def select_case(self, case: CounselingCase) -> None:
         if self.selected is None or case.student_id != self.selected.id:
             return
+        if not await self.confirm_editor_discard():
+            self.case_select.set_value(self.selected_case.id if self.selected_case else None)
+            return
+        self.clear_editor()
         self.selected_case = case
         if case.id in self.case_options:
             self.case_select.set_value(case.id)
@@ -207,9 +256,11 @@ class CounselingView:
         self.log_offset = 0
         self.add.enable()
         await self.load_logs()
+        if self.selected_case == case and not self.editor_fields:
+            await self.open_editor()
 
     async def open_case_editor(self, case: CounselingCase | None = None, report_field: str = 'report_html') -> None:
-        if self.editor_open or self.selected is None:
+        if self.report_open or self.editor_saving or self.selected is None:
             return
         if case is not None and case.student_id != self.selected.id:
             return
@@ -218,7 +269,7 @@ class CounselingView:
             'intake_html': ('접수 면접', '상담 신청 경위, 주호소, 배경 정보와 초기 면접 내용을 작성하세요.'),
             'closing_html': ('종결 보고서', '상담 진행 요약, 목표 달성 정도, 종결 사유와 추후 계획을 작성하세요.'),
         }[report_field]
-        self.editor_open = True
+        self.report_open = True
         student = self.selected
         dialog = None
         try:
@@ -277,12 +328,13 @@ class CounselingView:
             cancel_button.on_click(cancel)
             save_button.on_click(save)
             saved = await dialog
+            self.report_open = False
             if saved:
                 ui.notify(f'상담 사례와 {report_name} 내용을 저장했습니다.', type='positive')
                 if self.selected and self.selected.id == student.id:
                     await self.load_cases(preferred_id=saved.id)
         finally:
-            self.editor_open = False
+            self.report_open = False
             if dialog is not None and not dialog.is_deleted:
                 dialog.delete()
 
@@ -323,94 +375,79 @@ class CounselingView:
         self.log_next.set_enabled(len(entries) > PAGE_SIZE)
 
     async def open_editor(self, entry_id: int | None = None) -> None:
-        """원문을 유지하는 편집 모달. 실패 시 입력을 보존하며 미저장 취소를 확인한다."""
-        if self.editor_open or self.selected is None or self.selected_case is None:
+        """오른쪽 카드에서 일지를 편집하며 저장 실패 시 입력을 보존한다."""
+        if self.selected is None or self.selected_case is None:
             return
-        self.editor_open = True
-        student = self.selected
-        case = self.selected_case
-        dialog = None
-        try:
-            entry = None
-            if entry_id is not None:
-                try:
-                    entry = await run.io_bound(self.counseling.get, entry_id)
-                except DatabaseError as error:
+        if not await self.confirm_editor_discard():
+            return
+        self.editor_request += 1
+        request = self.editor_request
+        student, case = self.selected, self.selected_case
+        entry = None
+        if entry_id is not None:
+            try:
+                entry = await run.io_bound(self.counseling.get, entry_id)
+            except DatabaseError as error:
+                if request == self.editor_request:
                     ui.notify(str(error), type='negative')
-                    return
-                if entry is None or entry.student_id != student.id or entry.case_id != case.id:
-                    ui.notify('상담 일지를 찾을 수 없습니다. 목록을 새로고침해 주세요.', type='warning')
-                    return
-            # 모달을 목록 하위가 아닌 클라이언트 루트에 붙여 목록 재조회와 수명을 분리한다.
-            with ui.context.client.content:
-                dialog, fields, message, save_button, cancel_button = self.build_editor(student, entry)
-            original = {key: field.value for key, field in fields.items()}
-            saving = False
+                return
+            if request != self.editor_request:
+                return
+            if entry is None or entry.student_id != student.id or entry.case_id != case.id:
+                ui.notify('상담 일지를 찾을 수 없습니다. 목록을 새로고침해 주세요.', type='warning')
+                return
+        self.editor_container.clear()
+        with self.editor_container:
+            _, fields, message, save_button, cancel_button = self.build_editor(student, entry)
+        self.editor_fields = fields
+        self.editor_original = {key: field.value for key, field in fields.items()}
 
-            async def cancel() -> None:
-                if saving:
-                    return
-                if original != {key: field.value for key, field in fields.items()}:
-                    with ui.dialog().props('persistent') as confirm, ui.card():
-                        ui.label('저장하지 않은 내용을 버릴까요?')
-                        with ui.row():
-                            ui.button('계속 작성', on_click=lambda: confirm.submit(False)).props('flat')
-                            ui.button('변경 내용 버리기', on_click=lambda: confirm.submit(True)).props('color=negative')
-                    discard = await confirm
-                    if not confirm.is_deleted:
-                        confirm.delete()
-                    if not discard:
-                        return
-                dialog.submit(False)
+        async def cancel() -> None:
+            if request == self.editor_request and await self.confirm_editor_discard():
+                self.clear_editor()
 
-            async def save() -> None:
-                nonlocal saving, entry
-                if saving:
-                    return
-                try:
-                    value = counseling_form_input(student.id, dict(
-                        {key: field.value for key, field in fields.items()}, content_format='html', case_id=case.id))
-                except (ValueError, ValidationError, TypeError):
-                    message.text = '상담 유형, 날짜·시각, 상담 시간(1~1440분)을 확인해 주세요. 입력 길이 제한도 확인해 주세요.'
-                    return
-                saving = True
-                for field in fields.values():
-                    field.disable()
-                save_button.disable()
-                cancel_button.disable()
-                message.text = '저장 중입니다…'
-                try:
-                    if entry is None:
-                        entry = await run.io_bound(self.counseling.create, value)
-                    else:
-                        entry = await run.io_bound(self.counseling.update, entry.id, value)
-                except DatabaseError as error:
-                    message.text = str(error)
+        async def save() -> None:
+            nonlocal entry
+            if self.editor_saving or request != self.editor_request:
+                return
+            try:
+                value = counseling_form_input(student.id, dict(
+                    {key: field.value for key, field in fields.items()}, content_format='html', case_id=case.id))
+            except (ValueError, ValidationError, TypeError):
+                message.text = '상담 유형, 날짜·시각, 상담 시간(1~1440분)을 확인해 주세요. 입력 길이 제한도 확인해 주세요.'
+                return
+            self.editor_saving = True
+            for field in (*fields.values(), save_button, cancel_button):
+                field.disable()
+            message.text = '저장 중입니다…'
+            try:
+                if entry is None:
+                    entry = await run.io_bound(self.counseling.create, value)
                 else:
-                    dialog.submit(True)
-                finally:
-                    saving = False
-                    for field in fields.values():
-                        field.enable()
-                    save_button.enable()
-                    cancel_button.enable()
-
-            save_button.on_click(save)
-            cancel_button.on_click(cancel)
-            saved = await dialog
-            if saved:
+                    entry = await run.io_bound(self.counseling.update, entry.id, value)
+            except DatabaseError as error:
+                message.text = str(error)
+            else:
+                self.editor_original = {key: field.value for key, field in fields.items()}
+                message.text = '상담 일지를 저장했습니다.'
                 ui.notify(f'{self.log_name}를 저장했습니다.', type='positive')
                 self.log_offset = 0
                 await self.load_logs()
                 if self.on_saved:
                     await self.on_saved(student.id)
-        finally:
-            self.editor_open = False
-            if dialog is not None and not dialog.is_deleted:
-                dialog.delete()
+            finally:
+                self.editor_saving = False
+                for field in (*fields.values(), save_button, cancel_button):
+                    field.enable()
+
+        save_button.on_click(save)
+        cancel_button.on_click(cancel)
 
     async def open_record(self, entry_id: int) -> None:
         """캘린더에서 전달받은 일지의 학생을 선택하고 기존 편집기를 연다."""
+        if not await self.confirm_editor_discard():
+            return
+        self.clear_editor()
         self.student_request += 1
         self.log_request += 1
         request = self.student_request
@@ -443,7 +480,7 @@ class CounselingView:
             duration_minutes=50, content_markdown='', follow_up='', starts_at=datetime.now(KST).replace(second=0, microsecond=0))
         fields = {}
         local_start = initial['starts_at'].astimezone(KST)
-        with ui.dialog().props('persistent') as dialog, ui.card().classes('w-full max-w-6xl p-6 gap-4'):
+        with ui.column().classes('w-full min-w-0 gap-4') as panel:
             ui.label('상담 일지 수정' if entry else '새 상담 일지 작성').classes('text-2xl font-bold')
             ui.label(f'{student.name} · {student.grade}학년 {student.classroom}반 · 학번 {student.student_number or "미입력"}').classes('text-slate-500')
             with ui.row().classes('w-full items-start'):
@@ -483,4 +520,4 @@ class CounselingView:
             with ui.row().classes('w-full justify-end'):
                 cancel = ui.button('작성 닫기').props('flat')
                 save = ui.button('일지 저장', icon='save')
-        return dialog, fields, message, save, cancel
+        return panel, fields, message, save, cancel

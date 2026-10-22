@@ -96,7 +96,7 @@ def test_teacher_round_trip_and_duplicates(db):
 def test_row_errors_block_whole_file_and_report_original_rows(db):
     repository = RosterImportRepository(db)
     batch = repository.preview(xlsx('students', [
-        ['정상', 1, 1, '001'], ['오류', 0, 1], ['수식', 1, 1, '=1+1'], ['중복', 2, 1, '001'],
+        ['정상', 1, 1, '001'], ['오류', 0, 1], ['수식', 1, 1, '=1+1'], ['중복', 1, 1, '001'],
     ]), 'students')
     assert len(batch.errors) == 3
     assert all(any(error.startswith(f'{row}행:') for error in batch.errors) for row in (3, 4, 5))
@@ -116,12 +116,26 @@ def test_existing_student_number_and_new_conflict_after_preview(db):
     assert len(StudentRepository(db).list()) == 1
 
 
+def test_explicit_school_year_and_scoped_numbers(db):
+    repository = RosterImportRepository(db)
+    content = xlsx('students', [
+        ['학생1', 2025, 1, '1', '01'],
+        ['학생2', 2026, 1, '1', '01'],
+        ['학생3', 2026, 1, '2', '01'],
+    ], headers=['이름', '학년도', '학년', '반', '번호'])
+    batch = repository.preview(content, 'students')
+    assert not batch.errors
+    assert repository.save(batch) == 3
+    assert {row.school_year for row in StudentRepository(db).list()} == {2025, 2026}
+    assert len(repository.preview(content, 'students').errors) == 3
+
+
 def test_batch_insert_rolls_back_all_rows_on_database_conflict(db):
     students = StudentRepository(db)
     with pytest.raises(ConflictError):
         students.create_many([
             StudentInput(name='첫 학생', grade=1, classroom='1', student_number='001'),
-            StudentInput(name='두 학생', grade=2, classroom='2', student_number='001'),
+            StudentInput(name='두 학생', grade=1, classroom='1', student_number='001'),
         ])
     assert students.list() == []
     assert db.student_revision == 0
@@ -163,6 +177,8 @@ def test_invalid_files_and_headers(content, kind):
 def test_student_optional_fields_migrate_and_survive_edits(db):
     student = StudentRepository(db).create(StudentInput(name='학생', grade=1, classroom='1'))
     with db.session(write=True) as connection:
+        connection.execute('DROP TABLE student_enrollments')
+        connection.execute('ALTER TABLE students DROP COLUMN school_year')
         connection.execute('ALTER TABLE students DROP COLUMN nickname')
         connection.execute('ALTER TABLE students DROP COLUMN student_contact')
         connection.execute('PRAGMA user_version=27')

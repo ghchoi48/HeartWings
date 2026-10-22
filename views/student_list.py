@@ -30,7 +30,7 @@ class StudentList:
                     ui.button('학생 추가', icon='person_add', on_click=on_add)
             columns = [
                 {'name': name, 'label': label, 'field': name, 'align': 'left'}
-                for name, label in [('name', '이름'), ('nickname', '별명'), ('grade', '학년'), ('classroom', '반')]
+                for name, label in [('name', '이름'), ('nickname', '별명'), ('school_year', '학년도'), ('grade', '학년'), ('classroom', '반')]
             ]
             self.table = ui.table(columns=columns, rows=[], row_key='id', pagination={
                 'rowsPerPage': self.page_size, 'sortBy': 'name', 'descending': False, 'page': 1,
@@ -70,7 +70,7 @@ class StudentList:
         if request != self.list_request:
             return
         self.table.rows = [dict(id=s.id, name=s.name, nickname=s.nickname or '—',
-                                grade=s.grade, classroom=s.classroom) for s in students]
+                                school_year=s.school_year, grade=s.grade, classroom=s.classroom) for s in students]
         self.table.update()
 
     async def _select_student(self, event: events.GenericEventArguments) -> None:

@@ -54,6 +54,11 @@ def test_database_tab_template_preview_and_register(tmp_path):
                     ('교사', 'teachers', ['교사', '010-1234-5678', '0012', '담임']),
                 ]:
                     register = buttons[f'{title} 등록']
+                    dialog = next(element for element in elements if isinstance(element, ui.dialog)
+                                  and register in list(element.descendants()))
+                    cancel = next(element for element in dialog.descendants()
+                                  if isinstance(element, ui.button) and element.text == '취소')
+                    assert not dialog.value
                     assert not register.enabled
                     await callback(buttons[f'{title} 서식 다운로드'])()
                     template = download.call_args.args[0]
@@ -63,12 +68,21 @@ def test_database_tab_template_preview_and_register(tmp_path):
                     event = SimpleNamespace(file=SimpleNamespace(
                         name='roster.xlsx', read=AsyncMock(return_value=fill_template(template, values))))
                     await upload._upload_handlers[0](event)
+                    assert dialog.value
                     assert register.enabled
                     if kind == 'students':
                         assert StudentRepository(db).list() == []
                     else:
                         assert TeacherRepository(db).list() == []
+                    # 취소하면 저장 없이 닫히고 같은 파일을 다시 검사할 수 있다.
+                    callback(cancel)()
+                    assert not dialog.value
+                    assert not register.enabled
+                    assert imported.await_count == (0 if kind == 'students' else 1)
+                    await upload._upload_handlers[0](event)
+                    assert dialog.value
                     await callback(register)()
+                    assert not dialog.value
                     assert not register.enabled
                     imported.assert_awaited_with(kind)
                     await callback(register)()  # 반복 클릭으로 중복 등록되지 않는다.
@@ -83,6 +97,9 @@ def test_database_tab_template_preview_and_register(tmp_path):
                     await uploads['학생 XLSX 파일']._upload_handlers[0](SimpleNamespace(
                         file=SimpleNamespace(name='invalid.xlsx', read=AsyncMock(return_value=content))))
                     assert not buttons['학생 등록'].enabled
+                    student_dialog = next(element for element in elements if isinstance(element, ui.dialog)
+                                          and buttons['학생 등록'] in list(element.descendants()))
+                    assert student_dialog.value
                     await callback(buttons['학생 등록'])()
                 assert len(StudentRepository(db).list()) == 1
     asyncio.run(check())

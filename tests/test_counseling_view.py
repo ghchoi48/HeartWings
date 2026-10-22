@@ -1,9 +1,10 @@
 """상담 폼 변환, 목록 격리, 조회 실패를 검증한다."""
 
 import asyncio
+import inspect
 import unittest
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock, call, patch
 
 from nicegui import Client, ui
 from nicegui.page import page
@@ -63,6 +64,91 @@ class CounselingViewTests(unittest.IsolatedAsyncioTestCase):
     def tearDown(self):
         self.host.delete()
         self.client.__exit__(None, None, None)
+
+    async def test_case_and_logs_share_card_and_editor_is_inline(self):
+        self.assertIsInstance(self.view.case_select, ui.select)
+        case_card = self.view.case_select.parent_slot.parent
+        self.assertIs(self.view.logs.parent_slot.parent, case_card)
+        self.assertTrue(any(isinstance(child, ui.separator) for child in case_card))
+        editor_card = self.view.editor_container.parent_slot.parent
+        self.assertIsNot(case_card, editor_card)
+        self.assertIs(self.view.intake_interview.parent_slot.parent.parent_slot.parent, editor_card)
+        self.view.selected = self.student
+        await self.view.open_editor()
+        self.assertTrue(self.view.editor_fields['content_markdown'].visible)
+        self.assertFalse(any(isinstance(element, ui.dialog) for element in self.view.editor_container.descendants()))
+
+    async def test_inline_save_retry_then_update_preserves_fields(self):
+        self.view.selected = self.student
+        self.view.on_saved = AsyncMock()
+        await self.view.open_editor()
+        fields = self.view.editor_fields
+        fields['content_markdown'].value = '<p>상담 내용</p>'
+        save_button = next(element for element in self.view.editor_container.descendants()
+                           if isinstance(element, ui.button) and element.text == '일지 저장')
+        handler = next(listener.handler for listener in save_button._event_listeners.values() if listener.type == 'click')
+        save = inspect.getclosurevars(handler).nonlocals['callback']
+        self.repo.create.side_effect = DatabaseError('저장 실패')
+
+        async def invoke(function, *args, **kwargs):
+            return function(*args, **kwargs)
+
+        with self.host, patch('views.counseling_view.run.io_bound', side_effect=invoke):
+            await save()
+            self.assertIs(self.view.editor_fields, fields)
+            self.assertEqual(fields['content_markdown'].value, '<p>상담 내용</p>')
+            self.assertTrue(self.view.editor_open)
+            self.assertTrue(save_button.enabled)
+            self.view.on_saved.assert_not_awaited()
+            self.repo.create.side_effect = None
+            saved = Mock(id=5)
+            self.repo.create.return_value = saved
+            self.repo.update.return_value = saved
+            await save()
+            self.assertFalse(self.view.editor_open)
+            fields['follow_up'].value = '후속 조치 수정'
+            await save()
+        self.assertEqual(self.repo.create.call_count, 2)
+        self.repo.update.assert_called_once()
+        self.assertEqual(self.repo.update.call_args.args[0], 5)
+        self.assertEqual(self.repo.update.call_args.args[1].case_id, self.case.id)
+        self.assertEqual(self.view.on_saved.await_count, 2)
+
+    async def test_cancel_case_change_keeps_unsaved_editor(self):
+        self.view.selected = self.student
+        self.view.case_options = {self.case.id: self.case}
+        self.view.case_select.set_options({self.case.id: self.case.title}, value=self.case.id)
+        await self.view.open_editor()
+        fields = self.view.editor_fields
+        fields['content_markdown'].value = '<p>작성 중</p>'
+        second = self.case.model_copy(update={'id': 2})
+        with patch.object(self.view, 'confirm_editor_discard', new_callable=AsyncMock, return_value=False):
+            await self.view.select_case(second)
+        self.assertEqual(self.view.selected_case, self.case)
+        self.assertIs(self.view.editor_fields, fields)
+        self.assertEqual(self.view.case_select.value, self.case.id)
+        self.repo.list.assert_not_called()
+
+    async def test_previous_editor_response_is_discarded(self):
+        self.view.selected = self.student
+        started, release = asyncio.Event(), asyncio.Event()
+        now = datetime.now(timezone.utc)
+        entry = Counseling(id=1, created_at=now, updated_at=now,
+                           **counseling_form_input(self.student.id, form(case_id=self.case.id)).model_dump())
+
+        async def delayed(*args, **kwargs):
+            started.set()
+            await release.wait()
+            return entry
+
+        with patch('views.counseling_view.run.io_bound', side_effect=delayed):
+            task = asyncio.create_task(self.view.open_editor(entry.id))
+            await started.wait()
+            await self.view.select_student(None)
+            release.set()
+            await task
+        self.assertEqual(self.view.editor_fields, {})
+        self.assertIsNone(self.view.selected)
 
     async def test_wysiwyg_editor_preserves_html(self):
         with self.host:
@@ -142,7 +228,7 @@ class CounselingViewTests(unittest.IsolatedAsyncioTestCase):
         with patch('views.counseling_view.run.io_bound', side_effect=invoke), \
                 patch.object(self.view, 'open_editor', new_callable=AsyncMock) as editor:
             await self.view.open_record(entry.id)
-        editor.assert_awaited_once_with(entry.id)
+        self.assertEqual(editor.await_args_list, [call(), call(entry.id)])
         self.assertEqual(self.view.selected, self.student)
         self.view.on_selected.assert_awaited_once_with(self.student.id)
         self.assertFalse(hasattr(self.view, "student_list"))

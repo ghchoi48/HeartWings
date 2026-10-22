@@ -159,11 +159,11 @@ class AppLayout:
         if page == 'counseling' and self.counseling_view is None:
             with self.panels['counseling']:
                 with ui.row().classes('w-full items-center justify-between px-8 pt-6'):
-                    counseling_heading = ui.label('개인 상담').classes('text-3xl font-bold text-slate-800')
+                    counseling_heading = ui.label('일지 관리').classes('text-3xl font-bold text-slate-800')
                     ui.button('학생 관리', icon='arrow_back', on_click=lambda: self.navigate('students')).props('outline')
                 with ui.tabs().classes('w-full') as self.counseling_tabs:
                     ui.tab('logs', label='상담 일지', icon='edit_note')
-                    ui.tab('tests', label='심리검사', icon='psychology')
+                    ui.tab('tests', label='심리 검사', icon='psychology')
                 self.psychological_test_view = PsychologicalTestView(self.students)
                 self.counseling_view = CounselingView(
                     self.students, self.counseling, self.refresh_student_timeline,
@@ -171,8 +171,8 @@ class AppLayout:
                 counseling_heading.bind_text_from(
                     self.counseling_view, 'selected',
                     backward=lambda student: (
-                        f'개인 상담 · {student.name} · {student.grade}학년 {student.classroom}반'
-                        if student else '개인 상담'
+                        f'{student.name} · {student.grade}학년 {student.classroom}반'
+                        if student else '일지 관리'
                     ),
                 )
                 with ui.tab_panels(self.counseling_tabs, value='logs').classes('w-full bg-transparent'):

@@ -7,7 +7,7 @@ from nicegui import run, ui
 from pydantic import ValidationError
 
 from database import DatabaseError
-from models import FamilyInput, FamilyMember, SchoolSettings, Student, StudentInput
+from models import FamilyInput, FamilyMember, SchoolSettings, Student, StudentInput, current_school_year
 from repositories.counseling_repo import CounselingRepository
 from repositories.student_repo import StudentRepository
 from repositories.school_settings_repo import SchoolSettingsRepository
@@ -17,6 +17,7 @@ KST = timezone(timedelta(hours=9))
 PAGE_SIZE = 10
 STATUS_LABELS = {'scheduled': '예약', 'completed': '완료', 'cancelled': '취소'}
 FIELD_LABELS = {
+    'school_year': '학년도',
     'name': '이름', 'student_number': '번호', 'grade': '학년', 'classroom': '반', 'birth_date': '생년월일', 'student_contact': '학생 연락처', 'guardian_contact': '보호자 연락처', 'notes': '학생 메모', 'nickname': '별명',
 }
 
@@ -87,6 +88,7 @@ class StudentView:
             return
         try:
             student = await run.io_bound(self.students.get, student_id)
+            enrollments = await run.io_bound(self.students.enrollments, student_id) if student else []
         except DatabaseError as error:
             if request == self.detail_request:
                 ui.notify(str(error), type='negative')
@@ -105,7 +107,18 @@ class StudentView:
                         with ui.row().classes('w-full items-center justify-between'):
                             ui.label(student.name).classes('text-2xl font-bold')
                             ui.button('학생 정보 수정', icon='edit', on_click=lambda: self.open_editor(student)).props('outline')
-                        ui.label(f'{student.grade}학년 {student.classroom}반 · 번호 {student.student_number or "미입력"}').classes('text-slate-500')
+                        ui.label(f'{student.school_year}학년도 · {student.grade}학년 {student.classroom}반 · 번호 {student.student_number or "미입력"}').classes('text-slate-500')
+                        with ui.expansion('학년도별 학적 이력', icon='history').classes('w-full'):
+                            for enrollment in enrollments:
+                                with ui.row().classes('w-full items-center flex-nowrap gap-2 border-b border-slate-100 py-2'):
+                                    with ui.column().classes('flex-1 min-w-0 gap-1'):
+                                        ui.label(f'{enrollment.school_year}학년도').classes('font-semibold')
+                                        ui.label(f'{enrollment.grade}학년 {enrollment.classroom}반 · 번호 {enrollment.student_number or "미입력"}').classes('text-sm text-slate-500 break-words')
+                                    delete = ui.button(icon='delete_outline',
+                                        on_click=lambda year=enrollment.school_year: self.delete_enrollment(student.id, year)).props(
+                                            f'flat round color=negative aria-label="{enrollment.school_year}학년도 학적 이력 삭제"')
+                                    delete.set_enabled(len(enrollments) > 1)
+                                    delete.tooltip('학적 이력 삭제' if len(enrollments) > 1 else '마지막 학적 이력은 삭제할 수 없습니다.')
                         ui.separator()
                         ui.label(f'생년월일: {student.birth_date or "미입력"}')
                         ui.label(f'학생 연락처: {student.student_contact or "미입력"}')
@@ -144,6 +157,23 @@ class StudentView:
         self.timeline_busy = False
         self.timeline_more = True
         await self.load_timeline()
+
+    async def delete_enrollment(self, student_id: int, school_year: int) -> None:
+        """학적 삭제 중 중복 실행을 막고 학생 목록과 현재 프로필을 갱신한다."""
+        if self.editor_open or self.selected is None or self.selected.id != student_id:
+            return
+        self.editor_open = True
+        request = self.detail_request
+        try:
+            await run.io_bound(self.students.delete_enrollment, student_id, school_year)
+            ui.notify(f'{school_year}학년도 학적 이력을 삭제했습니다.', type='positive')
+            await self.student_list.reload()
+            if request == self.detail_request and self.selected is not None and self.selected.id == student_id:
+                await self.load_profile(student_id)
+        except DatabaseError as error:
+            ui.notify(str(error), type='negative')
+        finally:
+            self.editor_open = False
 
     async def load_timeline(self) -> None:
         """상담 이력을 페이지 단위로 추가하고 요약 항목만 표시한다."""
@@ -303,6 +333,7 @@ class StudentView:
         self.editor_open = True
         try:
             school = await run.io_bound(self.school.get) if self.school is not None else SchoolSettings()
+            enrollments = await run.io_bound(self.students.enrollments, student.id) if student else []
         except DatabaseError as error:
             self.editor_open = False
             ui.notify(str(error), type='negative')
@@ -313,17 +344,26 @@ class StudentView:
         saving = False
         with ui.dialog().props('persistent') as dialog, ui.card().classes('w-full max-w-2xl p-6'):
             ui.label('학생 정보 수정' if student else '새 학생 등록').classes('text-2xl font-bold')
-            ui.label('이름, 학년, 반은 필수 항목입니다.').classes('text-sm text-slate-500')
+            ui.label('학년도를 바꾸어 저장하면 해당 학년도의 학적을 추가하거나 수정합니다. 다른 학년도 이력은 유지됩니다.').classes('text-sm text-slate-500')
             with ui.column().classes('w-full gap-3'):
                 with ui.row().classes('w-full'):
                     fields['name'] = ui.input('*이름', value=initial.get('name') or '').props('outlined').classes('grow')
                     fields['nickname'] = ui.input('별명', value=initial.get('nickname') or '').props('outlined').classes('grow')
-                with ui.row().classes('w-full'):
+                with ui.row().classes('w-full flex-nowrap items-start'):
+                    fields['school_year'] = ui.number('*학년도', value=initial.get('school_year', current_school_year()),
+                                                      min=1900, max=9999, step=1, precision=0).props('outlined').classes('flex-1 min-w-0')
                     grade = initial.get('grade', 1)
                     fields['grade'] = ui.select(grade_options, label='*학년',
-                                                value=grade if grade in grade_options else None).props('outlined').classes('grow')
-                    fields['classroom'] = ui.input('*반', value=initial.get('classroom', '')).props('outlined').classes('grow')
-                    fields['student_number'] = ui.input('번호', value=initial.get('student_number') or '').props('outlined').classes('grow')
+                                                value=grade if grade in grade_options else None).props('outlined').classes('flex-1 min-w-0')
+                    fields['classroom'] = ui.input('*반', value=initial.get('classroom', '')).props('outlined').classes('flex-1 min-w-0')
+                    fields['student_number'] = ui.input('번호', value=initial.get('student_number') or '').props('outlined').classes('flex-1 min-w-0')
+                def load_year(event):
+                    for enrollment in enrollments:
+                        if enrollment.school_year == event.value:
+                            for key in ('grade', 'classroom', 'student_number'):
+                                fields[key].value = getattr(enrollment, key)
+                            break
+                fields['school_year'].on_value_change(load_year)
                 if grade not in grade_options:
                     ui.label(f'기존 학년은 {grade}학년입니다. 현재 학교급에 맞는 학년을 선택해야 저장할 수 있습니다.').classes('text-sm text-amber-700')
                 with ui.row().classes('w-full flex-nowrap items-start'):
@@ -337,7 +377,9 @@ class StudentView:
                 if saving:
                     return
                 try:
-                    value = student_form_input({key: element.value for key, element in fields.items()})
+                    value = student_form_input(dict(
+                        {key: element.value for key, element in fields.items()},
+                        guardian_contact=student.guardian_contact if student else ''))
                 except ValidationError as error:
                     invalid = list(dict.fromkeys(FIELD_LABELS.get(str(e['loc'][0]), '입력값') for e in error.errors()))
                     error_label.text = ', '.join(invalid) + ': 입력 형식과 길이를 확인하세요. 생년월일은 YYYY-MM-DD 형식입니다.'

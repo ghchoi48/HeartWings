@@ -19,6 +19,8 @@ def test_teacher_storage_and_migration(tmp_path):
     db = Database('test-only-password', tmp_path / 'teachers.db')
     db.initialize()
     with db.session(write=True) as connection:
+        connection.execute('DROP TABLE student_enrollments')
+        connection.execute('ALTER TABLE students DROP COLUMN school_year')
         connection.execute('DROP TABLE special_education_logs')
         connection.execute('DROP TABLE special_educations')
         connection.execute('DROP TABLE consultations')
@@ -49,7 +51,7 @@ def test_teacher_storage_and_migration(tmp_path):
     assert len(repo.list()) == 2
     with db.session() as connection:
         assert connection.execute('SELECT name FROM students').fetchone()[0] == '기존 학생'
-        assert connection.execute('PRAGMA user_version').fetchone()[0] == 28
+        assert connection.execute('PRAGMA user_version').fetchone()[0] == 29
 
 
 class ConsultationViewTests(unittest.IsolatedAsyncioTestCase):
@@ -100,6 +102,22 @@ def test_teacher_search_ranks_best_match_before_alphabetical_order(tmp_path):
     assert repo.search('김민', limit=1) == [exact]
     assert repo.search('민수', limit=1) == [exact]
     assert repo.search('없는 검색어', limit=1) == []
+
+
+def test_teacher_search_by_extension_preserves_zeros_and_ranks_exact_match(tmp_path):
+    db = Database('test-only-password', tmp_path / 'extensions.db')
+    db.initialize()
+    repo = TeacherRepository(db)
+    repo.save(TeacherInput(name='가', responsibilities='0012'))
+    repo.save(TeacherInput(name='나', extension='00123'))
+    exact = repo.save(TeacherInput(name='상담 교사', extension='0012'))
+    assert repo.search(' 0012 ', limit=1) == [exact]
+    assert exact in repo.search('001')
+    assert exact in repo.search('012')
+    assert repo.search('9999') == []
+    literal = repo.save(TeacherInput(name='특수 내선', extension='10%_!'))
+    for query in ('%', '_', '!'):
+        assert repo.search(query) == [literal]
 
 
 class TeacherSearchWidgetTests(unittest.IsolatedAsyncioTestCase):

@@ -33,24 +33,24 @@ class TeacherRepository:
             return [Teacher.model_validate(dict(row)) for row in rows]
 
     def search(self, query: str, *, limit: int = 50) -> list[Teacher]:
-        """이름·담당 업무를 전체 명부에서 검색한다. LIKE 패턴 문자는 문자로 취급한다."""
+        """이름·내선 번호·담당 업무를 검색한다. LIKE 패턴 문자는 문자로 취급한다."""
         check_page(limit, 0)
         exact = query.strip()
         query = exact.replace('!', '!!').replace('%', '!%').replace('_', '!_')
         with self.database.session() as connection:
             rows = connection.execute(
-                """SELECT * FROM teachers WHERE name LIKE ? ESCAPE '!'
-                OR responsibilities LIKE ? ESCAPE '!'
+                """SELECT * FROM teachers WHERE name LIKE :contains ESCAPE '!'
+                OR extension LIKE :contains ESCAPE '!'
+                OR responsibilities LIKE :contains ESCAPE '!'
                 ORDER BY CASE
-                    WHEN name = ? COLLATE NOCASE THEN 0
-                    WHEN name LIKE ? ESCAPE '!' THEN 1
-                    WHEN name LIKE ? ESCAPE '!' THEN 2
-                    WHEN responsibilities = ? COLLATE NOCASE THEN 3
-                    WHEN responsibilities LIKE ? ESCAPE '!' THEN 4
+                    WHEN name = :exact COLLATE NOCASE OR extension = :exact COLLATE NOCASE THEN 0
+                    WHEN name LIKE :prefix ESCAPE '!' OR extension LIKE :prefix ESCAPE '!' THEN 1
+                    WHEN name LIKE :contains ESCAPE '!' OR extension LIKE :contains ESCAPE '!' THEN 2
+                    WHEN responsibilities = :exact COLLATE NOCASE THEN 3
+                    WHEN responsibilities LIKE :prefix ESCAPE '!' THEN 4
                     ELSE 5 END,
-                    length(name), name, id LIMIT ?""",
-                (f'%{query}%', f'%{query}%', exact, f'{query}%', f'%{query}%',
-                 exact, f'{query}%', limit)).fetchall()
+                    length(name), name, id LIMIT :limit""",
+                dict(contains=f'%{query}%', exact=exact, prefix=f'{query}%', limit=limit)).fetchall()
             return [Teacher.model_validate(dict(row)) for row in rows]
 
     def get(self, teacher_id: int) -> Teacher | None:

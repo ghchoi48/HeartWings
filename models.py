@@ -1,6 +1,6 @@
 """UI나 DB 드라이버에 의존하지 않는 입력 및 저장 데이터 모델."""
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta, timezone
 import json
 from dataclasses import dataclass
 from typing import Annotated, Literal
@@ -76,10 +76,29 @@ class Consultation(ConsultationInput, AuthoredRecord):
     updated_at: datetime
 
 
+def current_school_year() -> int:
+    today = datetime.now(timezone(timedelta(hours=9))).date()
+    return today.year if today.month >= 3 else today.year - 1
+
+
+class StudentEnrollmentInput(InputModel):
+    school_year: int = Field(default_factory=current_school_year, ge=1900, le=9999)
+    grade: int = Field(ge=1, le=12)
+    classroom: str = Field(min_length=1, max_length=30)
+    student_number: str | None = Field(default=None, min_length=1, max_length=50)
+
+
+class StudentEnrollment(StudentEnrollmentInput, AuthoredRecord):
+    student_id: int
+    created_at: datetime
+    updated_at: datetime
+
+
 class StudentInput(InputModel):
-    """학적 식별 번호는 선택 사항이며 이름은 중복을 허용한다."""
+    """학생 기본 정보와 한 학년도의 학적. 번호는 선택 사항이다."""
 
     name: str = Field(min_length=1, max_length=100)
+    school_year: int = Field(default_factory=current_school_year, ge=1900, le=9999)
     nickname: str | None = Field(default='', max_length=100)
     student_number: str | None = Field(default=None, min_length=1, max_length=50)
     grade: int = Field(ge=1, le=12)

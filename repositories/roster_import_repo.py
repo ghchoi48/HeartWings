@@ -16,11 +16,12 @@ class RosterImportRepository:
         errors = list(batch.errors)
         with self.database.session() as connection:
             if batch.kind == 'students':
-                existing = {row[0] for row in connection.execute(
-                    'SELECT student_number FROM students WHERE student_number IS NOT NULL')}
+                existing = {tuple(row) for row in connection.execute(
+                    'SELECT school_year, grade, classroom, student_number FROM student_enrollments WHERE student_number IS NOT NULL')}
                 for row in batch.rows:
-                    if row.value.student_number and row.value.student_number in existing:
-                        errors.append(f'{row.number}행: 이미 등록된 학생 번호입니다.')
+                    value = row.value
+                    if value.student_number and (value.school_year, value.grade, value.classroom, value.student_number) in existing:
+                        errors.append(f'{row.number}행: 같은 학년도·학년·반에 이미 등록된 학생 번호입니다.')
             else:
                 existing = {tuple(row) for row in connection.execute(
                     'SELECT name, contact, extension, responsibilities FROM teachers')}

@@ -14,7 +14,7 @@ from nicegui.page import page
 from pydantic import ValidationError
 
 from database import DatabaseError
-from models import SchoolSettings, StudentTimelineEntry, Student
+from models import SchoolSettings, StudentTimelineEntry, Student, StudentEnrollment
 from views.student_view import PAGE_SIZE, StudentView, student_form_input
 
 
@@ -48,6 +48,7 @@ class StudentViewTests(unittest.IsolatedAsyncioTestCase):
         self.client.__enter__()
         self.students = Mock()
         self.students.list.return_value = []
+        self.students.enrollments.return_value = []
         self.counseling = Mock()
         self.counseling.list_timeline.return_value = []
         self.host = ui.column()
@@ -90,6 +91,72 @@ class StudentViewTests(unittest.IsolatedAsyncioTestCase):
         self.students.list.assert_called_with(limit=1000, offset=1000)
         self.assertFalse(self.view.student_list.table.props.get('hide-pagination'))
         self.assertNotIn('hide-bottom', self.view.student_list.table.props)
+
+    async def test_editor_loads_year_and_saves_new_history(self):
+        student = make_student().model_copy(update={'school_year': 2026, 'guardian_contact': '02-123-4567'})
+        self.students.enrollments.return_value = [StudentEnrollment(
+            student_id=student.id, school_year=2025, grade=1, classroom='4', student_number='08',
+            created_at=student.created_at, updated_at=student.updated_at)]
+        self.students.update.return_value = student
+
+        async def interact(dialog):
+            fields = {element.props.get('label'): element for element in dialog.descendants()
+                      if isinstance(element, (ui.input, ui.number, ui.select))}
+            fields['*학년도'].value = 2025
+            self.assertEqual(fields['*반'].value, '4')
+            self.assertEqual(fields['번호'].value, '08')
+            fields['*학년도'].value = 2027
+            fields['*학년'].value = 3
+            button = next(element for element in dialog.descendants()
+                          if isinstance(element, ui.button) and element.text == '저장')
+            handler = next(listener.handler for listener in button._event_listeners.values()
+                           if listener.type == 'click')
+            await inspect.getclosurevars(handler).nonlocals['callback']()
+            self.assertTrue(dialog.submitted.is_set())
+            return None
+
+        with self.host, patch.object(ui.dialog, '__await__', lambda dialog: interact(dialog).__await__()):
+            await self.view.open_editor(student)
+        value = self.students.update.call_args.args[1]
+        self.assertEqual((value.school_year, value.grade, value.classroom), (2027, 3, '4'))
+        self.assertEqual(value.guardian_contact, student.guardian_contact)
+
+    async def test_enrollment_delete_buttons_and_latest_profile_refresh(self):
+        student = make_student().model_copy(update={'school_year': 2026})
+        history = [StudentEnrollment(
+            student_id=student.id, school_year=year, grade=1, classroom='2',
+            created_at=student.created_at, updated_at=student.updated_at) for year in (2026, 2025)]
+        self.students.get.return_value = student
+        self.students.enrollments.return_value = history
+        with self.host:
+            await self.view.load_profile(student.id)
+            buttons = [element for element in self.view.detail.descendants()
+                       if isinstance(element, ui.button) and element.props.get('icon') == 'delete_outline']
+            self.assertEqual(len(buttons), 2)
+            self.assertTrue(all(button.enabled for button in buttons))
+            self.students.enrollments.return_value = history[1:]
+            self.students.get.return_value = student.model_copy(update={'school_year': 2025})
+            handler = next(listener.handler for listener in buttons[0]._event_listeners.values()
+                           if listener.type == 'click')
+            await inspect.getclosurevars(handler).nonlocals['callback']()
+        self.students.delete_enrollment.assert_called_once_with(student.id, 2026)
+        self.assertEqual(self.view.selected.school_year, 2025)
+        remaining = [element for element in self.view.detail.descendants()
+                     if isinstance(element, ui.button) and element.props.get('icon') == 'delete_outline']
+        self.assertEqual(len(remaining), 1)
+        self.assertFalse(remaining[0].enabled)
+        self.assertFalse(self.view.editor_open)
+
+    async def test_enrollment_delete_failure_keeps_profile_and_allows_retry(self):
+        student = make_student()
+        self.students.get.return_value = student
+        self.students.delete_enrollment.side_effect = DatabaseError('삭제 실패')
+        with self.host, patch('views.student_view.ui.notify') as notify:
+            await self.view.load_profile(student.id)
+            await self.view.delete_enrollment(student.id, 2025)
+        self.assertEqual(self.view.selected, student)
+        self.assertFalse(self.view.editor_open)
+        notify.assert_called_with('삭제 실패', type='negative')
 
     async def test_family_editor_save_and_retry(self):
         student = make_student().model_copy(update={'guardian_contact': '02-123-4567'})

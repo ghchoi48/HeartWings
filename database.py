@@ -3,14 +3,15 @@
 import os
 import hmac
 import sys
+import re
 from contextlib import contextmanager
 from importlib import import_module
 from pathlib import Path
 from threading import Lock, RLock
 from weakref import WeakValueDictionary
-from models import SchoolSettings
+from models import SchoolSettings, current_school_year
 
-SCHEMA_VERSION = 28
+SCHEMA_VERSION = 29
 
 
 class DatabaseError(RuntimeError):
@@ -22,7 +23,7 @@ class DatabaseOpenError(DatabaseError):
 
 
 class ConflictError(DatabaseError):
-    """중복 학번 또는 참조 무결성 위반."""
+    """학년도·학년·반 안의 중복 번호 또는 참조 무결성 위반."""
 
 
 class NotFoundError(DatabaseError):
@@ -183,16 +184,22 @@ class Database:
             self._password = new_password
 
     @contextmanager
-    def _transaction(self, *, write: bool = False):
+    def _transaction(self, *, write: bool = False, migration: bool = False):
         """잠금으로 보호된 세션 내부에서만 사용한다."""
         connection = self._connect()
         try:
+            if migration:
+                # Parent-table rebuilds must preserve all child records. Check every
+                # foreign key before committing; normal sessions keep FK enforcement.
+                connection.execute('PRAGMA foreign_keys = OFF')
             connection.execute('BEGIN IMMEDIATE' if write else 'BEGIN')
             yield connection
+            if migration and connection.execute('PRAGMA foreign_key_check').fetchone():
+                raise DatabaseError('DB 이관 중 연결된 자료의 무결성 검사에 실패했습니다.')
             connection.commit()
         except self.driver.IntegrityError:
             connection.rollback()
-            raise ConflictError('중복 학번이거나 연결된 학생/상담 기록 조건에 맞지 않습니다.') from None
+            raise ConflictError('같은 학년도·학년·반에 중복 번호가 있거나 연결된 학생/상담 기록 조건에 맞지 않습니다.') from None
         except self.driver.DatabaseError:
             connection.rollback()
             raise DatabaseError('DB 작업에 실패했습니다. 파일 상태 또는 잠금을 확인하세요.') from None
@@ -204,7 +211,7 @@ class Database:
 
     def initialize(self, school: SchoolSettings | None = None) -> None:
         """원자적으로 최초 스키마를 만든다. 미래 버전 DB의 묵시적 다운그레이드는 막는다."""
-        with self.session(write=True) as connection:
+        with self._session_lock, self._transaction(write=True, migration=True) as connection:
             version = connection.execute('PRAGMA user_version').fetchone()[0]
             new_database = version == 0
             if version == 0:
@@ -520,7 +527,7 @@ class Database:
                         connection.execute(f"ALTER TABLE school_settings ADD COLUMN {column} TEXT NOT NULL DEFAULT ''")
                 connection.execute('PRAGMA user_version = 26')
                 version = 26
-            if version not in (26, 27, SCHEMA_VERSION):
+            if version not in (26, 27, 28, SCHEMA_VERSION):
                 raise DatabaseError('지원하지 않는 DB 버전입니다. 앱 버전을 확인하세요.')
             if new_database and school is not None:
                 school = SchoolSettings.model_validate(school.model_dump())
@@ -555,4 +562,44 @@ class Database:
                 for column in ('nickname', 'student_contact'):
                     if column not in columns:
                         connection.execute(f"ALTER TABLE students ADD COLUMN {column} TEXT NOT NULL DEFAULT ''")
+                connection.execute('PRAGMA user_version = 28')
+                version = 28
+            if version == 28:
+                # Remove the old global number uniqueness: numbers belong to a
+                # particular year, grade and classroom, not a student's identity.
+                columns = {row['name'] for row in connection.execute('PRAGMA table_info(students)')}
+                if 'school_year' not in columns:
+                    schema = connection.execute("SELECT sql FROM sqlite_master WHERE name='students'").fetchone()[0]
+                    objects = [row[0] for row in connection.execute(
+                        "SELECT sql FROM sqlite_master WHERE tbl_name='students' AND type IN ('index','trigger') AND sql IS NOT NULL")]
+                    schema = re.sub(r'^CREATE TABLE\s+"?students"?', 'CREATE TABLE students_new', schema, count=1)
+                    schema = schema.replace('student_number TEXT UNIQUE', 'student_number TEXT')
+                    connection.execute(schema)
+                    connection.execute('INSERT INTO students_new SELECT * FROM students')
+                    connection.execute('DROP TABLE students')
+                    connection.execute('ALTER TABLE students_new RENAME TO students')
+                    for statement in objects:
+                        connection.execute(statement)
+                    year = current_school_year()
+                    connection.execute(f'ALTER TABLE students ADD COLUMN school_year INTEGER NOT NULL DEFAULT {year}')
+                connection.execute('''CREATE TABLE IF NOT EXISTS student_enrollments (
+                    student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+                    school_year INTEGER NOT NULL CHECK(school_year BETWEEN 1900 AND 9999),
+                    grade INTEGER NOT NULL CHECK(grade BETWEEN 1 AND 12),
+                    classroom TEXT NOT NULL CHECK(length(trim(classroom)) > 0),
+                    student_number TEXT,
+                    created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+                    author TEXT NOT NULL DEFAULT '',
+                    PRIMARY KEY(student_id, school_year),
+                    UNIQUE(school_year, grade, classroom, student_number)
+                )''')
+                connection.execute('''INSERT INTO student_enrollments
+                    SELECT id, school_year, grade, classroom, student_number, created_at, updated_at, author FROM students WHERE true
+                    ON CONFLICT(student_id, school_year) DO NOTHING''')
+                connection.execute('''CREATE TRIGGER IF NOT EXISTS student_enrollments_snapshot_author
+                    AFTER INSERT ON student_enrollments BEGIN
+                        UPDATE student_enrollments SET author=COALESCE(
+                            (SELECT counselor_name FROM school_settings WHERE id=1), '')
+                        WHERE student_id=NEW.student_id AND school_year=NEW.school_year;
+                    END''')
                 connection.execute(f'PRAGMA user_version = {SCHEMA_VERSION}')
