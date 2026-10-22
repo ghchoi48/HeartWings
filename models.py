@@ -100,6 +100,7 @@ class StudentInput(InputModel):
     name: str = Field(min_length=1, max_length=100)
     school_year: int = Field(default_factory=current_school_year, ge=1900, le=9999)
     nickname: str | None = Field(default='', max_length=100)
+    gender: Literal['남', '여', '기타'] | None = None
     student_number: str | None = Field(default=None, min_length=1, max_length=50)
     grade: int = Field(ge=1, le=12)
     classroom: str = Field(min_length=1, max_length=30)
@@ -363,10 +364,13 @@ class Calendar(CalendarInput, AuthoredRecord):
 
 
 class CalendarEventInput(InputModel):
+    all_day: bool = False
+    location: str = Field(default='', max_length=200)
+    content: str = Field(default='', max_length=20000)
     calendar_id: int = Field(gt=0)
     title: str = Field(min_length=1, max_length=200)
     starts_at: datetime
-    duration_minutes: int = Field(default=60, ge=1, le=1440)
+    duration_minutes: int = Field(default=60, ge=1)
     status: Literal['scheduled', 'completed', 'cancelled'] = 'scheduled'
 
     @field_validator('starts_at')
@@ -379,7 +383,10 @@ class CalendarEventInput(InputModel):
 
 class CalendarEvent(CalendarEventInput, AuthoredRecord):
     id: int
-    source: Literal['counseling', 'custom'] = 'custom'
+    source: Literal['counseling', 'group', 'consultation', 'custom'] = 'custom'
+    status: Literal['scheduled', 'completed', 'cancelled'] | None = None
+    owner_id: int | None = None
+    display_name: str = ''
     calendar_name: str
     color: str
     student_name: str = ''

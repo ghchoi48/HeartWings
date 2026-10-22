@@ -17,7 +17,7 @@ KST = timezone(timedelta(hours=9))
 PAGE_SIZE = 10
 STATUS_LABELS = {'scheduled': '예약', 'completed': '완료', 'cancelled': '취소'}
 FIELD_LABELS = {
-    'school_year': '학년도',
+    'school_year': '학년도', 'gender': '성별',
     'name': '이름', 'student_number': '번호', 'grade': '학년', 'classroom': '반', 'birth_date': '생년월일', 'student_contact': '학생 연락처', 'guardian_contact': '보호자 연락처', 'notes': '학생 메모', 'nickname': '별명',
 }
 
@@ -25,7 +25,7 @@ FIELD_LABELS = {
 def student_form_input(values: dict) -> StudentInput:
     """선택 항목의 빈 문자열을 정규화하고 모델에서 입력을 검증한다."""
     data = dict(values)
-    for field in ('student_number', 'birth_date'):
+    for field in ('student_number', 'birth_date', 'gender'):
         data[field] = data.get(field) or None
         if isinstance(data[field], str):
             data[field] = data[field].strip() or None
@@ -346,9 +346,11 @@ class StudentView:
             ui.label('학생 정보 수정' if student else '새 학생 등록').classes('text-2xl font-bold')
             ui.label('학년도를 바꾸어 저장하면 해당 학년도의 학적을 추가하거나 수정합니다. 다른 학년도 이력은 유지됩니다.').classes('text-sm text-slate-500')
             with ui.column().classes('w-full gap-3'):
-                with ui.row().classes('w-full'):
-                    fields['name'] = ui.input('*이름', value=initial.get('name') or '').props('outlined').classes('grow')
-                    fields['nickname'] = ui.input('별명', value=initial.get('nickname') or '').props('outlined').classes('grow')
+                with ui.row().classes('w-full flex-nowrap items-start'):
+                    fields['name'] = ui.input('*이름', value=initial.get('name') or '').props('outlined').classes('flex-1 min-w-0')
+                    fields['nickname'] = ui.input('별명', value=initial.get('nickname') or '').props('outlined').classes('flex-1 min-w-0')
+                    fields['gender'] = ui.select(['남', '여', '기타'], label='성별',
+                                                 value=initial.get('gender')).props('outlined clearable').classes('w-24 shrink-0')
                 with ui.row().classes('w-full flex-nowrap items-start'):
                     fields['school_year'] = ui.number('*학년도', value=initial.get('school_year', current_school_year()),
                                                       min=1900, max=9999, step=1, precision=0).props('outlined').classes('flex-1 min-w-0')

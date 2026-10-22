@@ -30,7 +30,7 @@ class StudentList:
                     ui.button('학생 추가', icon='person_add', on_click=on_add)
             columns = [
                 {'name': name, 'label': label, 'field': name, 'align': 'left'}
-                for name, label in [('name', '이름'), ('nickname', '별명'), ('school_year', '학년도'), ('grade', '학년'), ('classroom', '반')]
+                for name, label in [('name', '이름'), ('nickname', '별명'), ('gender', '성별'), ('grade', '학년'), ('classroom', '반')]
             ]
             self.table = ui.table(columns=columns, rows=[], row_key='id', pagination={
                 'rowsPerPage': self.page_size, 'sortBy': 'name', 'descending': False, 'page': 1,
@@ -38,7 +38,7 @@ class StudentList:
                 'flat :rows-per-page-options="[10, 20, 30]" rows-per-page-label="페이지당 학생 수" '
                 'no-data-label="등록된 학생이 없습니다" no-results-label="검색 결과가 없습니다"')
             with self.table.add_slot('top'):
-                ui.input('학생 검색', placeholder='이름, 별명, 학년, 반').props(
+                ui.input('학생 검색', placeholder='이름, 별명, 성별, 학년, 반').props(
                     'outlined dense clearable debounce=300').classes('w-full').bind_value(self.table, 'filter')
             self.table.on('rowClick', self._select_student,
                           js_handler='(event, row) => emit(row.id)')
@@ -70,7 +70,7 @@ class StudentList:
         if request != self.list_request:
             return
         self.table.rows = [dict(id=s.id, name=s.name, nickname=s.nickname or '—',
-                                school_year=s.school_year, grade=s.grade, classroom=s.classroom) for s in students]
+                                gender=s.gender or '—', grade=s.grade, classroom=s.classroom) for s in students]
         self.table.update()
 
     async def _select_student(self, event: events.GenericEventArguments) -> None:

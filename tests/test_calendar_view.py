@@ -1,6 +1,6 @@
 """캘린더 저장, 선택 필터 및 월간/주간 탐색 검증."""
 import asyncio
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -99,14 +99,10 @@ def test_calendar_selection_navigation_and_open(data):
                 view.mode = SimpleNamespace(value='week')
                 await view.shift(-1)
                 assert view.anchor == date(2026, 9, 24)
-                view.date_input.value = '2026-12-31'
-                await view.jump()
-                assert view.selected == date(2026, 12, 31)
+                view.anchor = view.selected = date(2026, 12, 31)
                 await view.shift(1)
                 assert view.selected == date(2027, 1, 7)
-                view.date_input.value = '잘못된 날짜'
-                await view.jump()
-                assert '올바른 날짜' in view.message.text
+                assert view.previous_button.text == '이전 주'
                 await view.today()
                 assert view.selected == datetime.now(KST).date()
     asyncio.run(check())
@@ -197,3 +193,384 @@ def test_holiday_calendar_visibility_and_date_colors(data):
     db.initialize()
     assert not next(item for item in repo.list() if item.source == 'holidays').visible
     assert len([item for item in repo.list() if item.source == 'holidays']) == 1
+
+
+def test_calendar_automatically_reflects_committed_event_changes(data):
+    db, _, _, counseling = data
+
+    async def invoke(function, *args, **kwargs):
+        return function(*args, **kwargs)
+
+    async def check():
+        with Client(page('/calendar-auto-refresh-test')), patch('views.calendar_view.ui.timer'), \
+                patch('views.calendar_view.run.io_bound', side_effect=invoke):
+            view = CalendarView(ReportingRepository(db), AsyncMock())
+            view.anchor = view.selected = date(2026, 10, 20)
+            view.build()
+            await view.reload()
+            assert view.previous_button.text == '이전 달'
+            assert view.next_button.text == '다음 달'
+            assert not hasattr(view, 'date_input')
+            assert not hasattr(view, 'status')
+            with patch.object(view, 'reload', new=AsyncMock()) as reload:
+                await view.refresh_if_changed()
+                reload.assert_not_awaited()
+            repo = CounselingRepository(db)
+            value = CounselingInput(**counseling.model_dump(include=set(CounselingInput.model_fields)))
+            added = repo.create(value.model_copy(update={'title': '추가 일정'}))
+            await view.refresh_if_changed()
+            assert any(e.id == added.id and e.source == 'counseling'
+                       for e in view.events_by_day[view.selected])
+            for status, icon in [('scheduled', 'schedule'), ('completed', 'check_circle'), ('cancelled', 'cancel')]:
+                repo.update(added.id, value.model_copy(update={'title': '변경 일정', 'status': status}))
+                view.editor_open = True
+                revision = view.loaded_revision
+                await view.refresh_if_changed()
+                assert view.loaded_revision == revision
+                view.editor_open = False
+                await view.refresh_if_changed()
+                entry = next(e for e in view.events_by_day[view.selected]
+                             if e.id == added.id and e.source == 'counseling')
+                assert entry.status == status and entry.title == '변경 일정'
+                assert any(isinstance(e, ui.icon) and e.props.get('name') == icon
+                           for e in view.grid.descendants())
+            repo.delete(added.id)
+            await view.refresh_if_changed()
+            assert not any(e.id == added.id and e.source == 'counseling'
+                           for e in view.events_by_day[view.selected])
+    asyncio.run(check())
+
+
+def test_unified_counseling_calendar_names_filtering_and_open(data):
+    from models import GroupCounselingInput, GroupLogInput, TeacherInput, ConsultationInput
+    from repositories.group_counseling_repo import GroupCounselingRepository
+    from repositories.teacher_repo import TeacherRepository
+    from repositories.consultation_repo import ConsultationRepository
+
+    db, repo, _, _ = data
+    groups = GroupCounselingRepository(db)
+    group = groups.save(GroupCounselingInput(name='친구 집단'))
+    groups.save_log(GroupLogInput(group_id=group.id, title='집단 제목 숨김',
+                                 starts_at=datetime(2026, 10, 20, 11, tzinfo=KST)))
+    teacher = TeacherRepository(db).create_many([TeacherInput(name='김교사')])[0]
+    ConsultationRepository(db).save(ConsultationInput(teacher_id=teacher.id, title='자문 제목 숨김',
+                                   starts_at=datetime(2026, 10, 20, 12, tzinfo=KST)))
+    calendar = next(c for c in repo.list() if c.source == 'counseling')
+    assert calendar.name == '상담 일정'
+    day = date(2026, 10, 20)
+    entries = repo.events(day, day, [calendar.id])
+    assert [e.source for e in entries] == ['counseling', 'group', 'consultation']
+    assert [e.display_name for e in entries] == ['학생', '친구 집단', '김교사']
+    assert all(e.calendar_name == '상담 일정' for e in entries)
+    assert repo.events(date(2026, 10, 21), date(2026, 10, 21), [calendar.id]) == []
+
+    async def invoke(function, *args, **kwargs):
+        return function(*args, **kwargs)
+
+    async def check():
+        with Client(page('/unified-calendar-test')), patch('views.calendar_view.ui.timer'), \
+                patch('views.calendar_view.run.io_bound', side_effect=invoke):
+            linked = AsyncMock()
+            view = CalendarView(ReportingRepository(db), AsyncMock(), linked)
+            view.anchor = view.selected = day
+            view.build()
+            await view.reload()
+            texts = [e.text for e in view.grid.descendants() if isinstance(e, ui.label)]
+            assert '09:00 학생' in texts
+            assert '11:00 친구 집단' in texts
+            assert '12:00 김교사' in texts
+            assert '10:00 회의' in texts
+            assert not any('제목 숨김' in text for text in texts)
+            for entry in entries[1:]:
+                await view.open_event(entry)
+                linked.assert_awaited_with(entry)
+            await view.toggle_calendar(calendar.id, False)
+            assert all(e.source == 'custom' for e in view.events_by_day[day])
+    asyncio.run(check())
+
+
+def test_event_location_content_persistence_and_migration(data):
+    db, repo, custom, _ = data
+    day = date(2026, 10, 20)
+    entry = repo.events(day, day, [custom.id])[0]
+    # Upgrade an existing calendar with the previous schema.
+    with db.session(write=True) as connection:
+        connection.execute('ALTER TABLE calendar_events DROP COLUMN location')
+        connection.execute('ALTER TABLE calendar_events DROP COLUMN content')
+        connection.execute('PRAGMA user_version=30')
+    db.initialize()
+    original = repo.events(day, day, [custom.id])[0]
+    assert original.location == original.content == ''
+    assert original.title == entry.title
+    value = CalendarEventInput(calendar_id=custom.id, title='장소 있는 일정',
+                               starts_at=datetime(2026, 10, 20, 13, tzinfo=KST),
+                               location='상담실', content='첫 번째 줄\n두 번째 줄')
+    repo.save_event(value)
+    created = repo.events(day, day, [custom.id])[-1]
+    assert (created.location, created.content) == ('상담실', '첫 번째 줄\n두 번째 줄')
+    repo.save_event(value.model_copy(update={'location': '도서관', 'content': '수정 내용'}), created.id)
+    db.initialize()
+    updated = repo.events(day, day, [custom.id])[-1]
+    assert (updated.location, updated.content) == ('도서관', '수정 내용')
+    repo.save_event(value.model_copy(update={'location': '', 'content': ''}), created.id)
+    cleared = repo.events(day, day, [custom.id])[-1]
+    assert cleared.location == cleared.content == ''
+
+
+@pytest.mark.parametrize('all_day', [False, True])
+@pytest.mark.parametrize('start_time,end_time,minutes,days', [('09:00', '10:30', 90, 0), ('23:30', '23:45', 15, 1), ('09:00', '09:00', 1440, 1), ('09:00', '10:30', 90, 3)])
+def test_event_editor_saves_and_restores_location_content(data, all_day, start_time, end_time, minutes, days):
+    import inspect
+    db, repo, custom, _ = data
+    day = date(2026, 10, 20)
+
+    async def invoke(function, *args, **kwargs):
+        return function(*args, **kwargs)
+
+    async def check():
+        with Client(page('/event-details-editor-test')), patch('views.calendar_view.ui.timer'), \
+                patch('views.calendar_view.run.io_bound', side_effect=invoke):
+            view = CalendarView(ReportingRepository(db), AsyncMock())
+            view.anchor = view.selected = day
+            view.build()
+            await view.reload()
+
+            async def create(dialog):
+                fields = {e.props.get('label'): e for e in dialog.descendants()
+                          if isinstance(e, (ui.input, ui.textarea))}
+                toggle = next(e for e in dialog.descendants() if isinstance(e, ui.checkbox))
+                controls = {e.props.get('label'): e for e in dialog.descendants() if e.props.get('label')}
+                assert '상태' not in controls
+                row_labels = [e.props.get('label') for e in controls['시작 날짜'].parent_slot.children
+                              if e.props.get('label') and not isinstance(e, ui.checkbox)]
+                assert row_labels == ['시작 날짜', '시작 시간', '종료 시간', '종료 날짜']
+                controls['시작 날짜'].value = str(day + timedelta(days=1))
+                assert controls['종료 날짜'].value == str(day + timedelta(days=1))
+                controls['시작 날짜'].value = str(day)
+                assert controls['종료 날짜'].value == str(day)
+                controls['종료 날짜'].value = str(day + timedelta(days=3))
+                controls['시작 날짜'].value = str(day + timedelta(days=1))
+                assert controls['종료 날짜'].value == str(day + timedelta(days=3))
+                controls['시작 날짜'].value = str(day)
+                controls['종료 날짜'].value = str(day + timedelta(days=days))
+                controls['시작 시간'].value = start_time
+                controls['종료 시간'].value = end_time
+                assert controls['시작 날짜'].parent_slot is controls['시작 시간'].parent_slot
+                assert controls['시작 날짜'].parent_slot is controls['종료 시간'].parent_slot
+                toggle.value = True
+                toggle.value = all_day
+                if not all_day and days == 0:
+                    controls['종료 날짜'].value = ''  # Hidden date must not be parsed or saved.
+                timed = [e for e in dialog.descendants() if e.props.get('label') in ('시작 시간', '종료 시간')]
+                assert all(e.enabled == (not all_day) for e in timed)
+                fields['일정 제목'].value = '상세 일정'
+                fields['장소'].value = '상담실'
+                fields['내용'].value = '준비물 안내\n회의 내용'
+                button = next(e for e in dialog.descendants()
+                              if isinstance(e, ui.button) and e.text == '일정 저장')
+                handler = next(listener.handler for listener in button._event_listeners.values()
+                               if listener.type == 'click')
+                await inspect.getclosurevars(handler).nonlocals['callback']()
+                assert dialog.submitted.is_set()
+                return dialog._result
+
+            with patch.object(ui.dialog, '__await__', lambda dialog: create(dialog).__await__()):
+                await view.open_event_editor()
+            saved = next(e for e in repo.events(day, day, [custom.id]) if e.title == '상세 일정')
+            assert saved.all_day == all_day
+            captions = [e.text for e in view.grid.descendants() if isinstance(e, ui.label)]
+            assert ('상세 일정' if all_day else f'{start_time} 상세 일정') in captions
+            if all_day:
+                assert saved.starts_at.astimezone(KST).hour == 0
+                assert saved.duration_minutes == 1440 * (days + 1)
+            assert saved.duration_minutes == (1440 * (days + 1) if all_day else minutes)
+            assert saved.location == '상담실'
+            assert saved.content == '준비물 안내\n회의 내용'
+
+            async def reopen(dialog):
+                fields = {e.props.get('label'): e for e in dialog.descendants()
+                          if isinstance(e, (ui.input, ui.textarea))}
+                toggle = next(e for e in dialog.descendants() if isinstance(e, ui.checkbox))
+                assert toggle.value == all_day
+                if not all_day:
+                    from views.time_inputs import parse_time
+                    controls = {e.props.get('label'): e for e in dialog.descendants() if e.props.get('label')}
+                    assert parse_time(controls['시작 시간'].value).strftime('%H:%M') == start_time
+                    assert parse_time(controls['종료 시간'].value).strftime('%H:%M') == end_time
+                toggle.value = not all_day
+                timed = [e for e in dialog.descendants() if e.props.get('label') in ('시작 시간', '종료 시간')]
+                assert all(e.enabled == all_day for e in timed)
+                assert fields['장소'].value == saved.location
+                assert fields['내용'].value == saved.content
+                return False
+
+            with patch.object(ui.dialog, '__await__', lambda dialog: reopen(dialog).__await__()):
+                await view.open_event_editor(saved)
+    asyncio.run(check())
+
+
+def test_all_day_migration_preserves_existing_events(data):
+    db, repo, custom, _ = data
+    day = date(2026, 10, 20)
+    previous = repo.events(day, day, [custom.id])
+    with db.session(write=True) as connection:
+        connection.execute('ALTER TABLE calendar_events DROP COLUMN all_day')
+        connection.execute('PRAGMA user_version=31')
+    db.initialize()
+    assert repo.events(day, day, [custom.id]) == previous
+    assert not previous[0].all_day
+
+
+def test_multiday_calendar_overlap_and_midnight_boundary(data):
+    db, repo, custom, _ = data
+    repo.save_event(CalendarEventInput(calendar_id=custom.id, title='월 경계 일정',
+        starts_at=datetime(2026, 10, 30, 9, tzinfo=KST), duration_minutes=3 * 1440 + 60))
+    repo.save_event(CalendarEventInput(calendar_id=custom.id, title='종일 여러 날짜', all_day=True,
+        starts_at=datetime(2026, 10, 30, tzinfo=KST), duration_minutes=3 * 1440))
+    first = date(2026, 11, 1)
+    assert len(repo.events(first, first, [custom.id])) == 2
+    assert [e.title for e in repo.events(date(2026, 11, 2), date(2026, 11, 2), [custom.id])] == ['월 경계 일정']
+    assert repo.events(date(2026, 11, 3), date(2026, 11, 3), [custom.id]) == []
+    db.initialize()
+
+    async def invoke(function, *args, **kwargs):
+        return function(*args, **kwargs)
+
+    async def check():
+        with Client(page('/multiday-calendar-test')), patch('views.calendar_view.ui.timer'), \
+                patch('views.calendar_view.run.io_bound', side_effect=invoke):
+            view = CalendarView(ReportingRepository(db), AsyncMock())
+            view.anchor = view.selected = first
+            view.build()
+            await view.reload()
+            assert len(view.events_by_day[first]) == 2
+            assert len(view.events_by_day[date(2026, 11, 2)]) == 1
+            assert not view.events_by_day.get(date(2026, 11, 3))
+            texts = [e.text for e in view.grid.descendants() if isinstance(e, ui.label)]
+            assert '계속 · 월 경계 일정' not in texts
+            assert '종일 여러 날짜' not in texts
+            bars = [e for e in view.grid.descendants() if isinstance(e, ui.button)]
+            assert any(e.props.get('aria-label') == '종일 여러 날짜' for e in bars)
+    asyncio.run(check())
+
+
+def test_multiday_bars_span_columns_and_show_title_once(data):
+    from views.calendar_view import week_event_segments, visible_days
+    db, repo, custom, _ = data
+    repo.save_event(CalendarEventInput(calendar_id=custom.id, title='연결 일정', all_day=True,
+        starts_at=datetime(2026, 10, 22, tzinfo=KST), duration_minutes=6 * 1440))
+    repo.save_event(CalendarEventInput(calendar_id=custom.id, title='겹친 일정', all_day=True,
+        starts_at=datetime(2026, 10, 23, tzinfo=KST), duration_minutes=2 * 1440))
+
+    async def invoke(function, *args, **kwargs):
+        return function(*args, **kwargs)
+
+    async def check():
+        with Client(page('/connected-bars-test')), patch('views.calendar_view.ui.timer'), \
+                patch('views.calendar_view.run.io_bound', side_effect=invoke):
+            view = CalendarView(ReportingRepository(db), AsyncMock())
+            view.anchor = view.selected = date(2026, 10, 22)
+            view.build()
+            await view.reload()
+            texts = [e.text for e in view.grid.descendants() if isinstance(e, ui.label)]
+            assert texts.count('연결 일정') == 1
+            assert texts.count('겹친 일정') == 1
+            bars = [e for e in view.grid.descendants() if isinstance(e, ui.button)
+                    and e.props.get('aria-label') == '연결 일정']
+            assert len(bars) == 2
+            assert all(e.props.get('unelevated') for e in bars)
+            week = visible_days(date(2026, 10, 22), 'week')
+            segments = week_event_segments(week, view.events_by_day)
+            first = next(s for s in segments if s[0].title == '연결 일정')
+            overlap = next(s for s in segments if s[0].title == '겹친 일정')
+            assert first[1:3] == (4, 3)
+            assert first[4:] == (True, False)
+            assert first[3] != overlap[3]
+            next_week = visible_days(date(2026, 10, 25), 'week')
+            continuation = week_event_segments(next_week, view.events_by_day)[0]
+            assert continuation[1:3] == (0, 3)
+            assert continuation[4:] == (False, True)
+    asyncio.run(check())
+
+
+@pytest.mark.parametrize('hide_sat,hide_sun', [(False, False), (True, False), (False, True), (True, True)])
+def test_hide_weekend_days_independently(data, hide_sat, hide_sun):
+    from views.calendar_view import visible_days, week_event_segments
+    db, repo, custom, _ = data
+    repo.save_event(CalendarEventInput(calendar_id=custom.id, title='주말 연결', all_day=True,
+        starts_at=datetime(2026, 10, 18, tzinfo=KST), duration_minutes=7 * 1440))
+
+    async def invoke(function, *args, **kwargs):
+        return function(*args, **kwargs)
+
+    async def check():
+        with Client(page('/weekend-visibility-test')), patch('views.calendar_view.ui.timer'), \
+                patch('views.calendar_view.run.io_bound', side_effect=invoke):
+            view = CalendarView(ReportingRepository(db), AsyncMock())
+            view.anchor = view.selected = date(2026, 10, 20)
+            view.build()
+            await view.reload()
+            view.hide_saturday.value = hide_sat
+            view.hide_sunday.value = hide_sun
+            for mode in ('month', 'week'):
+                view.mode = SimpleNamespace(value=mode)
+                view.render_grid()
+                labels = [e.text for e in view.grid.descendants() if isinstance(e, ui.label)]
+                assert ('토' not in labels) == hide_sat
+                assert ('일' not in labels) == hide_sun
+                buttons = [e.text for e in view.grid.descendants() if isinstance(e, ui.button)]
+                assert ('10/24' not in buttons) == hide_sat
+                assert ('10/18' not in buttons) == hide_sun
+                assert '10/20' in buttons
+            days = [d for d in visible_days(view.anchor, 'week')
+                    if not (hide_sat and d.weekday() == 5) and not (hide_sun and d.weekday() == 6)]
+            segment = next(s for s in week_event_segments(days, view.events_by_day) if s[0].title == '주말 연결')
+            assert segment[1:3] == (0, 7 - hide_sat - hide_sun)
+            await view.reload()
+            assert view.hide_saturday.value == hide_sat
+            assert view.hide_sunday.value == hide_sun
+            view.hide_saturday.value = view.hide_sunday.value = False
+            labels = [e.text for e in view.grid.descendants() if isinstance(e, ui.label)]
+            assert '토' in labels and '일' in labels
+    asyncio.run(check())
+
+
+def test_event_editor_rejects_end_before_start_and_allows_correction(data):
+    import inspect
+    db, repo, custom, _ = data
+
+    async def invoke(function, *args, **kwargs):
+        return function(*args, **kwargs)
+
+    async def check():
+        with Client(page('/event-invalid-time-test')), patch('views.calendar_view.ui.timer'), \
+                patch('views.calendar_view.run.io_bound', side_effect=invoke):
+            view = CalendarView(ReportingRepository(db), AsyncMock())
+            view.anchor = view.selected = date(2026, 10, 20)
+            view.build()
+            await view.reload()
+
+            async def interact(dialog):
+                controls = {e.props.get('label'): e for e in dialog.descendants() if e.props.get('label')}
+                controls['일정 제목'].value = '시간 검증'
+                controls['시작 시간'].value = '10:00'
+                controls['종료 시간'].value = '09:00'
+                button = next(e for e in dialog.descendants() if isinstance(e, ui.button) and e.text == '일정 저장')
+                handler = next(listener.handler for listener in button._event_listeners.values() if listener.type == 'click')
+                save = inspect.getclosurevars(handler).nonlocals['callback']
+                with patch.object(view.repository, 'save_event', wraps=repo.save_event) as persist:
+                    await save()
+                    persist.assert_not_called()
+                    assert not dialog.submitted.is_set()
+                    assert button.enabled
+                    assert any(isinstance(e, ui.label) and e.text == '종료 시간은 시작 시간보다 이를 수 없습니다.'
+                               for e in dialog.descendants())
+                    controls['종료 시간'].value = '11:30'
+                    await save()
+                    persist.assert_called_once()
+                    assert persist.call_args.args[0].duration_minutes == 90
+                return dialog._result
+
+            with patch.object(ui.dialog, '__await__', lambda dialog: interact(dialog).__await__()):
+                await view.open_event_editor()
+    asyncio.run(check())

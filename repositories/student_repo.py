@@ -82,9 +82,9 @@ class StudentRepository:
                 item['created_at'] = item['updated_at'] = now_text()
                 item['nickname'] = item['nickname'] or ''
                 cursor = connection.execute('''INSERT INTO students
-                    (name, nickname, school_year, student_number, grade, classroom, birth_date,
+                    (name, nickname, gender, school_year, student_number, grade, classroom, birth_date,
                      student_contact, guardian_contact, notes, created_at, updated_at)
-                    VALUES (:name, :nickname, :school_year, :student_number, :grade, :classroom, :birth_date,
+                    VALUES (:name, :nickname, :gender, :school_year, :student_number, :grade, :classroom, :birth_date,
                             :student_contact, :guardian_contact, :notes, :created_at, :updated_at)''', item)
                 self._save_enrollment(connection, cursor.lastrowid, item)
                 row = connection.execute('SELECT * FROM students WHERE id=?', (cursor.lastrowid,)).fetchone()
@@ -119,7 +119,7 @@ class StudentRepository:
         with self.database.session(write=True) as connection:
             cursor = connection.execute(
                 '''UPDATE students SET name=:name, birth_date=:birth_date,
-                nickname=:nickname, student_contact=:student_contact,
+                nickname=:nickname, gender=:gender, student_contact=:student_contact,
                 guardian_contact=:guardian_contact, notes=:notes, updated_at=:updated_at
                 WHERE id=:id''', data)
             if cursor.rowcount == 0:

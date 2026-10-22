@@ -4,7 +4,8 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
 
-from nicegui import ui
+from nicegui import Client, ui
+from nicegui.page import page
 
 from tests.test_student_view import inline_io, make_student
 from views.student_list import StudentList
@@ -12,7 +13,12 @@ from views.student_list import StudentList
 
 class StudentListTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
+        self.client = Client(page('/student-list-test'))
+        self.client.__enter__()
         self.host = ui.column()
+
+    def tearDown(self):
+        self.client.__exit__(None, None, None)
 
     async def test_independent_lists_and_callbacks(self):
         host = self.host

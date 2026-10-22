@@ -9,6 +9,7 @@ from database import Database
 from models import SchoolSettings
 from repositories.school_settings_repo import SchoolSettingsRepository
 from views.display_settings import DisplaySettings
+from views.auto_lock import AutoLock
 from views.password_settings_view import build_password_settings
 from views.school_settings_view import build_school_settings
 from views.about_view import build_about
@@ -42,7 +43,8 @@ def build_settings(display: DisplaySettings | None = None,
                    school: SchoolSettingsRepository | None = None,
                    database: Database | None = None,
                    on_school_change: Callable[[SchoolSettings], None] | None = None,
-                   on_roster_import=None) -> None:
+                   on_roster_import=None,
+                   auto_lock: AutoLock | None = None) -> None:
     """설정 종류별 탭을 만들고 기존 설정 컨트롤을 배치한다."""
     display = display or DisplaySettings()
     with ui.column().classes('w-full max-w-7xl mx-auto gap-6 p-4 md:p-8'):
@@ -66,6 +68,10 @@ def build_settings(display: DisplaySettings | None = None,
                                    '보기 편한 화면으로 맞춤 설정하세요.', '즉시 적용'):
                     display.build_controls()
             with ui.tab_panel('system').classes('p-0'):
+                if auto_lock is not None:
+                    with settings_card('자동 잠금', 'timer',
+                                       '일정 시간 조작이 없으면 DB를 잠급니다.', '즉시 적용'):
+                        auto_lock.build_controls()
                 with settings_card('비밀번호 설정', 'lock_outline',
                                    '상담 기록을 보호하는 비밀번호를 관리하세요.', 'DB 비밀번호'):
                     if database is not None:

@@ -93,7 +93,7 @@ class StudentViewTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn('hide-bottom', self.view.student_list.table.props)
 
     async def test_editor_loads_year_and_saves_new_history(self):
-        student = make_student().model_copy(update={'school_year': 2026, 'guardian_contact': '02-123-4567'})
+        student = make_student().model_copy(update={'school_year': 2026, 'guardian_contact': '02-123-4567', 'gender': '여'})
         self.students.enrollments.return_value = [StudentEnrollment(
             student_id=student.id, school_year=2025, grade=1, classroom='4', student_number='08',
             created_at=student.created_at, updated_at=student.updated_at)]
@@ -102,6 +102,11 @@ class StudentViewTests(unittest.IsolatedAsyncioTestCase):
         async def interact(dialog):
             fields = {element.props.get('label'): element for element in dialog.descendants()
                       if isinstance(element, (ui.input, ui.number, ui.select))}
+            self.assertEqual(fields['성별'].options, ['남', '여', '기타'])
+            self.assertEqual(fields['성별'].value, '여')
+            self.assertIs(fields['성별'].parent_slot, fields['*이름'].parent_slot)
+            self.assertIs(fields['성별'].parent_slot, fields['별명'].parent_slot)
+            fields['성별'].value = '기타'
             fields['*학년도'].value = 2025
             self.assertEqual(fields['*반'].value, '4')
             self.assertEqual(fields['번호'].value, '08')
@@ -120,6 +125,7 @@ class StudentViewTests(unittest.IsolatedAsyncioTestCase):
         value = self.students.update.call_args.args[1]
         self.assertEqual((value.school_year, value.grade, value.classroom), (2027, 3, '4'))
         self.assertEqual(value.guardian_contact, student.guardian_contact)
+        self.assertEqual(value.gender, '기타')
 
     async def test_enrollment_delete_buttons_and_latest_profile_refresh(self):
         student = make_student().model_copy(update={'school_year': 2026})

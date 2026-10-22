@@ -171,3 +171,73 @@ def test_law_migration_preserves_cases_and_logs(tmp_path):
     with pytest.raises(ConflictError):
         with db.session(write=True) as connection:
             connection.execute('DELETE FROM special_educations WHERE id=?', (case.id,))
+
+
+@pytest.mark.anyio
+async def test_student_row_click_loads_and_saves_special_log(tmp_path):
+    from types import SimpleNamespace
+    from database import DatabaseError
+
+    db = Database('test-only', tmp_path / 'special-selection.db')
+    db.initialize()
+    students = StudentRepository(db)
+    student = students.create(StudentInput(name='교육 학생', grade=2, classroom='3'))
+    other = students.create(StudentInput(name='다른 학생', grade=1, classroom='1'))
+    case = SpecialEducationRepository(db).save(SpecialEducationInput(
+        student_id=student.id, title='교육 과정', law='학교폭력예방법'))
+
+    async def invoke(function, *args, **kwargs):
+        return function(*args, **kwargs)
+
+    with Client(page('/special-row-click-test')), patch('views.special_education_view.ui.timer'), \
+            patch('views.special_education_view.run.io_bound', side_effect=invoke):
+        view = SpecialEducationView(students)
+        view.build()
+        await view.student_list.reload()
+        await view.student_list._select_student(SimpleNamespace(args=student.id))
+        assert view.selected.id == student.id
+        assert view.selected_case.id == case.id
+        assert view.student_heading.text == '교육 학생 · 2학년 3반'
+        assert view.add.enabled
+
+        async def interact(dialog):
+            # 편집 중 학생을 눌러도 저장 대상이 바뀌지 않는다.
+            await view.student_list._select_student(SimpleNamespace(args=other.id))
+            assert view.selected.id == student.id
+            editor = next(e for e in dialog.descendants() if isinstance(e, ui.editor))
+            editor.value = '<p>특별교육 내용</p>'
+            button = next(e for e in dialog.descendants() if isinstance(e, ui.button) and e.text == '일지 저장')
+            handler = next(listener.handler for listener in button._event_listeners.values() if listener.type == 'click')
+            save = inspect.getclosurevars(handler).nonlocals['callback']
+            with patch.object(view.counseling, 'create', side_effect=DatabaseError('저장 실패')):
+                await save()
+            assert not dialog.submitted.is_set()
+            assert button.enabled and editor.value == '<p>특별교육 내용</p>'
+            await save()
+            assert dialog.submitted.is_set()
+            return dialog._result
+
+        with patch.object(ui.dialog, '__await__', lambda dialog: interact(dialog).__await__()):
+            await view.open_editor()
+        assert not view.editor_open
+        logs = view.counseling.list(student_id=student.id, case_id=case.id)
+        assert len(logs) == 1
+        assert logs[0].content_markdown == '<p>특별교육 내용</p>'
+        assert '1건' in view.log_message.text
+
+        async def edit(dialog):
+            editor = next(e for e in dialog.descendants() if isinstance(e, ui.editor))
+            assert editor.value == '<p>특별교육 내용</p>'
+            editor.value = '<p>수정한 교육 내용</p>'
+            button = next(e for e in dialog.descendants() if isinstance(e, ui.button) and e.text == '일지 저장')
+            handler = next(listener.handler for listener in button._event_listeners.values() if listener.type == 'click')
+            await inspect.getclosurevars(handler).nonlocals['callback']()
+            return dialog._result
+
+        with patch.object(ui.dialog, '__await__', lambda dialog: edit(dialog).__await__()):
+            await view.open_editor(logs[0].id)
+        assert view.counseling.get(logs[0].id).content_markdown == '<p>수정한 교육 내용</p>'
+        await view.student_list._select_student(SimpleNamespace(args=other.id))
+        assert view.selected.id == other.id and view.selected_case is None
+        assert not view.add.enabled
+        assert '등록된 특별 교육이 없습니다' in view.case_message.text

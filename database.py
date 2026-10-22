@@ -11,7 +11,7 @@ from threading import Lock, RLock
 from weakref import WeakValueDictionary
 from models import SchoolSettings, current_school_year
 
-SCHEMA_VERSION = 29
+SCHEMA_VERSION = 33
 
 
 class DatabaseError(RuntimeError):
@@ -97,6 +97,7 @@ class Database:
         self._session_lock = self._state.lock
         self._generation = self._state.generation
         self.student_revision = 0
+        self.write_revision = 0
         try:
             # OS/CPU/Python 버전에 맞는 SQLCipher 확장 모듈이 필요하다.
             self.driver = import_module('sqlcipher3.dbapi2')
@@ -197,6 +198,8 @@ class Database:
             if migration and connection.execute('PRAGMA foreign_key_check').fetchone():
                 raise DatabaseError('DB 이관 중 연결된 자료의 무결성 검사에 실패했습니다.')
             connection.commit()
+            if write and connection.total_changes:
+                self.write_revision += 1
         except self.driver.IntegrityError:
             connection.rollback()
             raise ConflictError('같은 학년도·학년·반에 중복 번호가 있거나 연결된 학생/상담 기록 조건에 맞지 않습니다.') from None
@@ -527,7 +530,7 @@ class Database:
                         connection.execute(f"ALTER TABLE school_settings ADD COLUMN {column} TEXT NOT NULL DEFAULT ''")
                 connection.execute('PRAGMA user_version = 26')
                 version = 26
-            if version not in (26, 27, 28, SCHEMA_VERSION):
+            if version not in (26, 27, 28, 29, 30, 31, 32, SCHEMA_VERSION):
                 raise DatabaseError('지원하지 않는 DB 버전입니다. 앱 버전을 확인하세요.')
             if new_database and school is not None:
                 school = SchoolSettings.model_validate(school.model_dump())
@@ -602,4 +605,37 @@ class Database:
                             (SELECT counselor_name FROM school_settings WHERE id=1), '')
                         WHERE student_id=NEW.student_id AND school_year=NEW.school_year;
                     END''')
+                connection.execute('PRAGMA user_version = 29')
+                version = 29
+            if version == 29:
+                columns = {row['name'] for row in connection.execute('PRAGMA table_info(students)')}
+                if 'gender' not in columns:
+                    connection.execute("ALTER TABLE students ADD COLUMN gender TEXT CHECK(gender IN ('남', '여', '기타'))")
+                connection.execute('PRAGMA user_version = 30')
+                version = 30
+            if version == 30:
+                columns = {row['name'] for row in connection.execute('PRAGMA table_info(calendar_events)')}
+                for column in ('location', 'content'):
+                    if column not in columns:
+                        connection.execute(f"ALTER TABLE calendar_events ADD COLUMN {column} TEXT NOT NULL DEFAULT ''")
+                connection.execute('PRAGMA user_version = 31')
+                version = 31
+            if version == 31:
+                columns = {row['name'] for row in connection.execute('PRAGMA table_info(calendar_events)')}
+                if 'all_day' not in columns:
+                    connection.execute('ALTER TABLE calendar_events ADD COLUMN all_day INTEGER NOT NULL DEFAULT 0 CHECK(all_day IN (0, 1))')
+                connection.execute('PRAGMA user_version = 32')
+                version = 32
+            if version == 32:
+                schema = connection.execute("SELECT sql FROM sqlite_master WHERE name='calendar_events'").fetchone()[0]
+                objects = [row[0] for row in connection.execute(
+                    "SELECT sql FROM sqlite_master WHERE tbl_name='calendar_events' AND type IN ('index','trigger') AND sql IS NOT NULL")]
+                schema = re.sub(r'^CREATE TABLE\s+"?calendar_events"?', 'CREATE TABLE calendar_events_new', schema, count=1)
+                schema = schema.replace('duration_minutes BETWEEN 1 AND 1440', 'duration_minutes >= 1')
+                connection.execute(schema)
+                connection.execute('INSERT INTO calendar_events_new SELECT * FROM calendar_events')
+                connection.execute('DROP TABLE calendar_events')
+                connection.execute('ALTER TABLE calendar_events_new RENAME TO calendar_events')
+                for statement in objects:
+                    connection.execute(statement)
                 connection.execute(f'PRAGMA user_version = {SCHEMA_VERSION}')

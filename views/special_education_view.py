@@ -9,7 +9,7 @@ from views.time_inputs import time_input
 from database import DatabaseError
 from models import Counseling, Student, SpecialEducation, SpecialEducationInput
 from repositories.special_education_repo import SpecialEducationRepository, SpecialEducationLogRepository
-from views.counseling_view import CounselingView, KST, STATUSES, PAGE_SIZE
+from views.counseling_view import CounselingView, KST, STATUSES, PAGE_SIZE, counseling_form_input
 from views.counseling_content import editor_html
 from views.student_list import StudentList
 
@@ -20,6 +20,109 @@ class SpecialEducationView(CounselingView):
     def __init__(self, students, on_saved=None):
         super().__init__(students, SpecialEducationLogRepository(students.database), on_saved)
         self.cases = SpecialEducationRepository(students.database)
+
+    @property
+    def editor_open(self) -> bool:
+        return self.report_open
+
+    @editor_open.setter
+    def editor_open(self, value: bool) -> None:
+        self.report_open = value
+
+    async def confirm_editor_discard(self) -> bool:
+        # 팝업을 닫기 전에는 선택 학생/교육을 바꾸지 않는다.
+        return not self.editor_open
+
+    def clear_editor(self) -> None:
+        """특별교육은 팝업 편집기를 사용하므로 인라인 편집 영역이 없다."""
+        self.editor_request += 1
+        self.editor_fields = {}
+        self.editor_original = {}
+
+    async def select_case(self, case: SpecialEducation) -> None:
+        if self.editor_open or self.selected is None or case.student_id != self.selected.id:
+            return
+        self.selected_case = case
+        if case.id in self.case_options:
+            self.case_select.set_value(case.id)
+        self.set_case_actions_enabled(True)
+        self.log_offset = 0
+        self.add.enable()
+        await self.load_logs()
+
+    async def open_editor(self, entry_id: int | None = None) -> None:
+        """선택한 특별교육의 일지를 팝업에서 작성하거나 수정한다."""
+        if self.editor_open or self.selected is None or self.selected_case is None:
+            return
+        self.editor_open = True
+        student, case = self.selected, self.selected_case
+        dialog = None
+        saving = False
+        try:
+            entry = await run.io_bound(self.counseling.get, entry_id) if entry_id is not None else None
+            if entry_id is not None and (entry is None or entry.student_id != student.id or entry.case_id != case.id):
+                ui.notify('특별 교육 일지를 찾을 수 없습니다. 목록을 새로고침해 주세요.', type='warning')
+                return
+            with ui.context.client.content:
+                dialog, fields, message, save_button, cancel_button = self.build_editor(student, entry)
+            original = {key: field.value for key, field in fields.items()}
+
+            async def cancel():
+                if saving:
+                    return
+                if original != {key: field.value for key, field in fields.items()}:
+                    with ui.dialog().props('persistent') as confirm, ui.card():
+                        ui.label('저장하지 않은 내용을 버릴까요?')
+                        ui.button('계속 작성', on_click=lambda: confirm.submit(False))
+                        ui.button('변경 내용 버리기', on_click=lambda: confirm.submit(True))
+                    try:
+                        if not await confirm:
+                            return
+                    finally:
+                        if not confirm.is_deleted:
+                            confirm.delete()
+                dialog.submit(False)
+
+            async def save():
+                nonlocal saving
+                if saving:
+                    return
+                try:
+                    value = counseling_form_input(student.id, dict(
+                        {key: field.value for key, field in fields.items()}, content_format='html', case_id=case.id))
+                except (ValueError, TypeError):
+                    message.text = '교육 날짜·시간, 교육 시간(1~1440분)과 입력 길이를 확인해 주세요.'
+                    return
+                saving = True
+                for field in (*fields.values(), save_button, cancel_button):
+                    field.disable()
+                try:
+                    if entry is None:
+                        await run.io_bound(self.counseling.create, value)
+                    else:
+                        await run.io_bound(self.counseling.update, entry.id, value)
+                    dialog.submit(True)
+                except DatabaseError as error:
+                    message.text = str(error)
+                finally:
+                    saving = False
+                    for field in (*fields.values(), save_button, cancel_button):
+                        field.enable()
+
+            save_button.on_click(save)
+            cancel_button.on_click(cancel)
+            if await dialog:
+                self.log_offset = 0
+                await self.load_logs()
+                if self.on_saved:
+                    await self.on_saved(student.id)
+                ui.notify('특별 교육 일지를 저장했습니다.', type='positive')
+        except DatabaseError as error:
+            ui.notify(str(error), type='negative')
+        finally:
+            self.editor_open = False
+            if dialog is not None and not dialog.is_deleted:
+                dialog.delete()
 
     def set_case_actions_enabled(self, enabled: bool) -> None:
         self.edit_case.set_enabled(enabled)
@@ -162,6 +265,7 @@ class SpecialEducationView(CounselingView):
             cancel_button.on_click(cancel)
             save_button.on_click(save)
             saved = await dialog
+            self.editor_open = False
             if saved:
                 ui.notify('특별 교육 정보를 저장했습니다.', type='positive')
                 if self.selected and self.selected.id == student.id:

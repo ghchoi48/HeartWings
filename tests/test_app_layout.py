@@ -26,7 +26,8 @@ class StudentRefreshTests(unittest.IsolatedAsyncioTestCase):
         self.layout.calendar_view = SimpleNamespace(reload=AsyncMock())
         self.layout.statistics_view = SimpleNamespace(load=AsyncMock())
 
-    async def test_build_after_login_container_is_deleted(self):
+    @patch('views.auto_lock.ui.run_javascript')
+    async def test_build_after_login_container_is_deleted(self, _javascript):
         client = Client(page('/layout-test'))
         client.__enter__()
         content = ui.column()
@@ -101,6 +102,7 @@ class IntegratedCounselingTests(unittest.IsolatedAsyncioTestCase):
             return function(*args, **kwargs)
 
         with Client(page('/integrated-counseling-test')), patch('views.app_layout.ui.timer'), \
+                patch('views.auto_lock.ui.run_javascript'), \
                 patch('views.app_layout.run.io_bound', side_effect=invoke):
             layout = AppLayout(students, counseling, Mock())
             layout.build(ui.column(), ui.left_drawer(), ui.header())

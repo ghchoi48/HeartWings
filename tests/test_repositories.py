@@ -325,3 +325,24 @@ def test_version_six_report_migration(tmp_path):
     case = CaseRepository(db).list(1)[0]
     assert case.report_html == '<p>기존 보고서</p>'
     assert case.intake_html == case.closing_html == ''
+
+
+def test_student_gender_persistence_and_migration(db):
+    repo = StudentRepository(db)
+    student = repo.create(student_input(gender='남'))
+    assert repo.get(student.id).gender == '남'
+    for gender in ('여', '기타', None):
+        repo.update(student.id, student_input(gender=gender))
+        assert repo.get(student.id).gender == gender
+    with pytest.raises(ValidationError):
+        student_input(gender='invalid')
+    # Simulate the previous schema with an existing student.
+    with db.session(write=True) as connection:
+        connection.execute('ALTER TABLE students DROP COLUMN gender')
+        connection.execute('PRAGMA user_version = 29')
+    db.initialize()
+    assert repo.get(student.id).gender is None
+    assert repo.get(student.id).name == student.name
+    repo.update(student.id, student_input(gender='여'))
+    db.initialize()
+    assert repo.get(student.id).gender == '여'

@@ -23,6 +23,8 @@ from views.education_event_view import EducationEventView
 from views.psychological_test_view import PsychologicalTestView
 from views.settings_view import build_settings
 from views.display_settings import DisplaySettings
+from views.auto_lock import AutoLock
+from settings_store import SettingsStore
 from models import SchoolSettings
 from repositories.school_settings_repo import SchoolSettingsRepository
 
@@ -39,6 +41,7 @@ class AppLayout:
         self.reporting = reporting
         self.on_lock = on_lock
         self.display = display
+        self.auto_lock = AutoLock(display.store if display else SettingsStore(None), self.lock_database)
         self.on_school_change = on_school_change
         self.school = SchoolSettingsRepository(students.database)
         self.active_page = 'home'
@@ -77,7 +80,9 @@ class AppLayout:
                 if page in ('students', 'consultation'):
                     ui.separator()
         with header:
-            ui.button('DB 잠금', icon='lock', on_click=self.on_lock or (lambda: ui.navigate.to('/'))).props('flat color=white').classes('ml-auto rounded-lg')
+            with ui.row().classes('ml-auto items-center gap-3'):
+                self.auto_lock.install()
+                ui.button('DB 잠금', icon='lock', on_click=self.auto_lock.lock).props('flat color=white').classes('rounded-lg')
         with content:
             self.panels['home'] = ui.column().classes('w-full')
             with self.panels['home']:
@@ -95,12 +100,19 @@ class AppLayout:
             self.panels['settings'] = ui.column().classes('w-full')
             with self.panels['settings']:
                 build_settings(self.display, self.school, self.students.database, self.on_school_change,
-                               self.refresh_roster)
+                               self.refresh_roster, auto_lock=self.auto_lock)
             self.panels['calendar'] = ui.column().classes('w-full')
             self.panels['statistics'] = ui.column().classes('w-full')
         self.navigate('home')
         with content:
             ui.timer(0.5, self.refresh_students)
+
+    async def lock_database(self) -> None:
+        if self.on_lock is not None:
+            await self.on_lock()
+        else:
+            await run.io_bound(self.students.database.lock)
+            ui.navigate.to('/')
 
     async def refresh_roster(self, kind: str) -> None:
         if kind == 'students':
@@ -191,7 +203,7 @@ class AppLayout:
                 self.special_education_view.build()
         if page == 'calendar' and self.calendar_view is None:
             with self.panels['calendar']:
-                self.calendar_view = CalendarView(self.reporting, self.open_schedule)
+                self.calendar_view = CalendarView(self.reporting, self.open_schedule, self.open_linked_schedule)
                 self.calendar_view.build()
         if page == 'consultation' and self.consultation_view is None:
             with self.panels['consultation']:
@@ -253,5 +265,22 @@ class AppLayout:
             self.navigate('counseling')
             self.counseling_tabs.set_value('logs')
             await self.counseling_view.open_record(entry_id)
+        finally:
+            self.opening_schedule = False
+
+    async def open_linked_schedule(self, entry) -> None:
+        """연동 일정의 집단상담 또는 자문 일지를 연다."""
+        if self.opening_schedule:
+            return
+        self.opening_schedule = True
+        try:
+            if entry.source == 'group':
+                self.navigate('groups')
+                await self.group_view.select_group(entry.owner_id)
+                await self.group_view.open_editor(log=True, log_id=entry.id)
+            elif entry.source == 'consultation':
+                self.navigate('consultation')
+                await self.consultation_view.select_teacher(entry.owner_id)
+                await self.consultation_view.open_log_editor(entry.id)
         finally:
             self.opening_schedule = False
