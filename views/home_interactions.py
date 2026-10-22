@@ -1,69 +1,70 @@
-"""홈 위젯 크기 조절: 브라우저에서 미리보기하고 드래그 완료 시 한 번 저장한다."""
+﻿"""포인터 이동 중 미리 보고, 완료 시 한 번만 배치를 저장한다."""
 
-RESIZE_POINTER = r'''(event) => {
-    if (event.button !== 0) return;
-    event.preventDefault();
-    event.stopPropagation();
+POINTER = r'''(event) => {
+    if (event.button !== 0 || event.target.closest('.q-btn')) return;
     const handle = event.currentTarget;
-    const axis = handle.dataset.resizeAxis || 'xy';
     const card = handle.closest('.home-widget');
     const grid = card.parentElement;
-    const styles = getComputedStyle(grid);
-    const columns = styles.gridTemplateColumns.split(' ').length;
-    const gap = parseFloat(styles.columnGap) || 0;
-    const cell = (grid.clientWidth - gap * (columns - 1)) / columns;
-    const rect = card.getBoundingClientRect();
-    const x = event.clientX, y = event.clientY;
-    const originalColumn = card.style.gridColumn;
-    const originalHeight = card.style.height;
-    let span = Number(card.dataset.span);
-    let height = Math.round(rect.height);
-    let moved = false;
+    if (getComputedStyle(grid).gridTemplateColumns.split(' ').length !== 24) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const axis = handle.dataset.resizeAxis || 'move';
+    const step = (grid.clientWidth + 8) / 24;
+    const origin = {x: +card.dataset.x, y: +card.dataset.y,
+                    width: +card.dataset.width, height: +card.dataset.height};
+    let size = {...origin}, moved = false;
+    const originalStyle = card.getAttribute('style');
+    const startX = event.clientX, startY = event.clientY;
     handle.setPointerCapture(event.pointerId);
     card.classList.add('home-resizing');
     const move = e => {
-        const dx = e.clientX - x, dy = e.clientY - y;
-        moved ||= (axis !== 'y' && Math.abs(dx) > 3) || (axis !== 'x' && Math.abs(dy) > 3);
-        if (axis !== 'y' && Math.abs(dx) > 3) {
-            span = Math.max(1, Math.min(columns, Math.round((rect.width + dx + gap) / (cell + gap))));
-            card.style.gridColumn = `span ${span}`;
+        const dx = e.clientX - startX, dy = e.clientY - startY;
+        if (Math.abs(dx) + Math.abs(dy) < 4) return;
+        moved = true;
+        if (axis === 'move') {
+            size.x = Math.max(0, Math.min(24 - size.width, origin.x + Math.round(dx / step)));
+            size.y = Math.max(0, origin.y + Math.round(dy / 10));
+        } else {
+            if (axis !== 'y') size.width = Math.max(1, Math.min(24 - size.x, origin.width + Math.round(dx / step)));
+            if (axis !== 'x') size.height = Math.max(160, Math.min(1600, Math.round((origin.height + dy) / 10) * 10));
         }
-        if (axis !== 'x' && Math.abs(dy) > 3) {
-            height = Math.max(290, Math.min(900, Math.round((rect.height + dy) / 10) * 10));
-            card.style.height = `${height}px`;
-        }
-        handle.setAttribute('aria-label', `크기 조절: ${span}열, ${height}px`);
+        card.style.gridColumn = `${size.x + 1} / span ${size.width}`;
+        card.style.gridRow = `${size.y + 1} / span ${Math.ceil(size.height / 10) + 1}`;
+        card.style.height = `${size.height}px`;
+        handle.setAttribute('aria-label', `가로 ${size.x + 1}칸, 세로 ${size.y + 1}칸, 너비 ${size.width}칸, 높이 ${size.height}px`);
     };
     const finish = e => {
         handle.removeEventListener('pointermove', move);
         handle.removeEventListener('pointerup', finish);
-        handle.removeEventListener('pointercancel', cancel);
-        handle.removeEventListener('lostpointercapture', cancel);
+        handle.removeEventListener('pointercancel', finish);
+        handle.removeEventListener('lostpointercapture', finish);
         card.classList.remove('home-resizing');
         if (handle.hasPointerCapture(event.pointerId)) handle.releasePointerCapture(event.pointerId);
-        if (e.type === 'pointerup' && moved) {
-            emit({span, height});
-        } else {
-            card.style.gridColumn = originalColumn;
-            card.style.height = originalHeight;
-        }
+        card.setAttribute('style', originalStyle);
+        if (e.type === 'pointerup' && moved) emit(size);
     };
-    const cancel = e => finish(e);
     handle.addEventListener('pointermove', move);
     handle.addEventListener('pointerup', finish);
-    handle.addEventListener('pointercancel', cancel);
-    handle.addEventListener('lostpointercapture', cancel);
+    handle.addEventListener('pointercancel', finish);
+    handle.addEventListener('lostpointercapture', finish);
 }'''
 
-RESIZE_KEYBOARD = r'''(event) => {
+KEYBOARD = r'''(event) => {
     if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
-    const axis = event.currentTarget.dataset.resizeAxis || 'xy';
-    if (axis === 'x' && ['ArrowUp', 'ArrowDown'].includes(event.key)) return;
-    if (axis === 'y' && ['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
     event.preventDefault();
-    const card = event.currentTarget.closest('.home-widget');
-    const span = Number(card.dataset.span);
-    const height = parseInt(card.style.height);
-    emit({span: Math.max(1, Math.min(3, span + (event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0))),
-          height: Math.max(290, Math.min(900, height + (event.key === 'ArrowDown' ? 10 : event.key === 'ArrowUp' ? -10 : 0)))});
+    const handle = event.currentTarget;
+    const card = handle.closest('.home-widget');
+    const axis = handle.dataset.resizeAxis || 'move';
+    let x = +card.dataset.x, y = +card.dataset.y;
+    let width = +card.dataset.width, height = +card.dataset.height;
+    const dx = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+    const dy = event.key === 'ArrowDown' ? 1 : event.key === 'ArrowUp' ? -1 : 0;
+    if (axis === 'move') {
+        x = Math.max(0, Math.min(24 - width, x + dx));
+        y = Math.max(0, y + dy);
+    } else {
+        if (axis !== 'y') width = Math.max(1, Math.min(24 - x, width + dx));
+        if (axis !== 'x') height = Math.max(160, Math.min(1600, height + dy * 10));
+    }
+    emit({x, y, width, height});
 }'''

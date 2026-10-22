@@ -6,6 +6,7 @@ from datetime import date, datetime, timezone
 
 from database import Database, DatabaseError, NotFoundError
 from settings_store import SettingsStore
+from home_layout import COLUMNS, MIN_HEIGHT, MAX_HEIGHT, DEFAULT_SIZES
 from views.counseling_content import clean_html
 
 WIDGET_KINDS = ('clock', 'todo', 'teacher_search', 'meal', 'memo')
@@ -107,10 +108,18 @@ class HomeRepository:
         for index, item in enumerate(normalized):
             if not isinstance(item, dict) or item.get('kind') not in WIDGET_KINDS:
                 raise ValueError('지원하지 않는 위젯입니다.')
-            if item.get('span') not in (1, 2, 3):
+            if 'width' not in item and item.get('span') not in (1, 2, 3):
                 raise ValueError('위젯 너비는 1~3열이어야 합니다.')
-            if type(item.get('height', 290)) is not int or not 290 <= item.get('height', 290) <= 900:
-                raise ValueError('위젯 높이는 290~900px이어야 합니다.')
+            if type(item.get('height', 290)) is not int or not MIN_HEIGHT <= item.get('height', 290) <= MAX_HEIGHT:
+                raise ValueError('위젯 높이는 160~1600px이어야 합니다.')
+            if 'width' in item and (type(item['width']) is not int or not 1 <= item['width'] <= COLUMNS):
+                raise ValueError('위젯 너비는 1~24칸이어야 합니다.')
+            if ('x' in item) != ('y' in item):
+                raise ValueError('위젯의 가로·세로 위치를 함께 지정해 주세요.')
+            if 'x' in item and (type(item['x']) is not int or type(item['y']) is not int
+                                or not 0 <= item['x'] <= COLUMNS - item.get('width', item.get('span', 1) * 8)
+                                or item['y'] < 0):
+                raise ValueError('위젯 위치가 격자 범위를 벗어났습니다.')
             if 'id' not in item:
                 item['id'] = item['kind'] if item['kind'] not in ids else f"{item['kind']}-{index}"
             instance_id = item['id']
@@ -124,6 +133,18 @@ class HomeRepository:
     def save_layout(self, layout: list[dict]) -> None:
         layout = self.normalize_layout(layout)
         self._update(lambda widgets: widgets.update(layout=layout))
+
+    def widget_sizes(self):
+        sizes = {kind: {'width': width, 'height': height} for kind, (width, height) in DEFAULT_SIZES.items()}
+        sizes.update(self._read().get('default_sizes', {}))
+        for kind, size in sizes.items():
+            self.normalize_layout([{'kind': kind, **size}])
+        return sizes
+
+    def save_widget_size(self, kind, width, height):
+        self.normalize_layout([{'kind': kind, 'width': width, 'height': height}])
+        self._update(lambda widgets: widgets.setdefault('default_sizes', {}).update(
+            {kind: {'width': width, 'height': height}}))
 
     def note(self, instance_id: str) -> str:
         if instance_id in self.note_drafts:

@@ -2,7 +2,6 @@
 
 import json
 import unittest
-from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 import pytest
@@ -16,6 +15,7 @@ from repositories.teacher_repo import TeacherRepository
 from views.home_view import HomeView
 from views.display_settings import DisplaySettings
 from settings_store import SettingsStore
+from home_layout import arrange, overlaps
 
 
 def test_migration_and_home_persistence(tmp_path):
@@ -136,6 +136,7 @@ class HomeViewTests(unittest.IsolatedAsyncioTestCase):
         with Client(page('/home-test')):
             repo = Mock()
             repo.layout.return_value = [dict(item) for item in DEFAULT_LAYOUT]
+            repo.widget_sizes.return_value = {'clock': {'width': 8, 'height': 290}}
             teachers = Mock()
             view = HomeView(repo, teachers, Mock())
             host = ui.column()
@@ -147,24 +148,22 @@ class HomeViewTests(unittest.IsolatedAsyncioTestCase):
                 view.build()
                 await view.load()
                 view.toggle_edit()
-                await view.drop(SimpleNamespace(old_index=0, new_index=2))
-                assert view.layout[-1]['kind'] == 'clock'
-                await view.resize_drag('todo', {'span': 2, 'height': 430})
-                assert view.layout[0] == {'id': 'todo', 'kind': 'todo', 'span': 2, 'height': 430}
-                await view.resize_drag('todo', {'span': 9, 'height': 1})
-                assert view.layout[0]['height'] == 430
-                await view.drop(SimpleNamespace(old_index=2, new_index=0))
-                await view.move(0, 1)
-                assert view.layout[0]['kind'] == 'todo'
-                await view.resize(0, 2)
-                assert view.layout[0]['span'] == 2
-                await view.remove(0)
+                await view.change_geometry('todo', {'width': 11, 'height': 430, 'x': 3, 'y': 40})
+                todo = next(item for item in view.layout if item['id'] == 'todo')
+                assert (todo['width'], todo['height'], todo['x'], todo['y']) == (11, 430, 3, 40)
+                await view.change_geometry('todo', {'width': 25, 'height': 1})
+                assert next(item for item in view.layout if item['id'] == 'todo') == todo
+                await view.change_field('todo', 'x', 20)
+                assert next(item for item in view.layout if item['id'] == 'todo')['x'] == 13
+                await view.change_geometry('clock', {'x': 13, 'y': 40})
+                assert not any(overlaps(a, b) for i, a in enumerate(view.layout) for b in view.layout[i+1:])
+                await view.remove(1)
                 assert [item['kind'] for item in view.layout] == ['clock', 'teacher_search']
+                saved = [dict(item) for item in view.layout]
                 repo.save_layout.side_effect = DatabaseError('저장 실패')
                 with patch('views.home_view.ui.notify') as notify:
-                    await view.resize_drag('clock', {'span': 3, 'height': 500})
-                assert view.layout[0] == {'id': 'clock', 'kind': 'clock', 'span': 1}
-                assert len(view.layout) == 2
+                    await view.change_geometry('clock', {'width': 24, 'height': 500})
+                assert view.layout == saved
                 notify.assert_called_once()
             host.delete()
 
@@ -239,3 +238,37 @@ def test_old_layout_gets_stable_ids_without_losing_settings(tmp_path):
     assert first == {'id': 'todo', 'kind': 'todo', 'span': 2, 'height': 440}
     assert repo.layout()[0] == first
     assert repo.todo_state(first['id'])['selected_todo_list'] == 2
+
+
+def test_fine_layout_migration_and_collision_resolution():
+    legacy = [{'id': str(i), 'kind': 'clock', 'span': 1} for i in range(3)]
+    positioned = arrange(legacy)
+    assert [(item['x'], item['y'], item['width']) for item in positioned] == [(0, 0, 8), (8, 0, 8), (16, 0, 8)]
+    assert 'x' not in legacy[0]
+    positioned[1].update(x=0, y=0, width=13, height=170)
+    moved = arrange(positioned, priority='1')
+    assert moved[1]['x'] == moved[1]['y'] == 0
+    assert not any(overlaps(a, b) for i, a in enumerate(moved) for b in moved[i+1:])
+    assert arrange(moved) == moved
+    assert arrange([]) == []
+
+
+def test_fine_layout_and_default_sizes_persist(tmp_path):
+    db = Database('test-password', tmp_path / 'fine.db')
+    db.initialize()
+    repo = HomeRepository(db)
+    layout = [{'id': 'memo-a', 'kind': 'memo', 'width': 7, 'height': 180, 'x': 13, 'y': 45}]
+    repo.save_layout(layout)
+    repo.save_widget_size('memo', 11, 610)
+    reopened = HomeRepository(db)
+    assert reopened.layout() == layout
+    assert reopened.widget_sizes()['memo'] == {'width': 11, 'height': 610}
+    assert reopened.widget_sizes()['meal']['height'] == 520
+    for changes in ({'width': 25}, {'width': True}, {'height': 159}, {'height': 1601},
+                    {'x': -1}, {'x': 20}, {'y': -1}, {'y': 0.5}):
+        with pytest.raises(ValueError):
+            repo.save_layout([{**layout[0], **changes}])
+    assert reopened.layout() == layout
+    with pytest.raises(ValueError):
+        repo.save_widget_size('memo', 0, 200)
+    assert reopened.widget_sizes()['memo']['width'] == 11

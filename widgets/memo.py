@@ -18,13 +18,20 @@ class Memo:
         self.loading = False
 
     def build(self):
-        self.editor = ui.editor(placeholder='메모를 입력하세요.', on_change=self.changed).classes('w-full').props("""
-            min-height=180px
+        ui.add_css('''
+            .memo-editor { display: flex; flex-direction: column; flex: 1 1 0%;
+                width: 100%; min-width: 0; min-height: 0; overflow: hidden; }
+            .memo-editor .q-editor__toolbars-container { flex: 0 0 auto; max-height: 50%; overflow: auto; }
+            .memo-editor .q-editor__content { flex: 1 1 0%; min-height: 0 !important;
+                overflow: auto; overflow-wrap: anywhere; }
+        ''')
+        self.editor = ui.editor(placeholder='메모를 입력하세요.', on_change=self.changed).classes('memo-editor').props("""
+            min-height=0
             :toolbar='[["bold", "italic", "underline", "strike"],
                        ["unordered", "ordered"], ["left", "center", "right"], ["undo", "redo"]]'
         """.replace("\n", " "))
         self.editor.disable()
-        with ui.row().classes('w-full items-center justify-between gap-2'):
+        with ui.row().classes('w-full shrink-0 items-center justify-between gap-2'):
             self.status = ui.label('메모를 불러오는 중입니다…').classes('text-xs text-slate-500')
             self.retry = ui.button('다시 불러오기', icon='refresh', on_click=self.retry_action).props('flat dense')
             self.retry.set_visibility(False)
