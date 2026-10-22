@@ -66,7 +66,7 @@ def test_legacy_data_moves_to_shared_json_only_once(tmp_path):
     db.initialize()
     layout = [{'kind': 'todo', 'span': 3}]
     with db.session(write=True) as connection:
-        connection.execute('INSERT INTO home_preferences VALUES (1, ?)', (json.dumps(layout),))
+        connection.execute('INSERT INTO home_preferences (id, layout) VALUES (1, ?)', (json.dumps(layout),))
         connection.execute("INSERT INTO home_todos (id, title, done) VALUES (7, '기존 할 일', 1)")
     path = tmp_path / 'display-settings.json'
     path.write_text(json.dumps({'mode': 'dark', 'size': 18, 'font': 'system', 'other': 123}))

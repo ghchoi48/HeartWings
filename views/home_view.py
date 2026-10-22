@@ -57,10 +57,9 @@ class HomeView:
                     ui.label('홈').classes('text-sm font-semibold text-teal-700')
                     ui.label('오늘도, 마음을 잇는 시간').classes('text-3xl font-bold text-slate-800')
                     ui.label('나에게 필요한 위젯으로 하루를 준비하세요.').classes('text-slate-500')
-                ui.button('학생 관리', icon='arrow_forward', on_click=self.on_students).props('flat')
-            with ui.row().classes('w-full items-center gap-3'):
-                self.edit_button = ui.button('배치 편집', icon='dashboard_customize', on_click=self.toggle_edit)
+                self.edit_button = ui.button('위젯 편집', icon='dashboard_customize', on_click=self.toggle_edit)
                 self.edit_button.disable()
+            with ui.row().classes('w-full items-center gap-3'):
                 self.add_button = ui.button('위젯 추가', icon='add', on_click=self.open_picker).props('outline')
                 self.add_button.disable()
                 self.add_button.set_visibility(False)
@@ -96,7 +95,7 @@ class HomeView:
         self.widget_views = []
         self.grid.classes(add='home-grid-editing' if self.editing else '',
                           remove='' if self.editing else 'home-grid-editing')
-        self.edit_button.text = '편집 완료' if self.editing else '배치 편집'
+        self.edit_button.text = '편집 완료' if self.editing else '위젯 편집'
         self.add_button.set_visibility(self.editing)
         self.add_button.set_enabled(self.editing and not self.busy)
         self.status.text = ('제목을 끌어 빈 곳으로 이동 · 가장자리로 크기 조절 · 방향키로 미세 조절 · 자동 저장'
@@ -109,7 +108,7 @@ class HomeView:
                     if self.editing:
                         ui.button('첫 위젯 추가', icon='add', on_click=self.open_picker).props('flat')
                     else:
-                        ui.label('배치 편집을 눌러 위젯을 추가하세요.')
+                        ui.label('위젯 편집을 눌러 위젯을 추가하세요.')
             for index, item in enumerate(self.layout):
                 widget = WIDGETS[item['kind']]
                 with ui.card().classes('home-widget rounded-2xl shadow-sm p-4 gap-3').style(

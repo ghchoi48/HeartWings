@@ -6,7 +6,8 @@ import unittest
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-from nicegui import ui
+from nicegui import Client, ui
+from nicegui.page import page
 
 from database import Database, DatabaseError, DatabaseOpenError
 from models import StudentInput
@@ -96,13 +97,20 @@ def test_silent_rekey_failure_is_detected(database):
 
 class PasswordFormTests(unittest.IsolatedAsyncioTestCase):
     async def test_validation_busy_and_secret_cleanup(self):
+        client = Client(page('/password-settings-test'))
+        client.__enter__()
         host = ui.column()
         database = Mock()
         try:
             with host:
                 build_password_settings(database)
-            fields = {e.props['label']: e for e in host.descendants() if isinstance(e, ui.input)}
-            button = next(e for e in host.descendants() if isinstance(e, ui.button))
+            dialog = next(e for e in client.elements.values() if isinstance(e, ui.dialog))
+            fields = {e.props['label']: e for e in dialog.descendants() if isinstance(e, ui.input)}
+            self.assertFalse(dialog.value)
+            self.assertEqual(len(fields), 3)
+            self.assertFalse(any(isinstance(e, ui.input) for e in host.descendants()))
+            button = next(e for e in dialog.descendants() if isinstance(e, ui.button) and e.text == '변경')
+            cancel = next(e for e in dialog.descendants() if isinstance(e, ui.button) and e.text == '취소')
             listener = next(e.handler for e in button._event_listeners.values() if e.type == 'click')
             change = inspect.getclosurevars(listener).nonlocals['callback']
             release = asyncio.Event()
@@ -112,6 +120,8 @@ class PasswordFormTests(unittest.IsolatedAsyncioTestCase):
 
             with host, patch('views.password_settings_view.ui.notify'), \
                     patch('views.password_settings_view.run.io_bound', new=AsyncMock(side_effect=slow_change)) as io:
+                dialog.open()
+                self.assertTrue(dialog.value)
                 await change()
                 io.assert_not_awaited()
                 fields['현재 비밀번호'].value = 'old'
@@ -123,18 +133,30 @@ class PasswordFormTests(unittest.IsolatedAsyncioTestCase):
                 task = asyncio.create_task(change())
                 await asyncio.sleep(0)
                 self.assertFalse(button.enabled)
+                self.assertFalse(cancel.enabled)
                 await change()
                 io.assert_awaited_once_with(database.change_password, 'old', 'new')
                 release.set()
                 await task
                 self.assertTrue(button.enabled)
+                self.assertFalse(dialog.value)
                 self.assertTrue(all(field.value == '' for field in fields.values()))
 
                 for field in fields.values():
                     field.value = 'new' if field is not fields['현재 비밀번호'] else 'old'
                 io.side_effect = DatabaseError('현재 비밀번호가 올바르지 않습니다.')
+                dialog.open()
                 await change()
                 self.assertTrue(button.enabled)
+                self.assertTrue(dialog.value)
+                self.assertTrue(all(field.value == '' for field in fields.values()))
+
+                for field in fields.values():
+                    field.value = 'secret'
+                cancel_listener = next(e.handler for e in cancel._event_listeners.values() if e.type == 'click')
+                inspect.getclosurevars(cancel_listener).nonlocals['callback']()
+                self.assertFalse(dialog.value)
                 self.assertTrue(all(field.value == '' for field in fields.values()))
         finally:
             host.delete()
+            client.__exit__(None, None, None)

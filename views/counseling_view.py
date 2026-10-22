@@ -1,7 +1,7 @@
 """학생별 상담 일지 목록과 서식 편집/미리보기. SQL은 저장소에 위임한다."""
 
 from collections.abc import Awaitable, Callable
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from nicegui import run, ui
 from pydantic import ValidationError
@@ -12,6 +12,7 @@ from repositories.case_repo import CaseRepository
 from repositories.counseling_repo import CounselingRepository
 from repositories.student_repo import StudentRepository
 from views.counseling_content import clean_html, editor_html
+from views.time_inputs import parse_time, time_input
 
 KST = timezone(timedelta(hours=9))
 PAGE_SIZE = 20
@@ -32,7 +33,7 @@ def counseling_form_input(student_id: int, values: dict) -> CounselingInput:
     if 'starts_on' in data or 'starts_time' in data:
         starts_at = datetime.combine(
             date.fromisoformat(data.pop('starts_on')),
-            time.fromisoformat(data.pop('starts_time')),
+            parse_time(data.pop('starts_time')),
         )
     else:
         starts_at = datetime.fromisoformat(data['starts_at'])
@@ -447,8 +448,7 @@ class CounselingView:
             ui.label(f'{student.name} · {student.grade}학년 {student.classroom}반 · 학번 {student.student_number or "미입력"}').classes('text-slate-500')
             with ui.row().classes('w-full items-start'):
                 fields['starts_on'] = ui.date_input('상담 날짜', value=local_start.date().isoformat()).props('outlined').classes('grow')
-                fields['starts_time'] = ui.time_input('시작 시각 (한국 시각)', value=local_start.time().isoformat()).props('outlined').classes('grow')
-                fields['starts_time'].picker.props('format24h with-seconds mask="HH:mm:ss"')
+                fields['starts_time'] = time_input('시작 시각 (한국 시각)', value=local_start.time().isoformat()).props('outlined').classes('grow')
                 fields['duration_minutes'] = ui.number('상담 시간 (분)', value=initial['duration_minutes'], min=1, max=1440, step=1).props('outlined').classes('w-36')
                 fields['category'] = ui.input('상담 유형', value=initial['category']).props('outlined maxlength=100').classes('grow')
                 fields['status'] = ui.select(STATUSES, label='상담 상태', value=initial['status']).props('outlined').classes('w-36')

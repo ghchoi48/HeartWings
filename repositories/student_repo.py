@@ -15,18 +15,25 @@ class StudentRepository:
 
     def create(self, student: StudentInput) -> Student:
         """학생을 추가하고 ID와 타임스탬프가 포함된 모델을 반환한다."""
-        data = values(StudentInput.model_validate(student.model_dump(include=set(StudentInput.model_fields))))
-        data['created_at'] = data['updated_at'] = now_text()
+        return self.create_many([student])[0]
+
+    def create_many(self, students: list[StudentInput]) -> list[Student]:
+        """모든 입력을 검증하고 한 트랜잭션으로 등록한다. 오류 시 전체 롤백한다."""
+        data = [values(StudentInput.model_validate(
+            student.model_dump(include=set(StudentInput.model_fields)))) for student in students]
+        saved = []
         with self.database.session(write=True) as connection:
-            cursor = connection.execute(
-                '''INSERT INTO students
-                (name, student_number, grade, classroom, birth_date,
-                 guardian_contact, notes, created_at, updated_at)
-                VALUES (:name, :student_number, :grade, :classroom, :birth_date,
-                        :guardian_contact, :notes, :created_at, :updated_at)''', data)
-            row = connection.execute('SELECT * FROM students WHERE id = ?', (cursor.lastrowid,)).fetchone()
-            saved = Student.model_validate(dict(row))
-        self.database.student_revision += 1
+            for item in data:
+                item['created_at'] = item['updated_at'] = now_text()
+                item['nickname'] = item['nickname'] or ''
+                cursor = connection.execute('''INSERT INTO students
+                    (name, nickname, student_number, grade, classroom, birth_date,
+                     student_contact, guardian_contact, notes, created_at, updated_at)
+                    VALUES (:name, :nickname, :student_number, :grade, :classroom, :birth_date,
+                            :student_contact, :guardian_contact, :notes, :created_at, :updated_at)''', item)
+                row = connection.execute('SELECT * FROM students WHERE id=?', (cursor.lastrowid,)).fetchone()
+                saved.append(Student.model_validate(dict(row)))
+        self.database.student_revision += len(saved)
         return saved
 
     def get(self, student_id: int) -> Student | None:
@@ -52,10 +59,12 @@ class StudentRepository:
         """입력 필드 전체를 교체한다. 생성 시각과 ID는 보존한다."""
         data = values(StudentInput.model_validate(student.model_dump(include=set(StudentInput.model_fields))))
         data.update(id=student_id, updated_at=now_text())
+        data['nickname'] = data['nickname'] or ''
         with self.database.session(write=True) as connection:
             cursor = connection.execute(
                 '''UPDATE students SET name=:name, student_number=:student_number,
                 grade=:grade, classroom=:classroom, birth_date=:birth_date,
+                nickname=:nickname, student_contact=:student_contact,
                 guardian_contact=:guardian_contact, notes=:notes, updated_at=:updated_at
                 WHERE id=:id''', data)
             if cursor.rowcount == 0:

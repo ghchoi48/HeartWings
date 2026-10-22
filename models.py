@@ -14,6 +14,12 @@ class InputModel(BaseModel):
     model_config = ConfigDict(extra='forbid', str_strip_whitespace=True, frozen=True)
 
 
+class AuthoredRecord(InputModel):
+    """생성 당시 상담교사 이름. 수정 입력 모델에는 포함하지 않는다."""
+
+    author: str = ''
+
+
 class SchoolSettings(InputModel):
     school_name: str = Field(default='', max_length=100)
     school_level: Literal['초등학교', '중학교', '고등학교'] = '중학교'
@@ -37,7 +43,7 @@ class TeacherInput(InputModel):
     responsibilities: str = Field(default='', max_length=200)
 
 
-class Teacher(TeacherInput):
+class Teacher(TeacherInput, AuthoredRecord):
     id: int
     created_at: datetime
     updated_at: datetime
@@ -64,7 +70,7 @@ class ConsultationInput(InputModel):
         return value
 
 
-class Consultation(ConsultationInput):
+class Consultation(ConsultationInput, AuthoredRecord):
     id: int
     created_at: datetime
     updated_at: datetime
@@ -104,7 +110,7 @@ class FamilyInput(InputModel):
     family_members: list[FamilyMember] = Field(default_factory=list)
 
 
-class Student(StudentInput, FamilyInput):
+class Student(StudentInput, FamilyInput, AuthoredRecord):
     """DB에서 읽은 학생과 UTC 생성/수정 시각."""
 
     id: int
@@ -124,7 +130,7 @@ class SpecialEducationInput(InputModel):
     case_number: str = Field(default='', max_length=100)
 
 
-class SpecialEducation(SpecialEducationInput):
+class SpecialEducation(SpecialEducationInput, AuthoredRecord):
     id: int
     created_at: datetime
     updated_at: datetime
@@ -140,7 +146,7 @@ class CounselingCaseInput(InputModel):
     closing_html: Annotated[str, StringConstraints(strip_whitespace=False)] = Field(default='', max_length=200000)
 
 
-class CounselingCase(CounselingCaseInput):
+class CounselingCase(CounselingCaseInput, AuthoredRecord):
     id: int
     created_at: datetime
     updated_at: datetime
@@ -172,7 +178,7 @@ class CounselingInput(InputModel):
         return value
 
 
-class Counseling(CounselingInput):
+class Counseling(CounselingInput, AuthoredRecord):
     """저장된 상담 일정/일지."""
 
     id: int
@@ -243,7 +249,7 @@ class GroupCounselingInput(InputModel):
         return ' - '.join(day.isoformat() for day in dates)
 
 
-class GroupCounseling(GroupCounselingInput):
+class GroupCounseling(GroupCounselingInput, AuthoredRecord):
     participant_labels: list[str] = Field(default_factory=list)
     id: int
     created_at: datetime
@@ -268,7 +274,7 @@ class GroupLogInput(InputModel):
         return value
 
 
-class GroupLog(GroupLogInput):
+class GroupLog(GroupLogInput, AuthoredRecord):
     id: int
     created_at: datetime
     updated_at: datetime
@@ -303,7 +309,7 @@ class EducationEventInput(InputModel):
     content_format: Literal['text', 'html'] = 'text'
 
 
-class EducationEvent(EducationEventInput):
+class EducationEvent(EducationEventInput, AuthoredRecord):
     id: int
     created_at: datetime
     updated_at: datetime
@@ -320,7 +326,7 @@ class PsychologicalTestInput(InputModel):
     content_format: Literal['text', 'html'] = 'text'
 
 
-class PsychologicalTest(PsychologicalTestInput):
+class PsychologicalTest(PsychologicalTestInput, AuthoredRecord):
     id: int
     created_at: datetime
     updated_at: datetime
@@ -331,7 +337,7 @@ class CalendarInput(InputModel):
     color: str = Field(default='#0d9488', pattern=r'^#[0-9a-fA-F]{6}$')
 
 
-class Calendar(CalendarInput):
+class Calendar(CalendarInput, AuthoredRecord):
     id: int
     source: Literal['counseling', 'custom', 'holidays'] = 'custom'
     visible: bool = True
@@ -352,7 +358,7 @@ class CalendarEventInput(InputModel):
         return value
 
 
-class CalendarEvent(CalendarEventInput):
+class CalendarEvent(CalendarEventInput, AuthoredRecord):
     id: int
     source: Literal['counseling', 'custom'] = 'custom'
     calendar_name: str

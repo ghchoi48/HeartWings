@@ -1,0 +1,71 @@
+"""DB 탭에서 백업 다운로드와 파일 업로드 복원 흐름을 검사한다."""
+
+import inspect
+import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, patch
+
+from nicegui import Client, ui
+from nicegui.page import page
+
+from database import Database, DatabaseOpenError
+from models import StudentInput
+from repositories.student_repo import StudentRepository
+from services.database_maintenance import create_backup
+from views.database_settings_view import build_database_settings
+
+
+def callback(button):
+    listener = next(e.handler for e in button._event_listeners.values() if e.type == 'click')
+    return inspect.getclosurevars(listener).nonlocals['callback']
+
+
+class DatabaseSettingsTests(unittest.IsolatedAsyncioTestCase):
+    async def test_info_download_and_restore_require_confirmation_and_valid_password(self):
+        async def inline(function, *args):
+            return function(*args)
+
+        with TemporaryDirectory() as directory, Client(page('/database-settings-test')) as client:
+            database = Database('current-key', Path(directory) / 'current.db')
+            database.initialize()
+            source = Database('backup-key', Path(directory) / 'source.db')
+            source.initialize()
+            StudentRepository(source).create(StudentInput(name='Restored', grade=1, classroom='1'))
+            content = create_backup(source)
+            with patch('views.database_settings_view.ui.timer') as timer:
+                build_database_settings(database)
+            elements = list(client.elements.values())
+            buttons = {e.text: e for e in elements if isinstance(e, ui.button)}
+            upload = next(e for e in elements if isinstance(e, ui.upload))
+            password = next(e for e in elements if isinstance(e, ui.input))
+            confirm = next(e for e in elements if isinstance(e, ui.checkbox))
+            restore = callback(buttons['복원'])
+            with patch('views.database_settings_view.run.io_bound', side_effect=inline), \
+                    patch('views.database_settings_view.ui.notify') as notify, \
+                    patch('views.database_settings_view.ui.download.content') as download:
+                await timer.call_args.args[1]()
+                self.assertTrue(any(isinstance(e, ui.label) and e.text == str(database.path.resolve())
+                                    for e in elements))
+                await callback(buttons['DB 백업 다운로드'])()
+                self.assertNotEqual(download.call_args.args[0][:16], b'SQLite format 3\x00')
+                await restore()
+                notify.assert_called()
+                await upload._upload_handlers[0](SimpleNamespace(
+                    file=SimpleNamespace(read=AsyncMock(return_value=content))))
+                confirm.value = True
+                password.value = 'wrong'
+                await restore()
+                self.assertEqual(StudentRepository(database).list(), [])
+                self.assertEqual(password.value, '')
+                self.assertTrue(buttons['복원'].enabled)
+                password.value = 'backup-key'
+                await restore()
+                self.assertFalse(buttons['복원'].enabled)
+                with self.assertRaises(DatabaseOpenError):
+                    StudentRepository(database).list()
+                restored = Database('backup-key', database.path)
+                self.assertEqual(StudentRepository(restored).list()[0].name, 'Restored')
+                self.assertTrue(any(isinstance(e, ui.button) and e.text == 'DB 다시 열기'
+                                    for e in client.elements.values()))

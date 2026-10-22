@@ -45,14 +45,14 @@ class CalendarRepository:
         with self.database.session() as connection:
             rows = connection.execute(f'''SELECT e.id AS id, e.calendar_id AS calendar_id, e.title, e.starts_at,
                     e.duration_minutes, e.status, c.source, c.name AS calendar_name, c.color,
-                    '' AS student_name
+                    '' AS student_name, e.author
                 FROM calendar_events e JOIN calendars c ON c.id=e.calendar_id
                 WHERE c.id IN ({slots}) AND e.starts_at>=:start AND e.starts_at<:end
                     AND (:status IS NULL OR e.status=:status)
                 UNION ALL
                 SELECT e.id, c.id AS calendar_id, e.title, e.starts_at,
                     e.duration_minutes, e.status, c.source, c.name AS calendar_name, c.color,
-                    s.name AS student_name
+                    s.name AS student_name, e.author
                 FROM counseling e JOIN students s ON s.id=e.student_id
                     JOIN calendars c ON c.source='counseling'
                 WHERE c.id IN ({slots}) AND e.starts_at>=:start AND e.starts_at<:end

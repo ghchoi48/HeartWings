@@ -68,8 +68,7 @@ class AppLayout:
                                       ('consultation', '자문', 'forum'),
                                       ('calendar', '캘린더', 'calendar_month'),
                                       ('statistics', '통계', 'bar_chart'),
-                                      ('settings', '설정', 'settings'),
-                                      ('about', '프로그램 정보', 'info_outline')]:
+                                      ('settings', '설정', 'settings')]:
                 if page == 'settings':
                     ui.space().classes('min-h-4')
                 self.buttons[page] = ui.button(
@@ -95,16 +94,19 @@ class AppLayout:
             self.panels['education_events'] = ui.column().classes('w-full')
             self.panels['settings'] = ui.column().classes('w-full')
             with self.panels['settings']:
-                build_settings(self.display, self.school, self.students.database, self.on_school_change)
-            for page, title in [('about', '프로그램 정보')]:
-                self.panels[page] = ui.column().classes('w-full gap-6 p-4 md:p-8')
-                with self.panels[page]:
-                    ui.label(title).classes('text-3xl font-bold text-slate-800')
+                build_settings(self.display, self.school, self.students.database, self.on_school_change,
+                               self.refresh_roster)
             self.panels['calendar'] = ui.column().classes('w-full')
             self.panels['statistics'] = ui.column().classes('w-full')
         self.navigate('home')
         with content:
             ui.timer(0.5, self.refresh_students)
+
+    async def refresh_roster(self, kind: str) -> None:
+        if kind == 'students':
+            await self.refresh_students()
+        elif self.consultation_view is not None:
+            await self.consultation_view.reload()
 
     async def refresh_students(self) -> None:
         """커밋된 학생 변경을 숨겨진 화면에도 반영하고 편집 중에는 갱신을 미룬다."""

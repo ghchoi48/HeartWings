@@ -2,7 +2,8 @@
 from datetime import datetime
 
 from nicegui import run, ui
-from pydantic import ValidationError
+
+from views.time_inputs import storage_time, time_input
 
 from database import DatabaseError
 from models import PsychologicalTestInput
@@ -147,8 +148,7 @@ class PsychologicalTestView:
                                        value=entry.target if entry else '학생').props('outlined').classes('w-full')
                     with ui.row().classes('w-full items-start'):
                         test_date = ui.date_input('검사일 *', value=(entry.test_date if entry else datetime.now(KST).date()).isoformat()).props('outlined').classes('grow min-w-40')
-                        test_time = ui.time_input('시각', value=entry.test_time if entry else '09:00').props('outlined').classes('w-32')
-                        test_time.picker.props('format24h mask="HH:mm"')
+                        test_time = time_input('시각', value=entry.test_time if entry else '09:00').props('outlined').classes('w-40')
                         duration = ui.number('시간(분)', value=entry.duration_minutes if entry else 60,
                                              min=1, max=1440, step=1).props('outlined').classes('w-36')
                     ui.label('검사 결과 및 소견').classes('font-semibold')
@@ -185,11 +185,11 @@ class PsychologicalTestView:
                     return
                 try:
                     value = PsychologicalTestInput(student_id=student.id, title=title_text['value'],
-                                                   test_date=test_date.value, target=target.value, test_time=test_time.value or '',
+                                                   test_date=test_date.value, target=target.value, test_time=storage_time(test_time.value),
                                                    duration_minutes=duration.value, content=clean_html(content.value or ''),
                                                    content_format='html')
-                except ValidationError:
-                    message.text = '검사명(1~200자), 대상, 검사일, 시각(HH:MM), 시간(1~1440분 정수), 소견(최대 20,000자)을 확인해 주세요.'
+                except (ValueError, TypeError):
+                    message.text = '검사명(1~200자), 대상, 검사일, 시각(오전/오후 hh:mm), 시간(1~1440분 정수), 소견(최대 20,000자)을 확인해 주세요.'
                     return
                 saving = True
                 controls = (*fields, cancel_button, save_button)

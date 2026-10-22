@@ -9,6 +9,21 @@ class TeacherRepository:
     def __init__(self, database: Database):
         self.database = database
 
+    def create_many(self, teachers: list[TeacherInput]) -> list[Teacher]:
+        """교사들을 한 트랜잭션으로 등록하여 부분 저장을 방지한다."""
+        data = [values(TeacherInput.model_validate(
+            teacher.model_dump(include=set(TeacherInput.model_fields)))) for teacher in teachers]
+        saved = []
+        with self.database.session(write=True) as connection:
+            for item in data:
+                item['now'] = now_text()
+                cursor = connection.execute('''INSERT INTO teachers
+                    (name, contact, extension, responsibilities, created_at, updated_at)
+                    VALUES (:name, :contact, :extension, :responsibilities, :now, :now)''', item)
+                row = connection.execute('SELECT * FROM teachers WHERE id=?', (cursor.lastrowid,)).fetchone()
+                saved.append(Teacher.model_validate(dict(row)))
+        return saved
+
     def list(self, *, limit: int = 100, offset: int = 0) -> list[Teacher]:
         check_page(limit, offset)
         with self.database.session() as connection:

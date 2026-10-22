@@ -7,7 +7,8 @@ data, binaries, hidden = collect_all('sqlcipher3')
 model_data, model_binaries, model_hidden = collect_all('pydantic')
 a = Analysis(
     [str(root / 'init_db.py')], pathex=[str(root)],
-    binaries=binaries + model_binaries, datas=data + model_data,
+    binaries=binaries + model_binaries,
+    datas=data + model_data + [(str(root / 'LICENSE'), '.'), (str(root / 'licenses'), 'licenses')],
     hiddenimports=hidden + model_hidden + [
         'sqlcipher3.dbapi2', 'sqlcipher3._sqlite3',
         'repositories.student_repo', 'repositories.counseling_repo',

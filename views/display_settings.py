@@ -80,6 +80,8 @@ class DisplaySettings:
             :root { --app-primary-text: #ffffff; }
             body { --app-primary-accent: var(--app-primary-light); }
             body.body--dark { --app-primary-accent: var(--app-primary-dark); }
+            .neis-school-name { color: #000000; }
+            body.body--dark .neis-school-name { color: #ffffff; }
             .text-primary:not(.bg-primary) { color: var(--app-primary-accent) !important; }
             .bg-primary, .nicegui-header,
             .nicegui-header .q-btn { color: var(--app-primary-text) !important; }
@@ -170,6 +172,29 @@ class DisplaySettings:
 
     def build_controls(self) -> None:
         with ui.column().classes('w-full gap-2'):
+            ui.label('화면 모드').classes('font-semibold text-slate-700')
+            ui.select(MODES, value=self.values['mode'],
+                      on_change=lambda e: self.change('mode', e.value)).props(
+                'outlined aria-label="화면 모드"').classes('w-full')
+            ui.label('자동 모드는 기기의 화면 모드를 따릅니다.').classes('text-sm text-slate-500')
+        with ui.column().classes('w-full gap-2'):
+            ui.label('폰트 설정').classes('font-semibold text-slate-700')
+            ui.select(FONTS, value=self.values['font'],
+                      on_change=lambda e: self.change('font', e.value)).props(
+                'outlined aria-label="폰트 설정"').classes('w-full')
+            ui.label('앱에 포함된 글꼴을 사용합니다.').classes('text-sm text-slate-500')
+        with ui.column().classes('w-full gap-1'):
+            size_label = ui.label(f'글자 크기 · {self.values["size"]}px').classes('font-semibold text-slate-700')
+
+            def resize(e):
+                self.change('size', e.value)
+                size_label.text = f'글자 크기 · {self.values["size"]}px'
+
+            ui.slider(min=12, max=22, step=1, value=self.values['size'], on_change=resize).props(
+                'label label-always aria-label="글자 크기"'
+            ).classes('w-full mt-4')
+            ui.label('작게 12px · 기본 16px · 크게 22px').classes('text-sm text-slate-500')
+        with ui.column().classes('w-full gap-2'):
             ui.label('기본 색상 (Primary)').classes('font-semibold text-slate-700')
             ui.label('버튼과 상단 바의 색상을 바꿉니다. 글씨 색상은 읽기 쉽게 자동 조절됩니다.').classes('text-sm text-slate-500')
 
@@ -182,33 +207,11 @@ class DisplaySettings:
                 with ui.button('색상 선택', icon='palette'):
                     picker = ui.color_picker(on_pick=lambda e: pick_color(e.color))
                     picker.set_color(self.values['primary'])
-                    picker.q_color.props('format-model=hex no-header no-footer')
+                    picker.q_color.props('format-model=hex')
                 color_label = ui.label(self.values['primary'].upper()).classes('font-mono')
             with ui.row().classes('gap-2'):
                 for name, color in PRIMARY_PRESETS.items():
                     ui.button(name, color=None, on_click=lambda color=color: pick_color(color)).style(
                         f'background-color: {color}; color: {primary_text_color(color)};'
                     ).props(f'aria-label="기본 색상 {name}"')
-            with ui.row().classes('w-full items-center rounded-xl bg-primary p-4'):
-                ui.icon('visibility')
-                ui.label('선택한 색상과 글씨 미리보기')
-        ui.select(MODES, value=self.values['mode'], label='화면 모드',
-                  on_change=lambda e: self.change('mode', e.value)).props('outlined').classes('w-full')
-        ui.label('자동 모드는 기기의 화면 모드를 따릅니다.').classes('text-sm text-slate-500')
-        with ui.column().classes('w-full gap-1'):
-            size_label = ui.label(f'글자 크기 · {self.values["size"]}px').classes('font-semibold text-slate-700')
-
-            def resize(e):
-                self.change('size', e.value)
-                size_label.text = f'글자 크기 · {self.values["size"]}px'
-
-            ui.slider(min=12, max=22, step=1, value=self.values['size'], on_change=resize).props(
-                'label label-always aria-label="글자 크기"'
-            ).classes('w-full mt-4')
-            ui.label('작게 12px · 기본 16px · 크게 22px').classes('text-sm text-slate-500')
-        ui.select(FONTS, value=self.values['font'], label='폰트 설정',
-                  on_change=lambda e: self.change('font', e.value)).props('outlined').classes('w-full')
-        ui.label('앱에 포함된 글꼴을 사용합니다. 선택한 글꼴은 아래에서 미리 볼 수 있습니다.').classes('text-sm text-slate-500')
-        with ui.element('div').classes('w-full rounded-xl bg-slate-50 p-4'):
-            ui.label('마음나래에서 학생의 이야기를 기록하세요.').classes('text-base')
         ui.label('변경 사항은 즉시 적용되고 자동으로 저장됩니다.').classes('text-sm text-slate-500')

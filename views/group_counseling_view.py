@@ -1,9 +1,11 @@
 """집단 목록, 선택 집단의 상세 정보와 회기별 상담일지."""
 
-from datetime import datetime
+from datetime import date, datetime
 from collections.abc import Awaitable, Callable
 
 from nicegui import run, ui
+
+from views.time_inputs import parse_time, time_input
 
 from database import DatabaseError
 from models import GroupCounseling, GroupCounselingInput, GroupLogInput
@@ -205,7 +207,7 @@ class GroupCounselingView:
                         fields['title'] = ui.input('일지 제목', value=entry.title if entry else '').props('outlined maxlength=200').classes('w-full')
                         with ui.row().classes('w-full'):
                             fields['starts_on'] = ui.date_input('상담 날짜', value=local_start.date().isoformat()).props('outlined')
-                            fields['starts_time'] = ui.time_input('시작 시각 (한국 시각)', value=local_start.time().isoformat()).props('outlined')
+                            fields['starts_time'] = time_input('시작 시각 (한국 시각)', value=local_start.time().isoformat()).props('outlined')
                             fields['duration_minutes'] = ui.number('상담 시간 (분)', value=entry.duration_minutes if entry else 50, min=1, max=1440, step=1).props('outlined')
                         ui.label('상담 내용').classes('font-semibold')
                         fields['content_html'] = ui.editor(value=clean_html(entry.content_html) if entry else '').classes('w-full').props("""min-height=320px :toolbar='[[{"label": "머릿말", "list": "no-icons", "options": ["p", "h1", "h2", "h3"]}], ["bold", "italic", "underline", "strike"], ["unordered", "ordered"], ["left", "center", "right"], ["undo", "redo"]]'""")
@@ -256,7 +258,8 @@ class GroupCounselingView:
                 data = {key: field.value for key, field in fields.items()}
                 try:
                     if log:
-                        data['starts_at'] = datetime.fromisoformat(f"{data.pop('starts_on')}T{data.pop('starts_time')}")
+                        data['starts_at'] = datetime.combine(
+                            date.fromisoformat(data.pop('starts_on')), parse_time(data.pop('starts_time')))
                         if data['starts_at'].tzinfo is not None:
                             raise ValueError('한국 시각을 입력하세요.')
                         data['starts_at'] = data['starts_at'].replace(tzinfo=KST)

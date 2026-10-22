@@ -119,7 +119,7 @@ def test_editor_fields_storage_and_legacy_migration(tmp_path):
                 assert fields['대상'].options == ['학생', '보호자(학부모)']
                 assert fields['대상'].value == '보호자(학부모)'
                 assert isinstance(fields['시각'], ui.time_input)
-                assert fields['시각'].value == '14:30'
+                assert fields['시각'].value == '오후 02:30'
                 assert fields['시간(분)'].value == 45
                 assert fields['검사일 *'].parent_slot is fields['시각'].parent_slot
                 assert fields['시각'].parent_slot is fields['시간(분)'].parent_slot

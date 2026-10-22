@@ -46,9 +46,15 @@ class GroupCounselingRepository:
                     participants=:participants, purpose=:purpose, notes=:notes, updated_at=:updated_at WHERE id=:id''', data)
                 if not cursor.rowcount:
                     raise NotFoundError('집단 상담을 찾을 수 없습니다.')
-            connection.execute('DELETE FROM group_counseling_members WHERE group_id=?', (group_id,))
-            connection.executemany('INSERT INTO group_counseling_members (group_id, student_id) VALUES (?, ?)',
-                                   [(group_id, student_id) for student_id in sorted(set(value.student_ids))])
+            student_ids = sorted(set(value.student_ids))
+            if student_ids:
+                slots = ','.join('?' for _ in student_ids)
+                connection.execute(f'''DELETE FROM group_counseling_members
+                    WHERE group_id=? AND student_id NOT IN ({slots})''', (group_id, *student_ids))
+            else:
+                connection.execute('DELETE FROM group_counseling_members WHERE group_id=?', (group_id,))
+            connection.executemany('INSERT OR IGNORE INTO group_counseling_members (group_id, student_id) VALUES (?, ?)',
+                                   [(group_id, student_id) for student_id in student_ids])
             row = connection.execute('SELECT * FROM counseling_groups WHERE id=?', (group_id,)).fetchone()
             return self._group(connection, row)
 

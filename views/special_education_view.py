@@ -4,6 +4,8 @@ from datetime import datetime
 
 from nicegui import run, ui
 
+from views.time_inputs import time_input
+
 from database import DatabaseError
 from models import Counseling, Student, SpecialEducation, SpecialEducationInput
 from repositories.special_education_repo import SpecialEducationRepository, SpecialEducationLogRepository
@@ -216,8 +218,7 @@ class SpecialEducationView(CounselingView):
             fields['category'].set_visibility(False)
             with ui.row().classes('w-full items-start'):
                 fields['starts_on'] = ui.date_input('교육 날짜', value=local_start.date().isoformat()).props('outlined').classes('grow')
-                fields['starts_time'] = ui.time_input('시작 시각 (한국 시각)', value=local_start.time().isoformat()).props('outlined').classes('grow')
-                fields['starts_time'].picker.props('format24h with-seconds mask="HH:mm:ss"')
+                fields['starts_time'] = time_input('시간', value=local_start.time().isoformat()).props('outlined').classes('grow')
                 fields['duration_minutes'] = ui.number('교육 시간 (분)', value=initial['duration_minutes'], min=1, max=1440, step=1).props('outlined').classes('w-36')
                 targets = ['학생본인', '보호자(가족)']
                 target = initial.get('counseling_target', '')

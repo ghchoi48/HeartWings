@@ -6,8 +6,11 @@ import sys
 from contextlib import contextmanager
 from importlib import import_module
 from pathlib import Path
-from threading import RLock
+from threading import Lock, RLock
+from weakref import WeakValueDictionary
 from models import SchoolSettings
+
+SCHEMA_VERSION = 28
 
 
 class DatabaseError(RuntimeError):
@@ -69,6 +72,16 @@ SCHEMA = (
 )
 
 
+class _DatabaseState:
+    def __init__(self):
+        self.lock = RLock()
+        self.generation = 0
+
+
+_states: WeakValueDictionary[str, _DatabaseState] = WeakValueDictionary()
+_states_lock = Lock()
+
+
 class Database:
     """연결마다 키와 외래 키를 설정한다. 비밀번호를 파일이나 로그에 쓰지 않는다."""
 
@@ -77,7 +90,11 @@ class Database:
             raise ValueError('비밀번호는 비어 있거나 NUL 문자를 포함할 수 없습니다.')
         self.path = Path(path) if path is not None else default_database_path()
         self._password = password
-        self._session_lock = RLock()
+        with _states_lock:
+            key = os.path.normcase(str(self.path.resolve()))
+            self._state = _states.setdefault(key, _DatabaseState())
+        self._session_lock = self._state.lock
+        self._generation = self._state.generation
         self.student_revision = 0
         try:
             # OS/CPU/Python 버전에 맞는 SQLCipher 확장 모듈이 필요하다.
@@ -87,7 +104,7 @@ class Database:
 
     def _connect(self):
         """키 적용 직후 실제 페이지 읽기로 암호와 암호화 지원을 확인한다."""
-        if self._password is None:
+        if self._password is None or self._generation != self._state.generation:
             raise DatabaseOpenError('DB가 잠겨 있습니다. 비밀번호를 입력해 다시 열어 주세요.')
         connection = None
         try:
@@ -469,7 +486,7 @@ class Database:
                     name TEXT PRIMARY KEY,
                     visible INTEGER NOT NULL CHECK(visible IN (0, 1))
                 )""")
-                connection.execute("INSERT OR IGNORE INTO calendar_preferences VALUES ('holidays', 1)")
+                connection.execute("INSERT OR IGNORE INTO calendar_preferences (name, visible) VALUES ('holidays', 1)")
                 connection.execute('PRAGMA user_version = 23')
                 version = 23
             if version == 23:
@@ -503,7 +520,7 @@ class Database:
                         connection.execute(f"ALTER TABLE school_settings ADD COLUMN {column} TEXT NOT NULL DEFAULT ''")
                 connection.execute('PRAGMA user_version = 26')
                 version = 26
-            if version != 26:
+            if version not in (26, 27, SCHEMA_VERSION):
                 raise DatabaseError('지원하지 않는 DB 버전입니다. 앱 버전을 확인하세요.')
             if new_database and school is not None:
                 school = SchoolSettings.model_validate(school.model_dump())
@@ -511,3 +528,31 @@ class Database:
                     school_level=:school_level, counselor_name=:counselor_name,
                     office_number=:office_number, neis_office_code=:neis_office_code,
                     neis_school_code=:neis_school_code, neis_api_key=:neis_api_key WHERE id=1''', school.model_dump())
+            if version == 26:
+                # 설정/연결 테이블을 포함한 모든 사용자 테이블에 작성 당시 이름을 보관한다.
+                # 내부 테이블(sqlite_sequence 등)은 SQLite가 관리하므로 제외한다.
+                tables = [row[0] for row in connection.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")]
+                for table in tables:
+                    quoted = '"' + table.replace('"', '""') + '"'
+                    columns = {row['name'] for row in connection.execute(f'PRAGMA table_info({quoted})')}
+                    if 'author' not in columns:
+                        connection.execute(f"ALTER TABLE {quoted} ADD COLUMN author TEXT NOT NULL DEFAULT ''")
+                        connection.execute(f'''UPDATE {quoted} SET author=COALESCE(
+                            (SELECT counselor_name FROM school_settings WHERE id=1), '')''')
+                    trigger = '"' + (table + '_snapshot_author').replace('"', '""') + '"'
+                    connection.execute(f'''CREATE TRIGGER IF NOT EXISTS {trigger}
+                        AFTER INSERT ON {quoted}
+                        BEGIN
+                            UPDATE {quoted} SET author=COALESCE(
+                                (SELECT counselor_name FROM school_settings WHERE id=1), '')
+                            WHERE rowid=NEW.rowid;
+                        END''')
+                connection.execute('PRAGMA user_version = 27')
+                version = 27
+            if version == 27:
+                columns = {row['name'] for row in connection.execute('PRAGMA table_info(students)')}
+                for column in ('nickname', 'student_contact'):
+                    if column not in columns:
+                        connection.execute(f"ALTER TABLE students ADD COLUMN {column} TEXT NOT NULL DEFAULT ''")
+                connection.execute(f'PRAGMA user_version = {SCHEMA_VERSION}')

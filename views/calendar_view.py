@@ -6,6 +6,8 @@ from collections.abc import Awaitable, Callable
 from datetime import date, datetime, time, timedelta
 
 from nicegui import run, ui
+
+from views.time_inputs import parse_time, time_input
 from pydantic import ValidationError
 
 from database import DatabaseError
@@ -279,8 +281,7 @@ class CalendarView:
                     title = ui.input('일정 제목', value=entry.title if entry else '').props('outlined maxlength=200').classes('w-full')
                     with ui.row().classes('w-full items-start'):
                         day = ui.date_input('날짜', value=str(local.date())).props('outlined').classes('grow')
-                        start = ui.time_input('시각', value=local.strftime('%H:%M')).props('outlined').classes('w-32')
-                        start.picker.props('format24h mask="HH:mm"')
+                        start = time_input('시각', value=local.strftime('%H:%M')).props('outlined').classes('w-40')
                         duration = ui.number('시간(분)', value=entry.duration_minutes if entry else 60, min=1, max=1440, step=1).props('outlined').classes('w-32')
                     status = ui.select(STATUS_LABELS, label='상태', value=entry.status if entry else 'scheduled').props('outlined').classes('w-full')
                     message = ui.label().classes('text-sm text-red-700')
@@ -310,7 +311,7 @@ class CalendarView:
                 if saving:
                     return
                 try:
-                    moment = datetime.combine(date.fromisoformat(day.value), time.fromisoformat(start.value), KST)
+                    moment = datetime.combine(date.fromisoformat(day.value), parse_time(start.value), KST)
                     if not 2 <= moment.year <= 9998:
                         raise ValueError
                     value = CalendarEventInput(calendar_id=target.value, title=title.value, starts_at=moment,

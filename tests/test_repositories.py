@@ -182,20 +182,26 @@ def test_version_one_family_migration(tmp_path):
     from database import SCHEMA
 
     database = Database('migration-test', tmp_path / 'old.db')
+    student = student_input()
     with database.session(write=True) as connection:
         for statement in SCHEMA:
             connection.execute(statement)
         connection.execute('PRAGMA user_version=1')
+        # 구버전 fixture는 해당 버전 SQL로 만든다. 현재 저장소는 최신 열을 사용한다.
+        cursor = connection.execute('''INSERT INTO students
+            (name, student_number, grade, classroom, guardian_contact, notes, created_at, updated_at)
+            VALUES (?, ?, ?, ?, '', '', '2026-01-01', '2026-01-01')''',
+            (student.name, student.student_number, student.grade, student.classroom))
+        student_id = cursor.lastrowid
     repo = StudentRepository(database)
-    student = repo.create(student_input())
     database.initialize()
     database.initialize()
-    restored = repo.get(student.id)
+    restored = repo.get(student_id)
     assert restored.name == student.name
     assert restored.family_members == []
     assert restored.family_type == ''
-    repo.update_family(student.id, FamilyInput(family_type='확인'))
-    assert repo.get(student.id).family_type == '확인'
+    repo.update_family(student_id, FamilyInput(family_type='확인'))
+    assert repo.get(student_id).family_type == '확인'
 
 
 def test_html_counseling_round_trip(db):

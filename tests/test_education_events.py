@@ -118,7 +118,7 @@ def test_editor_restores_time_and_duration():
                   if isinstance(element, (ui.input, ui.number, ui.time_input, ui.select))}
         assert fields['구분'].options == ['교육', '행사', '단체심리검사']
         assert fields['구분'].value == '단체심리검사'
-        assert fields['시각'].value == '15:30'
+        assert fields['시각'].value == '오후 03:30'
         assert fields['운영 시간(분)'].value == 75
         assert fields['시각'].parent_slot is fields['운영 시간(분)'].parent_slot
 

@@ -2,7 +2,8 @@
 from datetime import datetime
 
 from nicegui import run, ui
-from pydantic import ValidationError
+
+from views.time_inputs import storage_time, time_input
 
 from database import DatabaseError
 from models import EducationEvent, EducationEventInput
@@ -124,10 +125,10 @@ class EducationEventView:
             ui.label('교육/행사 수정' if entry else '새 교육/행사 등록').classes('text-2xl font-bold')
             fields = {}
             fields['title'] = ui.input('교육/행사명 *', value=initial['title']).props('outlined maxlength=200').classes('w-full')
-            with ui.row().classes('w-full items-start'):
-                fields['category'] = ui.select(['교육', '행사', '단체심리검사'], label='구분', value=initial['category']).props('outlined').classes('w-40')
-                fields['event_date'] = ui.date_input('날짜 *', value=initial['event_date'].isoformat()).props('outlined').classes('grow min-w-40')
-                fields['event_time'] = ui.time_input('시각', value=initial['event_time']).props('outlined').classes('w-32')
+            with ui.row().classes('w-full items-start flex-nowrap'):
+                fields['category'] = ui.select(['교육', '행사', '단체심리검사'], label='구분', value=initial['category']).props('outlined').classes('grow')
+                fields['event_date'] = ui.date_input('날짜 *', value=initial['event_date'].isoformat()).props('outlined').classes('grow')
+                fields['event_time'] = time_input('시각', value=initial['event_time']).props('outlined').classes('w-40')
                 fields['duration_minutes'] = ui.number('운영 시간(분)', value=initial['duration_minutes'], min=1, max=1440, step=1).props('outlined').classes('w-36')
             for key, label, maximum in [('location', '장소', 200), ('audience', '대상', 200), ('facilitator', '담당자 / 강사', 100)]:
                 fields[key] = ui.input(label, value=initial[key]).props(f'outlined maxlength={maximum}').classes('w-full')
@@ -142,10 +143,11 @@ class EducationEventView:
         async def save():
             try:
                 data = {key: field.value for key, field in fields.items()}
+                data['event_time'] = storage_time(data['event_time'])
                 data['content'] = clean_html(data['content'] or '')
                 value = EducationEventInput(**data, content_format='html')
-            except ValidationError:
-                message.text = '교육/행사명, 날짜, 시각(HH:MM), 운영 시간(1~1440분 정수), 내용 길이(서식 포함 최대 20,000자)를 확인해 주세요.'
+            except (ValueError, TypeError):
+                message.text = '교육/행사명, 날짜, 시각(오전/오후 hh:mm), 운영 시간(1~1440분 정수), 내용 길이(서식 포함 최대 20,000자)를 확인해 주세요.'
                 return
             save_button.disable()
             try:
