@@ -62,8 +62,7 @@ class AppLayout:
         drawer.classes('flex flex-col flex-nowrap')
         with drawer:
             for page, title, icon in [('home', '홈', 'home'), ('students', '학생 관리', 'school'),
-                                      ('counseling', '개인 상담', 'chat_bubble'), ('groups', '집단 상담', 'groups'),
-                                      ('psychological_tests', '심리검사', 'psychology'),
+                                      ('groups', '집단 상담', 'groups'),
                                       ('education_events', '교육/행사', 'event'),
                                       ('special_education', '특별교육', 'menu_book'),
                                       ('consultation', '자문', 'forum'),
@@ -94,7 +93,6 @@ class AppLayout:
             self.panels['special_education'] = ui.column().classes('w-full')
             self.panels['consultation'] = ui.column().classes('w-full')
             self.panels['education_events'] = ui.column().classes('w-full')
-            self.panels['psychological_tests'] = ui.column().classes('w-full')
             self.panels['settings'] = ui.column().classes('w-full')
             with self.panels['settings']:
                 build_settings(self.display, self.school, self.students.database, self.on_school_change)
@@ -125,7 +123,8 @@ class AppLayout:
             for view in (self.counseling_view, self.special_education_view, self.psychological_test_view):
                 if view is None:
                     continue
-                await view.student_list.reload()
+                if hasattr(view, 'student_list'):
+                    await view.student_list.reload()
                 if view.selected:
                     selected_id = view.selected.id
                     student = await run.io_bound(self.students.get, selected_id)
@@ -153,16 +152,33 @@ class AppLayout:
             raise ValueError(f'지원하지 않는 화면: {page}')
         if page == 'students' and self.student_view is None:
             with self.panels['students']:
-                self.student_view = StudentView(self.students, self.counseling, self.school)
+                self.student_view = StudentView(self.students, self.counseling, self.school, self.open_student_counseling)
                 self.student_view.build()
         if page == 'counseling' and self.counseling_view is None:
             with self.panels['counseling']:
-                self.counseling_view = CounselingView(self.students, self.counseling, self.refresh_student_timeline)
-                self.counseling_view.build()
-        if page == 'psychological_tests' and self.psychological_test_view is None:
-            with self.panels['psychological_tests']:
+                with ui.row().classes('w-full items-center justify-between px-8 pt-6'):
+                    counseling_heading = ui.label('개인 상담').classes('text-3xl font-bold text-slate-800')
+                    ui.button('학생 관리', icon='arrow_back', on_click=lambda: self.navigate('students')).props('outline')
+                with ui.tabs().classes('w-full') as self.counseling_tabs:
+                    ui.tab('logs', label='상담 일지', icon='edit_note')
+                    ui.tab('tests', label='심리검사', icon='psychology')
                 self.psychological_test_view = PsychologicalTestView(self.students)
-                self.psychological_test_view.build()
+                self.counseling_view = CounselingView(
+                    self.students, self.counseling, self.refresh_student_timeline,
+                    self.psychological_test_view.select_student)
+                counseling_heading.bind_text_from(
+                    self.counseling_view, 'selected',
+                    backward=lambda student: (
+                        f'개인 상담 · {student.name} · {student.grade}학년 {student.classroom}반'
+                        if student else '개인 상담'
+                    ),
+                )
+                with ui.tab_panels(self.counseling_tabs, value='logs').classes('w-full bg-transparent'):
+                    with ui.tab_panel('logs').classes('p-0'):
+                        self.counseling_view.build()
+                        self.counseling_view.student_heading.set_visibility(False)
+                    with ui.tab_panel('tests').classes('p-0'):
+                        self.psychological_test_view.build(embedded=True)
         if page == 'groups' and self.group_view is None:
             with self.panels['groups']:
                 self.group_view = GroupCounselingView(GroupCounselingRepository(self.counseling.database), self.refresh_group_timeline)
@@ -197,11 +213,20 @@ class AppLayout:
             panel.set_visibility(name == page)
         for name, button in self.buttons.items():
             if name == page:
-                button.classes(add='bg-teal-50 text-teal-800 font-bold')
+                button.classes(add='bg-primary font-bold')
+                # Quasar의 flat 버튼 text-primary보다 대비 색상을 우선한다.
+                button.style('color: var(--app-primary-text, #ffffff) !important')
                 button.props('aria-current=page')
             else:
-                button.classes(remove='bg-teal-50 text-teal-800 font-bold')
+                button.classes(remove='bg-primary font-bold')
+                button.style(remove='color:')
                 button.props(remove='aria-current')
+
+    async def open_student_counseling(self, student_id: int) -> None:
+        """학생 관리에서 선택한 학생의 상담 사례와 심리검사를 함께 연다."""
+        self.navigate('counseling')
+        self.counseling_tabs.set_value('logs')
+        await self.counseling_view.select_student(student_id)
 
     async def refresh_group_timeline(self) -> None:
         """참여자 변경과 일지 저장을 열려 있는 학생 타임라인에 반영한다."""
@@ -224,6 +249,7 @@ class AppLayout:
         self.opening_schedule = True
         try:
             self.navigate('counseling')
+            self.counseling_tabs.set_value('logs')
             await self.counseling_view.open_record(entry_id)
         finally:
             self.opening_schedule = False

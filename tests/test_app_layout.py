@@ -4,7 +4,8 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
 
-from nicegui import ui
+from nicegui import Client, ui
+from nicegui.page import page
 
 from views.app_layout import AppLayout
 
@@ -26,6 +27,8 @@ class StudentRefreshTests(unittest.IsolatedAsyncioTestCase):
         self.layout.statistics_view = SimpleNamespace(load=AsyncMock())
 
     async def test_build_after_login_container_is_deleted(self):
+        client = Client(page('/layout-test'))
+        client.__enter__()
         content = ui.column()
         drawer = ui.left_drawer(value=False)
         header = ui.header()
@@ -45,6 +48,7 @@ class StudentRefreshTests(unittest.IsolatedAsyncioTestCase):
             content.delete()
             drawer.delete()
             header.delete()
+            client.__exit__(None, None, None)
 
     async def test_refreshes_hidden_lists_and_selected_student(self):
         student = SimpleNamespace(id=1, name='수정 이름', grade=2, classroom='3')
@@ -78,3 +82,47 @@ class StudentRefreshTests(unittest.IsolatedAsyncioTestCase):
             setattr(self.layout, name, None)
         await self.layout.refresh_students()
         self.assertEqual(self.layout.student_revision, 1)
+
+
+class IntegratedCounselingTests(unittest.IsolatedAsyncioTestCase):
+    async def test_student_button_tabs_and_student_switch(self):
+        from datetime import datetime, timezone
+        from models import Student
+        now = datetime.now(timezone.utc)
+        students = Mock(database=SimpleNamespace(student_revision=0))
+        students.get.side_effect = lambda student_id: Student(
+            id=student_id, name=f'학생 {student_id}', grade=1, classroom='1',
+            created_at=now, updated_at=now)
+        counseling = Mock()
+        counseling.list_timeline.return_value = []
+
+        async def invoke(function, *args, **kwargs):
+            return function(*args, **kwargs)
+
+        with Client(page('/integrated-counseling-test')), patch('views.app_layout.ui.timer'), \
+                patch('views.app_layout.run.io_bound', side_effect=invoke):
+            layout = AppLayout(students, counseling, Mock())
+            layout.build(ui.column(), ui.left_drawer(), ui.header())
+            layout.navigate('students')
+            await layout.student_view.load_profile(1)
+            self.assertTrue(any(isinstance(e, ui.button) and e.text == '상담 일지'
+                                for e in layout.student_view.detail.descendants()))
+            layout.navigate('counseling')
+            layout.counseling_view.cases = Mock()
+            layout.counseling_view.cases.list.return_value = []
+            layout.psychological_test_view.repository = Mock()
+            layout.psychological_test_view.repository.list.return_value = []
+            for student_id in (1, 2):
+                await layout.student_view.on_counseling(student_id)
+                self.assertEqual(layout.active_page, 'counseling')
+                self.assertEqual(layout.counseling_tabs.value, 'logs')
+                self.assertEqual(layout.counseling_view.selected.id, student_id)
+                self.assertEqual(layout.psychological_test_view.selected.id, student_id)
+                layout.counseling_tabs.set_value('tests')
+                self.assertTrue(layout.psychological_test_view.add.enabled)
+            self.assertNotIn('psychological_tests', layout.buttons)
+            self.assertFalse(hasattr(layout.counseling_view, 'student_list'))
+            self.assertFalse(hasattr(layout.psychological_test_view, 'student_list'))
+            await layout.counseling_view.select_student(None)
+            self.assertIsNone(layout.psychological_test_view.selected)
+            self.assertFalse(layout.psychological_test_view.add.enabled)

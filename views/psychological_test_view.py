@@ -24,22 +24,25 @@ class PsychologicalTestView:
         self.offset = 0
         self.editor_open = False
 
-    def build(self):
+    def build(self, *, embedded=False):
         with ui.column().classes('w-full gap-5 p-4 md:p-8'):
-            ui.label('심리검사').classes('text-3xl font-bold text-slate-800')
-            ui.label('학생을 선택하고 심리검사 일지를 확인하세요.').classes('text-slate-500')
-            with ui.element('div').classes('w-full grid grid-cols-1 lg:grid-cols-[3fr_7fr] items-start gap-6'):
-                self.student_list = StudentList(self.students, on_select=self.select_student)
-                self.student_list.build()
+            if not embedded:
+                ui.label('심리검사').classes('text-3xl font-bold text-slate-800')
+            with ui.element('div').classes('w-full' if embedded else 'w-full grid grid-cols-1 lg:grid-cols-[3fr_7fr] items-start gap-6'):
+                if not embedded:
+                    self.student_list = StudentList(self.students, on_select=self.select_student)
+                    self.student_list.build()
                 with ui.card().classes('w-full min-w-0 rounded-2xl shadow-sm p-5'):
                     self.student_heading = ui.label('검사 대상 학생을 선택해 주세요.').classes('text-xl font-bold')
-                    ui.separator()
+                    self.student_heading.set_visibility(not embedded)
+                    if not embedded:
+                        ui.separator()
                     with ui.row().classes('w-full items-center justify-between'):
                         ui.label('심리검사 일지 목록').classes('text-lg font-bold')
                         self.add = ui.button('새 심리검사 일지', icon='edit_note', on_click=lambda: self.open_editor())
                         self.add.disable()
                     self.logs = ui.column().classes('w-full gap-3')
-                    self.message = ui.label('왼쪽 목록에서 학생을 선택해 주세요.').classes('text-sm text-slate-500')
+                    self.message = ui.label('학생 관리에서 상담 대상 학생을 선택해 주세요.').classes('text-sm text-slate-500')
                     with ui.row().classes('w-full items-center justify-end'):
                         self.previous = ui.button('일지 이전', on_click=lambda: self.change_page(-1)).props('flat')
                         self.page_label = ui.label()
@@ -59,7 +62,7 @@ class PsychologicalTestView:
         self.next.disable()
         self.page_label.text = ''
         self.student_heading.text = '검사 대상 학생을 선택해 주세요.'
-        self.message.text = '왼쪽 목록에서 학생을 선택해 주세요.'
+        self.message.text = '학생 관리에서 상담 대상 학생을 선택해 주세요.'
         if student_id is None:
             return
         self.message.text = '학생 정보를 불러오는 중입니다…'

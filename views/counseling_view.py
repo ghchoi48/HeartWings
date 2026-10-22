@@ -11,7 +11,6 @@ from models import Counseling, CounselingInput, Student, CounselingCase, Counsel
 from repositories.case_repo import CaseRepository
 from repositories.counseling_repo import CounselingRepository
 from repositories.student_repo import StudentRepository
-from views.student_list import StudentList
 from views.counseling_content import clean_html, editor_html
 
 KST = timezone(timedelta(hours=9))
@@ -57,7 +56,8 @@ class CounselingView:
             button.set_enabled(enabled)
 
     def __init__(self, students: StudentRepository, counseling: CounselingRepository,
-                 on_saved: Callable[[int], Awaitable[None]] | None = None):
+                 on_saved: Callable[[int], Awaitable[None]] | None = None,
+                 on_selected: Callable[[int | None], Awaitable[None]] | None = None):
         self.students = students
         self.counseling = counseling
         self.cases = CaseRepository(counseling.database)
@@ -65,6 +65,7 @@ class CounselingView:
         self.case_request = 0
         self.case_options: dict[int, CounselingCase] = {}
         self.on_saved = on_saved
+        self.on_selected = on_selected
         self.selected: Student | None = None
         self.log_offset = 0
         self.student_request = 0
@@ -72,24 +73,21 @@ class CounselingView:
         self.editor_open = False
 
     def build(self) -> None:
-        """학생 검색, 선택 학생의 상담 목록을 구성한다."""
+        """선택 학생의 상담 사례 목록과 사례별 일지를 구성한다."""
         with ui.column().classes('w-full gap-5 p-4 md:p-8'):
-            ui.label('개인 상담').classes('text-3xl font-bold text-slate-800')
-            ui.label('학생을 선택하고 상담 내용을 기록하세요.').classes('text-slate-500')
+            self.student_heading = ui.label('학생 관리에서 상담 대상 학생을 선택해 주세요.').classes('text-xl font-bold')
             with ui.element('div').classes('w-full grid grid-cols-1 lg:grid-cols-[3fr_7fr] items-start gap-6'):
-                self.student_list = StudentList(self.students, on_select=self.select_student)
-                self.student_list.build()
                 with ui.card().classes('w-full min-w-0 rounded-2xl shadow-sm p-5'):
-                    with ui.row().classes('w-full items-center justify-between'):
-                        self.student_heading = ui.label('상담 대상 학생을 선택해 주세요.').classes('text-xl font-bold')
                     with ui.row().classes('w-full items-center justify-between'):
                         ui.label('상담 사례 목록').classes('text-lg font-bold')
                         self.add_case = ui.button('새 상담 사례', icon='create_new_folder',
                                                   on_click=lambda: self.open_case_editor(report_field='intake_html'))
                         self.add_case.disable()
+                    self.case_select = ui.radio({}, on_change=self.change_case).classes('w-full break-words')
+                    self.case_select.disable()
+                    self.case_message = ui.label().classes('text-sm text-slate-500')
+                with ui.card().classes('w-full min-w-0 rounded-2xl shadow-sm p-5'):
                     with ui.row().classes('w-full items-center'):
-                        self.case_select = ui.select({}, label='상담 사례', on_change=self.change_case).props('outlined dense').classes('grow min-w-0')
-                        self.case_select.disable()
                         self.intake_interview = ui.button('접수 면접', icon='assignment_ind',
                                                         on_click=lambda: self.open_case_editor(self.selected_case, 'intake_html')).props('outline')
                         self.intake_interview.disable()
@@ -99,7 +97,6 @@ class CounselingView:
                         self.closing_report = ui.button('종결 보고서', icon='task_alt',
                                                       on_click=lambda: self.open_case_editor(self.selected_case, 'closing_html')).props('outline')
                         self.closing_report.disable()
-                    self.case_message = ui.label().classes('text-sm text-slate-500')
                     ui.separator()
                     with ui.row().classes('w-full items-center justify-between'):
                         self.log_heading = ui.label('상담 일지 목록').classes('text-lg font-bold')
@@ -136,6 +133,10 @@ class CounselingView:
         self.add.disable()
         self.log_previous.disable()
         self.log_next.disable()
+        if self.on_selected:
+            await self.on_selected(student_id)
+            if request != self.log_request:
+                return
         if student_id is None:
             return
         try:
@@ -423,6 +424,10 @@ class CounselingView:
         if entry is None or student is None:
             ui.notify('상담 일지 또는 학생이 존재하지 않습니다.', type='warning')
             return
+        if self.on_selected:
+            await self.on_selected(student.id)
+            if request != self.student_request:
+                return
         self.selected = student
         self.student_heading.text = f'{student.name} · {student.grade}학년 {student.classroom}반'
         self.add_case.enable()

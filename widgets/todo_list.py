@@ -28,13 +28,12 @@ class TodoList:
             with ui.row().classes('w-full items-center flex-nowrap'):
                 self.selector = ui.select({}, label='할 일 목록', on_change=self.select).props('outlined dense').classes('flex-1 min-w-0')
                 ui.button(icon='playlist_add', on_click=self.new_list).props('flat round aria-label="목록 만들기"')
-            with ui.row().classes('w-full items-center flex-nowrap'):
-                self.input = ui.input('새 할 일').props('outlined dense maxlength=300').classes('flex-1 min-w-0')
+            with ui.row().classes('w-full items-center flex-nowrap gap-2 overflow-x-auto'):
+                self.input = ui.input('새 할 일').props('outlined dense maxlength=300').classes('flex-1 min-w-32')
                 self.input.on('keydown.enter', self.add)
-                ui.button(icon='add', on_click=self.add).props('round flat aria-label="할 일 추가"')
-            with ui.row().classes('w-full gap-2'):
-                self.due = ui.input('기한', value='').props('type=date outlined dense clearable').classes('flex-1 min-w-0')
-                self.priority = ui.select(PRIORITIES, value='normal', label='우선순위').props('outlined dense').classes('w-24')
+                self.due = ui.input('기한', value='').props('type=date outlined dense clearable').classes('w-40 shrink-0')
+                self.priority = ui.select(PRIORITIES, value='normal', label='우선순위').props('outlined dense').classes('w-24 shrink-0')
+                ui.button(icon='add', on_click=self.add).props('round flat aria-label="할 일 추가"').classes('shrink-0')
             self.summary = ui.label().classes('text-xs text-slate-500')
             self.items = ui.column().classes('w-full gap-1')
             with ui.expansion('완료한 할 일 (0)', icon='task_alt').props('dense').classes('w-full') as self.completed:

@@ -1,13 +1,12 @@
 ﻿"""세밀한 홈 격자와 위젯 배치 편집."""
 
 from copy import deepcopy
-from math import ceil
 from uuid import uuid4
 
 from nicegui import run, ui
 
 from database import DatabaseError
-from home_layout import arrange, DEFAULT_SIZES
+from home_layout import arrange, DEFAULT_SIZES, row_span
 from widgets import WIDGETS
 from views.home_interactions import POINTER, KEYBOARD
 
@@ -27,11 +26,12 @@ class HomeView:
     def build(self):
         ui.add_css('''
             .home-grid { display: grid; grid-template-columns: repeat(24, minmax(0, 1fr));
-                grid-auto-rows: 10px; column-gap: 8px; row-gap: 0; align-items: start; }
+                grid-auto-rows: var(--home-cell); gap: 8px; align-items: start;
+                --home-cell: calc((100cqw - 184px) / 24); }
             .home-grid-editing { min-height: 800px;
                 background-image: linear-gradient(to right, #cbd5e155 1px, transparent 1px),
                     linear-gradient(to bottom, #cbd5e155 1px, transparent 1px);
-                background-size: calc((100% + 8px) / 24) 10px; }
+                background-size: calc(var(--home-cell) + 8px) calc(var(--home-cell) + 8px); }
             .home-widget { min-width: 0; width: 100%; position: relative; overflow: auto; }
             .home-drag-handle { cursor: grab; touch-action: none; user-select: none; }
             .home-drag-handle:active { cursor: grabbing; }
@@ -47,6 +47,7 @@ class HomeView:
             @media (max-width: 899px) {
                 .home-grid { display: flex; flex-direction: column; gap: 10px; }
                 .home-grid-editing { background: none; }
+                .home-widget { height: var(--home-mobile-height) !important; }
                 .home-drag-handle { cursor: default; }
             }
         ''')
@@ -62,8 +63,10 @@ class HomeView:
                 self.edit_button.disable()
                 self.add_button = ui.button('위젯 추가', icon='add', on_click=self.open_picker).props('outline')
                 self.add_button.disable()
+                self.add_button.set_visibility(False)
                 self.status = ui.label('위젯을 불러오는 중입니다…').classes('text-sm text-slate-500')
-            self.grid = ui.element('div').classes('home-grid w-full')
+            with ui.element('div').classes('w-full').style('container-type: inline-size'):
+                self.grid = ui.element('div').classes('home-grid w-full')
             ui.timer(0, self.load, once=True)
 
     async def load(self):
@@ -94,41 +97,42 @@ class HomeView:
         self.grid.classes(add='home-grid-editing' if self.editing else '',
                           remove='' if self.editing else 'home-grid-editing')
         self.edit_button.text = '편집 완료' if self.editing else '배치 편집'
+        self.add_button.set_visibility(self.editing)
+        self.add_button.set_enabled(self.editing and not self.busy)
         self.status.text = ('제목을 끌어 빈 곳으로 이동 · 가장자리로 크기 조절 · 방향키로 미세 조절 · 자동 저장'
                             if self.editing else '배치는 자동 저장됩니다.')
         with self.grid:
             if not self.layout:
-                with ui.column().classes('items-center w-full p-10 text-slate-500').style('grid-column: 1 / -1; grid-row: span 20'):
+                with ui.column().classes('items-center w-full p-10 text-slate-500').style('grid-column: 1 / -1; grid-row: span 5'):
                     ui.icon('widgets', size='40px')
                     ui.label('아직 배치된 위젯이 없습니다.')
-                    ui.button('첫 위젯 추가', icon='add', on_click=self.open_picker).props('flat')
+                    if self.editing:
+                        ui.button('첫 위젯 추가', icon='add', on_click=self.open_picker).props('flat')
+                    else:
+                        ui.label('배치 편집을 눌러 위젯을 추가하세요.')
             for index, item in enumerate(self.layout):
                 widget = WIDGETS[item['kind']]
                 with ui.card().classes('home-widget rounded-2xl shadow-sm p-4 gap-3').style(
                         f'grid-column: {item["x"] + 1} / span {item["width"]}; '
-                        f'grid-row: {item["y"] + 1} / span {ceil(item["height"] / 10) + 1}; height: {item["height"]}px').props(
+                        f'grid-row: {item["y"] + 1} / span {row_span(item)}; '
+                        f'height: calc({row_span(item)} * var(--home-cell) + {(row_span(item) - 1) * 8}px); '
+                        f'--home-mobile-height: {item["height"]}px').props(
                         f'data-kind={item["kind"]} data-instance={item["id"]} data-width={item["width"]} '
                         f'data-height={item["height"]} data-x={item["x"]} data-y={item["y"]}'):
-                    with ui.row().classes('w-full items-center gap-2' + (' home-drag-handle' if self.editing else '')) as header:
+                    with ui.row().classes('w-full items-center flex-nowrap gap-2' + (' home-drag-handle' if self.editing else '')) as header:
                         if self.editing:
-                            ui.icon('drag_indicator').classes('text-slate-400')
-                        ui.icon(widget.icon).classes('text-teal-700')
-                        ui.label(widget.title).classes('font-bold text-slate-800')
+                            ui.icon('drag_indicator').classes('shrink-0 text-slate-400')
+                        ui.icon(widget.icon, size='24px').classes('shrink-0 text-teal-700')
+                        ui.label(widget.title).classes('min-w-0 break-words font-bold text-slate-800')
                     if self.editing:
                         header.props(f'tabindex=0 role=button aria-label="{widget.title} 위치 이동"')
                         self.bind_geometry(header, item['id'])
                         with ui.row().classes('w-full gap-2'):
-                            for key, label, value, minimum, maximum in (
-                                    ('width', '너비 (1~24칸)', item['width'], 1, 24),
-                                    ('height', '높이 (px)', item['height'], 160, 1600),
-                                    ('x', '가로 위치 (칸)', item['x'] + 1, 1, 24),
-                                    ('y', '세로 위치 (10px)', item['y'] + 1, 1, None)):
-                                field = ui.number(label, value=value, min=minimum, max=maximum,
-                                                  step=10 if key == 'height' else 1).props('dense outlined').classes('w-32')
-                                field.on('change', lambda e, key=key, instance_id=item['id']:
-                                         self.change_field(instance_id, key, e.sender.value))
                             ui.button(icon='delete_outline', on_click=lambda index=index: self.remove(index)).props(
                                 f'flat round color=negative aria-label="{widget.title} 위젯 삭제"').tooltip('위젯 삭제 (데이터는 보존)')
+                        if hasattr(widget, 'build_settings'):
+                            view = widget(self.repository, self.teachers, item['id'], self.refresh_todos)
+                            view.build_settings()
                         for axis, label, icon in (('x', '너비 조절', 'drag_indicator'),
                                                   ('y', '높이 조절', 'drag_handle'),
                                                   ('xy', '크기 조절', 'open_in_full')):
@@ -147,36 +151,19 @@ class HomeView:
                 await view.reload()
 
     def open_picker(self):
-        if self.busy or not self.loaded:
+        if self.busy or not self.loaded or not self.editing:
             return
         with ui.dialog() as dialog, ui.card().classes('w-[480px] max-w-full p-6'):
             ui.label('위젯 추가').classes('text-xl font-bold')
             kind = ui.select({key: widget.title for key, widget in WIDGETS.items()},
                              value='clock', label='위젯').classes('w-full')
-            ui.label('너비는 전체 24칸 기준입니다. 작은 화면에서는 한 줄로 표시됩니다.').classes('text-sm text-slate-500')
-            with ui.row():
-                width = ui.number('기본 너비 (칸)', value=self.default_sizes['clock']['width'], min=1, max=24, step=1)
-                height = ui.number('기본 높이 (px)', value=self.default_sizes['clock']['height'], min=160, max=1600, step=10)
-            remember = ui.checkbox('이 종류의 기본 크기로 저장', value=True)
-            def selected(e):
-                width.value = self.default_sizes[e.value]['width']
-                height.value = self.default_sizes[e.value]['height']
-            kind.on_value_change(selected)
+            ui.label('추가한 뒤 제목을 끌어 이동하고 가장자리로 크기를 조절하세요.').classes('text-sm text-slate-500')
 
             async def add():
-                if self.busy:
+                if self.busy or not self.editing:
                     return
-                w, h = width.value, height.value
-                if w is None or h is None or w != int(w) or h != int(h) or not 1 <= w <= 24 or not 160 <= h <= 1600:
-                    ui.notify('너비 1~24칸, 높이 160~1600px의 정수를 입력해 주세요.', type='negative')
-                    return
-                if remember.value:
-                    try:
-                        await run.io_bound(self.repository.save_widget_size, kind.value, int(w), int(h))
-                        self.default_sizes[kind.value] = {'width': int(w), 'height': int(h)}
-                    except (DatabaseError, ValueError) as error:
-                        ui.notify(str(error), type='negative')
-                        return
+                w = self.default_sizes[kind.value]['width']
+                h = self.default_sizes[kind.value]['height']
                 if await self.commit(arrange([*self.layout, {'id': uuid4().hex, 'kind': kind.value,
                                                             'width': int(w), 'height': int(h)}])):
                     dialog.close()
@@ -184,12 +171,6 @@ class HomeView:
                 ui.button('닫기', on_click=dialog.close).props('flat')
                 ui.button('추가', icon='add', on_click=add)
         dialog.open()
-
-    async def change_field(self, instance_id, key, value):
-        if value is None or value != int(value):
-            self.render()
-            return
-        await self.change_geometry(instance_id, {key: int(value) - (1 if key in ('x', 'y') else 0)})
 
     async def change_geometry(self, instance_id, size):
         if not self.editing or self.busy or not isinstance(size, dict):
@@ -211,6 +192,8 @@ class HomeView:
             return
 
     async def remove(self, index):
+        if not self.editing or self.busy:
+            return
         await self.commit([item for i, item in enumerate(self.layout) if i != index])
 
     async def commit(self, layout):

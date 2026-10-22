@@ -2,6 +2,7 @@
 
 import json
 import logging
+import re
 from pathlib import Path
 
 from nicegui import ui
@@ -12,16 +13,56 @@ from app_fonts import FONTS, FONT_FAMILIES, font_face_css
 
 MODES = {'auto': '자동 (기본값)', 'dark': '다크', 'light': '라이트'}
 
+DEFAULT_PRIMARY = '#24756b'
+PRIMARY_PRESETS = {
+    '청록': DEFAULT_PRIMARY, '파랑': '#2563eb', '보라': '#7c3aed',
+    '장미': '#be185d', '노랑': '#facc15',
+}
+
+
+def normalize_color(value) -> str | None:
+    if not isinstance(value, str):
+        return None
+    value = value.strip().lower()
+    if re.fullmatch(r'#[0-9a-f]{3}', value):
+        value = '#' + ''.join(channel * 2 for channel in value[1:])
+    return value if re.fullmatch(r'#[0-9a-f]{6}', value) else None
+
+
+def luminance(color: str) -> float:
+    channels = [int(color[i:i + 2], 16) / 255 for i in (1, 3, 5)]
+    linear = [c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in channels]
+    return sum(c * weight for c, weight in zip(linear, (0.2126, 0.7152, 0.0722)))
+
+
+def primary_text_color(color: str) -> str:
+    brightness = luminance(color)
+    return '#000000' if (brightness + 0.05) / 0.05 >= 1.05 / (brightness + 0.05) else '#ffffff'
+
+
+def readable_accent(color: str, background: str) -> str:
+    """배경 없는 강조 글씨는 화면 배경과 4.5:1 이상의 대비를 확보한다."""
+    target = 0 if luminance(background) > 0.5 else 255
+    channels = [int(color[i:i + 2], 16) for i in (1, 3, 5)]
+    for step in range(101):
+        candidate = '#' + ''.join(f'{round(c + (target - c) * step / 100):02x}' for c in channels)
+        low, high = sorted((luminance(candidate), luminance(background)))
+        if (high + 0.05) / (low + 0.05) >= 4.5:
+            return candidate
+    return candidate
+
 
 class DisplaySettings:
     def __init__(self, path: Path | None = None):
         self.path = path
         self.store = SettingsStore(path)
-        self.values = {'mode': 'auto', 'size': 16, 'font': 'system'}
+        self.values = {'mode': 'auto', 'size': 16, 'font': 'system', 'primary': DEFAULT_PRIMARY}
         if path and path.exists():
             try:
                 data = json.loads(path.read_text(encoding='utf-8'))
                 if isinstance(data, dict):
+                    if color := normalize_color(data.get('primary')):
+                        self.values['primary'] = color
                     if data.get('mode') in MODES:
                         self.values['mode'] = data['mode']
                     if type(data.get('size')) is int and 12 <= data['size'] <= 22:
@@ -36,6 +77,12 @@ class DisplaySettings:
         ui.add_css(font_face_css())
         self.dark_mode = ui.dark_mode({'auto': None, 'dark': True, 'light': False}[self.values['mode']])
         ui.add_css('''
+            :root { --app-primary-text: #ffffff; }
+            body { --app-primary-accent: var(--app-primary-light); }
+            body.body--dark { --app-primary-accent: var(--app-primary-dark); }
+            .text-primary:not(.bg-primary) { color: var(--app-primary-accent) !important; }
+            .bg-primary, .nicegui-header,
+            .nicegui-header .q-btn { color: var(--app-primary-text) !important; }
             body { font-family: var(--app-font); font-size: 1rem; }
             .q-field, .q-btn, .q-table, .q-table th, .q-table tbody td { font-size: .875rem; }
             @layer overrides {
@@ -47,7 +94,7 @@ class DisplaySettings:
             body.body--dark .text-slate-800, body.body--dark .text-slate-700 { color: #e2e8f0 !important; }
             body.body--dark .text-slate-600, body.body--dark .text-slate-500 { color: #b8c5d6 !important; }
             body.body--dark .text-teal-800, body.body--dark .text-teal-700 { color: #8fe0ce !important; }
-            body.body--dark .text-primary { color: #8fe0ce !important; }
+
             body.body--dark .border-slate-200 { border-color: #475569 !important; }
             body.body--dark .q-editor__content { background: #1e293b; color: #e2e8f0; }
             }
@@ -77,6 +124,20 @@ class DisplaySettings:
             })();
         ''')
         self.apply_typography()
+        self.apply_primary()
+
+    def apply_primary(self) -> None:
+        color = self.values['primary']
+        ui.colors(primary=color)
+        variables = {
+            '--app-primary-text': primary_text_color(color),
+            '--app-primary-light': readable_accent(color, '#ffffff'),
+            '--app-primary-dark': readable_accent(color, '#1e293b'),
+        }
+        ui.run_javascript(''.join(
+            f'document.documentElement.style.setProperty({json.dumps(key)}, {json.dumps(value)});'
+            for key, value in variables.items()
+        ))
 
     def apply_typography(self) -> None:
         ui.run_javascript(
@@ -86,7 +147,10 @@ class DisplaySettings:
         )
 
     def change(self, key: str, value) -> None:
-        if key == 'mode' and value in MODES:
+        if key == 'primary' and (color := normalize_color(value)):
+            self.values[key] = color
+            self.apply_primary()
+        elif key == 'mode' and value in MODES:
             self.values[key] = value
             if self.dark_mode is not None:
                 self.dark_mode.value = {'auto': None, 'dark': True, 'light': False}[value]
@@ -105,6 +169,29 @@ class DisplaySettings:
                 ui.notify('화면에는 적용했지만 설정을 저장하지 못했습니다. 저장 폴더의 권한을 확인해 주세요.', type='negative')
 
     def build_controls(self) -> None:
+        with ui.column().classes('w-full gap-2'):
+            ui.label('기본 색상 (Primary)').classes('font-semibold text-slate-700')
+            ui.label('버튼과 상단 바의 색상을 바꿉니다. 글씨 색상은 읽기 쉽게 자동 조절됩니다.').classes('text-sm text-slate-500')
+
+            def pick_color(color):
+                self.change('primary', color)
+                color_label.set_text(self.values['primary'].upper())
+                picker.set_color(self.values['primary'])
+
+            with ui.row().classes('items-center'):
+                with ui.button('색상 선택', icon='palette'):
+                    picker = ui.color_picker(on_pick=lambda e: pick_color(e.color))
+                    picker.set_color(self.values['primary'])
+                    picker.q_color.props('format-model=hex no-header no-footer')
+                color_label = ui.label(self.values['primary'].upper()).classes('font-mono')
+            with ui.row().classes('gap-2'):
+                for name, color in PRIMARY_PRESETS.items():
+                    ui.button(name, color=None, on_click=lambda color=color: pick_color(color)).style(
+                        f'background-color: {color}; color: {primary_text_color(color)};'
+                    ).props(f'aria-label="기본 색상 {name}"')
+            with ui.row().classes('w-full items-center rounded-xl bg-primary p-4'):
+                ui.icon('visibility')
+                ui.label('선택한 색상과 글씨 미리보기')
         ui.select(MODES, value=self.values['mode'], label='화면 모드',
                   on_change=lambda e: self.change('mode', e.value)).props('outlined').classes('w-full')
         ui.label('자동 모드는 기기의 화면 모드를 따릅니다.').classes('text-sm text-slate-500')

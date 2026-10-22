@@ -9,7 +9,7 @@ from settings_store import SettingsStore
 from home_layout import COLUMNS, MIN_HEIGHT, MAX_HEIGHT, DEFAULT_SIZES
 from views.counseling_content import clean_html
 
-WIDGET_KINDS = ('clock', 'todo', 'teacher_search', 'meal', 'memo')
+WIDGET_KINDS = ('clock', 'todo', 'teacher_search', 'meal', 'memo', 'weather')
 DEFAULT_LAYOUT = [{'id': kind, 'kind': kind, 'span': 1} for kind in WIDGET_KINDS[:3]]
 
 
@@ -145,6 +145,30 @@ class HomeRepository:
         self.normalize_layout([{'kind': kind, 'width': width, 'height': height}])
         self._update(lambda widgets: widgets.setdefault('default_sizes', {}).update(
             {kind: {'width': width, 'height': height}}))
+
+    @staticmethod
+    def validate_weather_preferences(value):
+        from services.weather import coordinates
+        if not isinstance(value, dict) or value.get('mode') not in ('daily', 'weekly'):
+            raise ValueError('날씨 표시 설정이 올바르지 않습니다.')
+        location = value.get('location')
+        if location is not None:
+            if (not isinstance(location, dict) or not isinstance(location.get('name'), str)
+                    or not 1 <= len(location['name']) <= 500):
+                raise ValueError('날씨 지역 설정이 올바르지 않습니다.')
+            coordinates(location.get('latitude'), location.get('longitude'))
+        return deepcopy({'mode': value['mode'], 'location': location})
+
+    def weather_preferences(self, instance_id):
+        try:
+            value = self._read().get('weather', {}).get(instance_id, {'mode': 'daily', 'location': None})
+            return self.validate_weather_preferences(value)
+        except (ValueError, AttributeError):
+            raise DatabaseError('날씨 설정을 읽지 못했습니다.') from None
+
+    def save_weather_preferences(self, instance_id, value):
+        value = self.validate_weather_preferences(value)
+        self._update(lambda widgets: widgets.setdefault('weather', {}).update({instance_id: value}))
 
     def note(self, instance_id: str) -> str:
         if instance_id in self.note_drafts:

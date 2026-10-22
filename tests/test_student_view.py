@@ -9,7 +9,8 @@ import unittest
 from datetime import datetime, timezone
 from unittest.mock import Mock, patch
 
-from nicegui import ui
+from nicegui import Client, ui
+from nicegui.page import page
 from pydantic import ValidationError
 
 from database import DatabaseError
@@ -43,6 +44,8 @@ class StudentFormTests(unittest.TestCase):
 
 class StudentViewTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
+        self.client = Client(page('/test_student_view'))
+        self.client.__enter__()
         self.students = Mock()
         self.students.list.return_value = []
         self.counseling = Mock()
@@ -57,6 +60,7 @@ class StudentViewTests(unittest.IsolatedAsyncioTestCase):
     def tearDown(self):
         self.io_patch.stop()
         self.host.delete()
+        self.client.__exit__(None, None, None)
 
     async def test_editor_reads_current_school_level_each_time(self):
         self.view.school = Mock()

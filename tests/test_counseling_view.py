@@ -5,7 +5,8 @@ import unittest
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, Mock, patch
 
-from nicegui import ui
+from nicegui import Client, ui
+from nicegui.page import page
 
 from database import DatabaseError
 from models import Counseling, Student, CounselingCase
@@ -44,6 +45,8 @@ class CounselingFormTests(unittest.TestCase):
 
 class CounselingViewTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
+        self.client = Client(page('/test_counseling_view'))
+        self.client.__enter__()
         self.students, self.repo = Mock(), Mock()
         self.repo.list.return_value = []
         self.host = ui.column()
@@ -59,6 +62,7 @@ class CounselingViewTests(unittest.IsolatedAsyncioTestCase):
 
     def tearDown(self):
         self.host.delete()
+        self.client.__exit__(None, None, None)
 
     async def test_wysiwyg_editor_preserves_html(self):
         with self.host:
@@ -112,26 +116,25 @@ class CounselingViewTests(unittest.IsolatedAsyncioTestCase):
             await self.view.load_logs()
         self.assertEqual(self.view.log_message.text, '조회 실패')
 
-    async def test_shared_list_selection_loads_student_logs(self):
+    async def test_student_management_selection_loads_student_logs(self):
         self.students.get.return_value = self.student
 
         async def invoke(function, *args, **kwargs):
             return function(*args, **kwargs)
 
         with patch('views.counseling_view.run.io_bound', side_effect=invoke):
-            await self.view.student_list.on_select(self.student.id)
+            await self.view.select_student(self.student.id)
         self.assertEqual(self.view.selected, self.student)
         self.assertTrue(self.view.add.enabled)
         self.repo.list.assert_called_once_with(student_id=1, case_id=1, limit=21, offset=0)
 
-    async def test_calendar_open_keeps_shared_student_list(self):
+    async def test_calendar_open_updates_shared_student_context(self):
         now = datetime.now(timezone.utc)
         entry = Counseling(id=1, student_id=1, created_at=now, updated_at=now,
                            **counseling_form_input(1, form()).model_dump(exclude={'student_id'}))
         self.repo.get.return_value = entry
         self.students.get.return_value = self.student
-        rows = [dict(id=1, name='가상 학생'), dict(id=2, name='다른 학생')]
-        self.view.student_list.table.rows = rows
+        self.view.on_selected = AsyncMock()
 
         async def invoke(function, *args, **kwargs):
             return function(*args, **kwargs)
@@ -141,7 +144,8 @@ class CounselingViewTests(unittest.IsolatedAsyncioTestCase):
             await self.view.open_record(entry.id)
         editor.assert_awaited_once_with(entry.id)
         self.assertEqual(self.view.selected, self.student)
-        self.assertEqual(self.view.student_list.table.rows, rows)
+        self.view.on_selected.assert_awaited_once_with(self.student.id)
+        self.assertFalse(hasattr(self.view, "student_list"))
 
     async def test_no_case_disables_new_log(self):
         self.students.get.return_value = self.student

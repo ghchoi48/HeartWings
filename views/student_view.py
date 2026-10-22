@@ -1,5 +1,6 @@
 """학생 목록, 편집 모달, 상세 프로필 및 상담 타임라인."""
 
+from collections.abc import Awaitable, Callable
 from datetime import timedelta, timezone
 
 from nicegui import run, ui
@@ -34,10 +35,12 @@ class StudentView:
     """클라이언트별 상태를 유지한다. DB 호출은 작업 스레드에서 수행한다."""
 
     def __init__(self, students: StudentRepository, counseling: CounselingRepository,
-                 school: SchoolSettingsRepository | None = None):
+                 school: SchoolSettingsRepository | None = None,
+                 on_counseling: Callable[[int], Awaitable[None]] | None = None):
         self.students = students
         self.counseling = counseling
         self.school = school
+        self.on_counseling = on_counseling
         self.selected: Student | None = None
         self.detail_request = 0
         self.timeline_offset = 0
@@ -129,7 +132,11 @@ class StudentView:
                         else:
                             ui.label('등록된 가족 구성원이 없습니다. 가족 정보 수정에서 구성원을 추가해 주세요.').classes('text-slate-500')
                 with ui.card().classes('w-full rounded-2xl shadow-sm p-6'):
-                    ui.label('상담 타임라인').classes('text-xl font-bold')
+                    with ui.row().classes('w-full items-center justify-between'):
+                        ui.label('상담 타임라인').classes('text-xl font-bold')
+                        if self.on_counseling:
+                            ui.button('상담 일지', icon='edit_note',
+                                      on_click=lambda: self.on_counseling(student.id))
                     self.timeline = ui.timeline(side='right', layout='dense', color='primary').classes('w-full')
                     self.timeline_message = ui.label().classes('text-sm text-slate-500')
                     self.more = ui.button('이력 더 보기', on_click=self.load_timeline).props('flat')

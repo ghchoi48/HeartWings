@@ -153,7 +153,7 @@ class HomeViewTests(unittest.IsolatedAsyncioTestCase):
                 assert (todo['width'], todo['height'], todo['x'], todo['y']) == (11, 430, 3, 40)
                 await view.change_geometry('todo', {'width': 25, 'height': 1})
                 assert next(item for item in view.layout if item['id'] == 'todo') == todo
-                await view.change_field('todo', 'x', 20)
+                await view.change_geometry('todo', {'x': 19})
                 assert next(item for item in view.layout if item['id'] == 'todo')['x'] == 13
                 await view.change_geometry('clock', {'x': 13, 'y': 40})
                 assert not any(overlaps(a, b) for i, a in enumerate(view.layout) for b in view.layout[i+1:])
@@ -272,3 +272,37 @@ def test_fine_layout_and_default_sizes_persist(tmp_path):
     with pytest.raises(ValueError):
         repo.save_widget_size('memo', 0, 200)
     assert reopened.widget_sizes()['memo']['width'] == 11
+
+
+def test_square_grid_conversion_is_stable():
+    old = [{'id': 'a', 'kind': 'clock', 'width': 8, 'height': 290, 'x': 0, 'y': 40},
+           {'id': 'b', 'kind': 'memo', 'width': 8, 'height': 430, 'x': 0, 'y': 70}]
+    converted = arrange(old)
+    assert converted[0]['y'] == 10
+    assert all(item['grid'] == 'square' for item in converted)
+    assert not overlaps(*converted)
+    assert arrange(converted) == converted
+    assert 'grid' not in old[0]
+
+
+def test_widget_addition_only_while_editing():
+    with Client(page('/home-edit-controls')), patch('views.home_view.ui.timer'):
+        view = HomeView(Mock(), Mock(), Mock())
+        view.build()
+        view.loaded = True
+        view.render()
+        assert not view.add_button.visible
+        with patch('views.home_view.ui.dialog') as dialog:
+            view.open_picker()
+            dialog.assert_not_called()
+        view.toggle_edit()
+        assert view.add_button.visible and view.add_button.enabled
+        view.layout = arrange([{'id': 'clock', 'kind': 'clock', 'width': 8, 'height': 290}])
+        view.render()
+        assert not any(isinstance(element, ui.number) for element in view.grid.descendants())
+        view.open_picker()
+        dialogs = [e for e in ui.context.client.elements.values() if isinstance(e, ui.dialog)]
+        assert len(dialogs) == 1
+        assert not any(isinstance(e, ui.number) for e in dialogs[0].descendants())
+        view.toggle_edit()
+        assert not view.add_button.visible
