@@ -6,7 +6,7 @@ from database import DatabaseError
 from repositories.deletion_repo import DeletionRepository, TARGETS
 
 
-def delete_button(database, kind, record, on_deleted, *, blocked=lambda: False):
+def delete_button(database, kind, record, on_deleted, *, blocked=lambda: False, icon_only=False):
     """record는 클릭 시점의 모델을 반환하며, 확인 후에도 해당 ID만 삭제한다."""
     busy = False
 
@@ -52,5 +52,11 @@ def delete_button(database, kind, record, on_deleted, *, blocked=lambda: False):
             if dialog is not None and not dialog.is_deleted:
                 dialog.delete()
 
-    button = ui.button(f'{TARGETS[kind][1]} 삭제', icon='delete_outline', on_click=remove).props('flat color=negative')
+    label = f'{TARGETS[kind][1]} 삭제'
+    if icon_only:
+        button = ui.button(icon='delete_outline').props(
+            f'flat round color=negative aria-label="{label}"').tooltip(label)
+        button.on('click.stop', remove)
+    else:
+        button = ui.button(label, icon='delete_outline', on_click=remove).props('flat color=negative')
     return button

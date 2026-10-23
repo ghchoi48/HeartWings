@@ -27,13 +27,43 @@ class PsychologicalTestView:
         self.selected = None
         self.request = 0
         self.offset = 0
-        self.editor_open = False
+        self.editor_saving = False
+        self.editor_request = 0
+        self.editor_values = lambda: ()
+        self.editor_original = ()
+
+    @property
+    def editor_open(self):
+        return self.editor_saving or self.editor_original != self.editor_values()
+
+    async def confirm_editor_discard(self):
+        if self.editor_saving:
+            return False
+        if not self.editor_open:
+            return True
+        with ui.context.client.content:
+            with ui.dialog().props('persistent') as confirm, ui.card():
+                ui.label('저장하지 않은 내용을 버릴까요?')
+                ui.button('계속 작성', on_click=lambda: confirm.submit(False))
+                ui.button('변경 내용 버리기', on_click=lambda: confirm.submit(True))
+        try:
+            return bool(await confirm)
+        finally:
+            confirm.delete()
+
+    def clear_editor(self):
+        self.editor_request += 1
+        self.editor_values = lambda: ()
+        self.editor_original = ()
+        self.editor_container.clear()
+        with self.editor_container:
+            ui.label('새 심리검사 일지를 작성하거나 일지를 선택해 주세요.').classes('text-slate-500')
 
     def build(self, *, embedded=False):
         with ui.column().classes('w-full gap-5 p-4 md:p-8'):
             if not embedded:
                 ui.label('심리검사').classes('text-3xl font-bold text-slate-800')
-            with ui.element('div').classes('w-full' if embedded else 'w-full grid grid-cols-1 lg:grid-cols-[3fr_7fr] items-start gap-6'):
+            with ui.element('div').classes('w-full grid grid-cols-1 lg:grid-cols-[3fr_7fr] items-start gap-6' if embedded else 'w-full grid grid-cols-1 lg:grid-cols-[2fr_3fr_5fr] items-start gap-6'):
                 if not embedded:
                     self.student_list = StudentList(self.students, on_select=self.select_student)
                     self.student_list.build()
@@ -56,7 +86,14 @@ class PsychologicalTestView:
                     self.previous.disable()
                     self.next.disable()
 
+                with ui.card().classes('w-full min-w-0 rounded-2xl shadow-sm p-5'):
+                    self.editor_container = ui.column().classes('w-full min-w-0 gap-4')
+                    self.clear_editor()
+
     async def select_student(self, student_id):
+        if not await self.confirm_editor_discard():
+            return
+        self.clear_editor()
         self.request += 1
         request = self.request
         self.selected = None
@@ -92,6 +129,7 @@ class PsychologicalTestView:
         await self.load_logs()
 
     async def after_log_deleted(self):
+        self.clear_editor()
         self.offset = 0
         await self.load_logs()
 
@@ -116,114 +154,108 @@ class PsychologicalTestView:
             return
         with self.logs:
             for entry in entries[:PAGE_SIZE]:
-                with ui.row().classes('w-full items-center justify-between border rounded-xl p-4'):
+                open_log = lambda entry=entry: self.open_editor(entry)
+                with ui.row().classes(
+                        'w-full items-center justify-between border rounded-xl p-4 cursor-pointer hover:bg-slate-50 focus-visible:outline'
+                ).props('role=button tabindex=0 aria-label="일지 열기"').on('click', open_log).on(
+                        'keydown.enter.self.prevent', open_log).on('keydown.space.self.prevent', open_log):
                     with ui.column().classes('gap-1 min-w-0 flex-1'):
                         ui.label(entry.title).classes('font-semibold break-words w-full')
                         details = [f'{entry.test_date:%Y.%m.%d}' + (f' {entry.test_time}' if entry.test_time else ''), entry.target]
                         if entry.duration_minutes is not None:
                             details.append(f'{entry.duration_minutes}분')
                         ui.label(' · '.join(details)).classes('text-sm text-slate-500')
-                    delete_button(self.repository.database, 'test', lambda entry=entry: entry, self.after_log_deleted, blocked=lambda: self.editor_open)
-                    attachment_button(self.repository.database, 'test', entry.id)
-                    ui.button('열기 / 수정', icon='edit', on_click=lambda entry=entry: self.open_editor(entry)).props('outline')
+                    delete_button(self.repository.database, 'test', lambda entry=entry: entry, self.after_log_deleted, blocked=lambda: self.editor_open, icon_only=True)
+
         self.message.text = f'이 페이지에 {min(len(entries), PAGE_SIZE)}건' if entries else '등록된 심리검사 일지가 없습니다.'
         self.page_label.text = f'{self.offset // PAGE_SIZE + 1} 페이지'
         self.previous.set_enabled(self.offset > 0)
         self.next.set_enabled(len(entries) > PAGE_SIZE)
 
     async def open_editor(self, entry=None):
-        if self.editor_open or self.selected is None:
+        if self.selected is None:
             return
         student = self.selected
         if entry is not None and entry.student_id != student.id:
             return
-        self.editor_open = True
-        dialog = None
-        try:
-            with ui.context.client.content:
-                with ui.dialog().props('persistent') as dialog, ui.card().classes('w-full max-w-3xl p-6'):
-                    ui.label('심리검사 일지 수정' if entry else '새 심리검사 일지').classes('text-2xl font-bold')
-                    ui.label(student.name).classes('text-slate-500')
-                    title_text = {'value': entry.title if entry else ''}
-                    title_options = list(TEST_NAMES)
-                    if entry and entry.title not in title_options:
-                        title_options.append(entry.title)
-                    title = ui.select(title_options, label='검사명 *', value=entry.title if entry else None,
-                                      with_input=True, new_value_mode='add-unique',
-                                      on_change=lambda event: title_text.update(value=event.value or '')).props(
-                        'outlined maxlength=200 placeholder="검사명의 일부를 입력하거나 직접 작성하세요"').classes('w-full')
-                    # Enter로 확정하지 않은 직접 입력도 저장 및 미저장 변경 감지에 포함한다.
-                    title.on('input-value', lambda event: title_text.update(value=event.args or ''))
-                    target = ui.select(['학생', '보호자(학부모)'], label='대상',
-                                       value=entry.target if entry else '학생').props('outlined').classes('w-full')
-                    with ui.row().classes('w-full items-start'):
-                        test_date = ui.date_input('검사일 *', value=(entry.test_date if entry else datetime.now(KST).date()).isoformat()).props('outlined').classes('grow min-w-40')
-                        test_time = time_input('시각', value=entry.test_time if entry else '09:00').props('outlined').classes('w-40')
-                        duration = ui.number('시간(분)', value=entry.duration_minutes if entry else 60,
-                                             min=1, max=1440, step=1).props('outlined').classes('w-36')
-                    ui.label('검사 결과 및 소견').classes('font-semibold')
-                    content = ui.editor(value=editor_html(entry.content, entry.content_format) if entry else '',
-                                        placeholder='검사 결과 및 소견을 입력하세요.').classes('w-full').props("""min-height=320px :toolbar='[["bold", "italic", "underline", "strike"], ["unordered", "ordered"], ["left", "center", "right"], ["undo", "redo"]]'""")
-                    attachment_button(self.repository.database, 'test', entry.id if entry else None)
-                    message = ui.label().classes('text-sm text-red-700')
-                    with ui.row().classes('w-full justify-end'):
-                        cancel_button = ui.button('작성 닫기').props('flat')
-                        save_button = ui.button('일지 저장', icon='save')
-            fields = (title, target, test_date, test_time, duration, content)
-            def current_values():
-                return (title_text['value'], *(field.value for field in fields[1:]))
+        if not await self.confirm_editor_discard():
+            return
+        self.clear_editor()
+        request = self.editor_request
+        with self.editor_container:
+            ui.label('심리검사 일지 수정' if entry else '새 심리검사 일지').classes('text-2xl font-bold')
+            ui.label(student.name).classes('text-slate-500')
+            title_text = {'value': entry.title if entry else ''}
+            title_options = list(TEST_NAMES)
+            if entry and entry.title not in title_options:
+                title_options.append(entry.title)
+            title = ui.select(title_options, label='검사명 *', value=entry.title if entry else None,
+                              with_input=True, new_value_mode='add-unique',
+                              on_change=lambda event: title_text.update(value=event.value or '')).props(
+                'outlined maxlength=200 placeholder="검사명의 일부를 입력하거나 직접 작성하세요"').classes('w-full')
+            # Enter로 확정하지 않은 직접 입력도 저장 및 미저장 변경 감지에 포함한다.
+            title.on('input-value', lambda event: title_text.update(value=event.args or ''))
+            target = ui.select(['학생', '보호자(학부모)'], label='대상',
+                               value=entry.target if entry else '학생').props('outlined').classes('w-full')
+            with ui.row().classes('w-full items-start'):
+                test_date = ui.date_input('검사일 *', value=(entry.test_date if entry else datetime.now(KST).date()).isoformat()).props('outlined').classes('grow min-w-40')
+                test_time = time_input('시각', value=entry.test_time if entry else '09:00').props('outlined').classes('w-40')
+                duration = ui.number('시간(분)', value=entry.duration_minutes if entry else 60,
+                                     min=1, max=1440, step=1).props('outlined').classes('w-36')
+            ui.label('검사 결과 및 소견').classes('font-semibold')
+            content = ui.editor(value=editor_html(entry.content, entry.content_format) if entry else '',
+                                placeholder='검사 결과 및 소견을 입력하세요.').classes('w-full').props("""min-height=320px :toolbar='[["bold", "italic", "underline", "strike"], ["unordered", "ordered"], ["left", "center", "right"], ["undo", "redo"]]'""")
+            with ui.row() as attachments:
+                attachment_button(self.repository.database, 'test', entry.id if entry else None)
+            message = ui.label().classes('text-sm text-red-700')
+            with ui.row().classes('w-full justify-end'):
+                cancel_button = ui.button('작성 닫기').props('flat')
+                save_button = ui.button('일지 저장', icon='save')
+        fields = (title, target, test_date, test_time, duration, content)
 
-            original = current_values()
-            saving = False
+        def current_values():
+            return (title_text['value'], *(field.value for field in fields[1:]))
 
-            async def cancel():
-                if saving:
-                    return
-                if original != current_values():
-                    with ui.dialog().props('persistent') as confirm, ui.card():
-                        ui.label('저장하지 않은 내용을 버릴까요?')
-                        ui.button('계속 작성', on_click=lambda: confirm.submit(False))
-                        ui.button('변경 내용 버리기', on_click=lambda: confirm.submit(True))
-                    discard = await confirm
-                    confirm.delete()
-                    if not discard:
-                        return
-                dialog.submit(False)
+        self.editor_values = current_values
+        self.editor_original = current_values()
 
-            async def save():
-                nonlocal saving
-                if saving:
-                    return
-                try:
-                    value = PsychologicalTestInput(student_id=student.id, title=title_text['value'],
-                                                   test_date=test_date.value, target=target.value, test_time=storage_time(test_time.value),
-                                                   duration_minutes=duration.value, content=clean_html(content.value or ''),
-                                                   content_format='html')
-                except (ValueError, TypeError):
-                    message.text = '검사명(1~200자), 대상, 검사일, 시각(오전/오후 hh:mm), 시간(1~1440분 정수), 소견(최대 20,000자)을 확인해 주세요.'
-                    return
-                saving = True
-                controls = (*fields, cancel_button, save_button)
-                for control in controls:
-                    control.disable()
-                try:
-                    await run.io_bound(self.repository.save, value, entry.id if entry else None)
-                    dialog.submit(True)
-                except DatabaseError as error:
-                    message.text = str(error)
-                finally:
-                    saving = False
-                    for control in controls:
-                        control.enable()
+        async def cancel():
+            if request == self.editor_request and await self.confirm_editor_discard():
+                self.clear_editor()
 
-            cancel_button.on_click(cancel)
-            save_button.on_click(save)
-            if await dialog:
+        async def save():
+            nonlocal entry
+            if self.editor_saving or request != self.editor_request:
+                return
+            try:
+                value = PsychologicalTestInput(student_id=student.id, title=title_text['value'],
+                                               test_date=test_date.value, target=target.value, test_time=storage_time(test_time.value),
+                                               duration_minutes=duration.value, content=clean_html(content.value or ''),
+                                               content_format='html')
+            except (ValueError, TypeError):
+                message.text = '검사명(1~200자), 대상, 검사일, 시각(오전/오후 hh:mm), 시간(1~1440분 정수), 소견(최대 20,000자)을 확인해 주세요.'
+                return
+            self.editor_saving = True
+            controls = (*fields, cancel_button, save_button)
+            for control in controls:
+                control.disable()
+            try:
+                entry = await run.io_bound(self.repository.save, value, entry.id if entry else None)
+            except DatabaseError as error:
+                message.text = str(error)
+            else:
+                self.editor_original = current_values()
+                attachments.clear()
+                with attachments:
+                    attachment_button(self.repository.database, 'test', entry.id)
+                message.text = '심리검사 일지를 저장했습니다.'
                 ui.notify('심리검사 일지를 저장했습니다.', type='positive')
-                if self.selected and self.selected.id == student.id:
-                    self.offset = 0
-                    await self.load_logs()
-        finally:
-            self.editor_open = False
-            if dialog is not None and not dialog.is_deleted:
-                dialog.delete()
+                self.offset = 0
+                await self.load_logs()
+            finally:
+                self.editor_saving = False
+                for control in controls:
+                    control.enable()
+
+        cancel_button.on_click(cancel)
+        save_button.on_click(save)

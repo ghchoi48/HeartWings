@@ -108,7 +108,7 @@ class CalendarView:
                                 self.hide_saturday = ui.checkbox('토요일 감추기', on_change=lambda: self.render_grid())
                                 self.hide_sunday = ui.checkbox('일요일 감추기', on_change=lambda: self.render_grid())
                                 ui.separator()
-                                ui.button('캘린더 추가', icon='add', on_click=self.open_calendar_editor).props('outline').classes('w-full')
+                                ui.button('캘린더 추가', icon='add', on_click=lambda: self.open_calendar_editor()).props('outline').classes('w-full')
                     self.mode = ui.toggle({'month': '월간', 'week': '주간'}, value='month', on_change=self.change_mode)
                     self.add_event = ui.button('일정 추가', icon='add', on_click=lambda: self.open_event_editor())
                     self.add_event.disable()
@@ -126,7 +126,12 @@ class CalendarView:
                     ui.element('span').classes('w-3 h-3 rounded-full shrink-0').style(f'background-color:{item.color}')
                     checkbox = ui.checkbox(item.name, value=item.visible,
                         on_change=lambda event, calendar_id=item.id: self.toggle_calendar(calendar_id, event.value))
-                    checkbox.classes('min-w-0 break-words')
+                    checkbox.classes('flex-1 min-w-0 break-words')
+                    if item.source == 'custom':
+                        ui.button(icon='edit', on_click=lambda item=item: self.open_calendar_editor(item)).props(
+                            'flat round dense aria-label="캘린더 수정"').tooltip('캘린더 수정')
+                        ui.button(icon='delete_outline', on_click=lambda item=item: self.delete_calendar(item)).props(
+                            'flat round dense color=negative aria-label="캘린더 삭제"').tooltip('캘린더 삭제')
                     if item.source in ('counseling', 'holidays'):
                         ui.badge('연동').props('outline').classes('shrink-0')
         self.list_message.text = '체크한 캘린더의 일정만 표시합니다.'
@@ -303,8 +308,8 @@ class CalendarView:
         else:
             await self.open_event_editor(entry)
 
-    async def open_calendar_editor(self):
-        if self.editor_open:
+    async def open_calendar_editor(self, item=None):
+        if self.editor_open or (item is not None and item.source != 'custom'):
             return
         self.calendar_menu.close()
         self.editor_open = True
@@ -312,14 +317,16 @@ class CalendarView:
         try:
             with ui.context.client.content:
                 with ui.dialog().props('persistent') as dialog, ui.card().classes('w-full max-w-md p-6'):
-                    ui.label('캘린더 추가').classes('text-xl font-bold')
-                    name = ui.input('캘린더 이름', placeholder='예: 학교 일정, 상담실 운영').props('outlined maxlength=100').classes('w-full')
-                    color = ui.select({'#0d9488': '청록', '#2563eb': '파랑', '#7c3aed': '보라', '#db2777': '분홍', '#ea580c': '주황'},
-                                      label='색상', value='#2563eb').props('outlined').classes('w-full')
+                    ui.label('캘린더 수정' if item else '캘린더 추가').classes('text-xl font-bold')
+                    name = ui.input('캘린더 이름', value=item.name if item else '', placeholder='예: 학교 일정, 상담실 운영').props('outlined maxlength=100').classes('w-full')
+                    colors = {'#0d9488': '청록', '#2563eb': '파랑', '#7c3aed': '보라', '#db2777': '분홍', '#ea580c': '주황'}
+                    if item and item.color not in colors:
+                        colors[item.color] = item.color
+                    color = ui.select(colors, label='색상', value=item.color if item else '#2563eb').props('outlined').classes('w-full')
                     message = ui.label().classes('text-sm text-red-700')
                     with ui.row().classes('w-full justify-end'):
                         cancel = ui.button('취소', on_click=lambda: dialog.submit(False)).props('flat')
-                        save = ui.button('추가', icon='add')
+                        save = ui.button('저장' if item else '추가', icon='save' if item else 'add')
 
             saving = False
 
@@ -336,7 +343,10 @@ class CalendarView:
                 for control in (name, color, save, cancel):
                     control.disable()
                 try:
-                    await run.io_bound(self.repository.create, value)
+                    if item:
+                        await run.io_bound(self.repository.update, item.id, value)
+                    else:
+                        await run.io_bound(self.repository.create, value)
                     dialog.submit(True)
                 except DatabaseError as error:
                     message.text = str(error)
@@ -347,7 +357,51 @@ class CalendarView:
             save.on_click(create)
             if await dialog:
                 await self.reload()
-                ui.notify('캘린더를 추가했습니다.', type='positive')
+                ui.notify('캘린더를 수정했습니다.' if item else '캘린더를 추가했습니다.', type='positive')
+        finally:
+            self.editor_open = False
+            if dialog is not None and not dialog.is_deleted:
+                dialog.delete()
+
+    async def delete_calendar(self, item):
+        if self.editor_open or item.source != 'custom':
+            return
+        self.calendar_menu.close()
+        self.editor_open = True
+        dialog = None
+        try:
+            with ui.context.client.content:
+                with ui.dialog().props('persistent') as dialog, ui.card().classes('w-full max-w-md p-6'):
+                    ui.label('캘린더 삭제').classes('text-xl font-bold')
+                    ui.label(f'“{item.name}” 캘린더를 삭제할까요?').classes('break-words')
+                    ui.label('이 캘린더에 등록된 일정도 모두 삭제되며 되돌릴 수 없습니다.').classes('text-red-700')
+                    message = ui.label().classes('text-sm text-red-700')
+                    with ui.row().classes('w-full justify-end'):
+                        cancel = ui.button('취소', on_click=lambda: dialog.submit(False)).props('flat')
+                        confirm = ui.button('삭제', icon='delete_outline').props('color=negative')
+            deleting = False
+
+            async def remove():
+                nonlocal deleting
+                if deleting:
+                    return
+                deleting = True
+                cancel.disable()
+                confirm.disable()
+                try:
+                    await run.io_bound(self.repository.delete, item.id)
+                    dialog.submit(True)
+                except DatabaseError as error:
+                    message.text = str(error)
+                finally:
+                    deleting = False
+                    cancel.enable()
+                    confirm.enable()
+
+            confirm.on_click(remove)
+            if await dialog:
+                await self.reload()
+                ui.notify('캘린더를 삭제했습니다.', type='positive')
         finally:
             self.editor_open = False
             if dialog is not None and not dialog.is_deleted:
@@ -387,12 +441,12 @@ class CalendarView:
                     message = ui.label().classes('text-sm text-red-700')
                     with ui.row().classes('w-full justify-end'):
                         cancel = ui.button('작성 닫기').props('flat')
-                        save = ui.button('일정 저장', icon='save')
                         if entry:
                             async def after_deleted():
                                 dialog.submit(False)
                                 await self.reload()
                             delete = delete_button(self.repository.database, 'event', lambda: entry, after_deleted, blocked=lambda: saving)
+                        save = ui.button('일정 저장', icon='save')
             fields = (target, title, day, start, end, end_day, all_day, location, content)
             original = tuple(field.value for field in fields)
             saving = False

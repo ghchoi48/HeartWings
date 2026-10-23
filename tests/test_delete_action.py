@@ -65,3 +65,27 @@ def test_failure_keeps_view_and_allows_retry():
                 refresh.assert_awaited_once()
         client.delete()
     asyncio.run(scenario())
+
+
+def test_icon_only_delete_stops_card_click_and_keeps_confirmation():
+    async def scenario():
+        with Client(page('/delete-card-test')):
+            target = SimpleNamespace(id=7, title='검사 일지')
+            refresh = AsyncMock()
+            button = delete_button(Mock(), 'test', lambda: target, refresh, icon_only=True)
+            assert not button.text
+            assert button._props['aria-label'] == '심리검사 일지 삭제'
+            listener = next(iter(button._event_listeners.values()))
+            assert listener.to_dict()['type'] == 'click'
+            assert 'stop' in listener.to_dict()['modifiers']
+
+            async def confirm(dialog):
+                assert any(isinstance(child, ui.label) and '검사 일지' in child.text for child in dialog.descendants())
+                return True
+
+            with patch.object(ui.dialog, '__await__', lambda dialog: confirm(dialog).__await__()), \
+                    patch('views.delete_action.run.io_bound', new_callable=AsyncMock) as io:
+                await listener.handler()
+                assert io.await_args.args[1:] == ('test', 7)
+                refresh.assert_awaited_once()
+    asyncio.run(scenario())

@@ -52,9 +52,11 @@ class ConsultationView:
                         ui.input('교사 검색', placeholder='이름, 내선번호, 담당업무').props(
                             'outlined dense clearable debounce=300').classes('w-full').bind_value(self.table, 'filter')
                     self.table.on('rowClick', self.row_clicked, js_handler='(event, row) => emit(row.id)')
-                    self.edit_teacher = ui.button('교사 정보 수정', icon='edit',
-                                                  on_click=lambda: self.open_editor(self.selected)).props('outline')
-                    self.edit_teacher.disable()
+                    with ui.row().classes('items-center gap-2'):
+                        delete_button(self.teachers.database, 'teacher', lambda: self.selected, self.after_teacher_deleted, blocked=lambda: self.editor_open).bind_visibility_from(self, 'selected', backward=lambda value: value is not None)
+                        self.edit_teacher = ui.button('교사 정보 수정', icon='edit',
+                                                      on_click=lambda: self.open_editor(self.selected)).props('outline')
+                        self.edit_teacher.disable()
                 self.log_panel = ui.column().classes('w-full min-w-0')
                 self.show_logs()
             ui.timer(0.01, self.reload, once=True)
@@ -112,8 +114,6 @@ class ConsultationView:
         with self.log_panel, ui.card().classes('w-full rounded-2xl shadow-sm p-5'):
             teacher = self.selected
             ui.label(f'{teacher.name} 선생님' if teacher else '목록에서 교사를 선택해 주세요.').classes('text-xl font-bold')
-            if teacher:
-                delete_button(self.teachers.database, 'teacher', lambda: teacher, self.after_teacher_deleted, blocked=lambda: self.editor_open)
             with ui.row().classes('w-full items-center justify-between'):
                 ui.label('자문 일지 목록').classes('text-lg font-bold')
                 self.add_log = ui.button('새 자문 일지', icon='edit_note', on_click=lambda: self.open_log_editor())
@@ -164,13 +164,16 @@ class ConsultationView:
             return
         with self.logs:
             for entry in entries[:PAGE_SIZE]:
-                with ui.row().classes('w-full items-center justify-between border rounded-xl p-4'):
+                open_log = lambda entry_id=entry.id: self.open_log_editor(entry_id)
+                with ui.row().classes(
+                        'w-full items-center justify-between border rounded-xl p-4 cursor-pointer hover:bg-slate-50 focus-visible:outline'
+                ).props('role=button tabindex=0 aria-label="일지 열기"').on('click', open_log).on(
+                        'keydown.enter.self.prevent', open_log).on('keydown.space.self.prevent', open_log):
                     with ui.column().classes('gap-1'):
                         ui.label(entry.consultation_area or '자문 분야 미지정').classes('font-semibold')
                         ui.label(f'{entry.starts_at.astimezone(KST):%Y.%m.%d %H:%M} · {STATUSES[entry.status]} · 자문 · {entry.duration_minutes}분').classes('text-sm text-slate-500')
-                    delete_button(self.teachers.database, 'consultation', lambda entry=entry: entry, self.after_log_deleted, blocked=lambda: self.editor_open)
-                    attachment_button(self.teachers.database, 'consultation', entry.id)
-                    ui.button('열기 / 수정', icon='edit', on_click=lambda entry_id=entry.id: self.open_log_editor(entry_id)).props('outline')
+                    delete_button(self.teachers.database, 'consultation', lambda entry=entry: entry, self.after_log_deleted, blocked=lambda: self.editor_open, icon_only=True)
+
         self.log_message.text = f'이 페이지에 {min(len(entries), PAGE_SIZE)}건 · 한국 표준시' if entries else '등록된 자문 일지가 없습니다. 새 자문 일지를 작성해 보세요.'
         self.page_label.text = f'{self.log_offset // PAGE_SIZE + 1} 페이지'
         self.previous.set_enabled(self.log_offset > 0)

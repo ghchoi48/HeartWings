@@ -51,7 +51,8 @@ def test_migration_and_html_roundtrip(tmp_path, kind):
     if kind == 'education_events':
         with Client(page('/rich-event-editor')):
             view = EducationEventView(Mock())
-            view.open_editor(restored)
+            view.details = ui.column()
+            view.build_editor(restored)
             editors = [element for element in ui.context.client.elements.values() if isinstance(element, ui.editor)]
             assert len(editors) == 1
             assert '&lt;b&gt;' in editors[0].value

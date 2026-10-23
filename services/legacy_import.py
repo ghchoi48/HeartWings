@@ -267,11 +267,11 @@ def parse_rows(rows, school_year, period_times=None, corrections=None, destinati
                 if route == '특별교육' and special_laws.get(number) not in SPECIAL_LAWS:
                     raise ValueError('특별교육의 근거 법률을 선택하세요.')
                 guardian = text(row['중분류']) == '학부모상담'
-                area = text(row['상담구분']) if guardian else text(row['중분류']) or text(row['대분류'])
+                area = text(row['상담구분'])
                 if guardian and area not in GUARDIAN_COUNSELING_AREAS:
                     area = '기타'
                 value = CounselingInput(student_id=1, **common, content_format='html', content_markdown=body,
-                    category=text(row['상담구분']) or '개인상담', counseling_method=text(row['상담매체']),
+                    category=text(row['중분류']) or '개인상담', counseling_method=text(row['상담매체']),
                     counseling_target='보호자(가족)' if guardian else text(row['대상']), counseling_area=area)
             else:
                 if not isinstance(person, GroupCounselingInput):

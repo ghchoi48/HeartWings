@@ -29,6 +29,24 @@ class CalendarRepository:
             row = connection.execute('SELECT * FROM calendars WHERE id=?', (cursor.lastrowid,)).fetchone()
             return Calendar.model_validate(dict(row))
 
+    def update(self, calendar_id: int, value: CalendarInput):
+        data = values(CalendarInput.model_validate(value.model_dump()))
+        with self.database.session(write=True) as connection:
+            cursor = connection.execute(
+                "UPDATE calendars SET name=:name, color=:color WHERE id=:id AND source='custom'",
+                {**data, 'id': calendar_id})
+            if not cursor.rowcount:
+                raise NotFoundError('수정할 사용자 캘린더를 찾을 수 없습니다.')
+
+    def delete(self, calendar_id: int):
+        with self.database.session(write=True) as connection:
+            target = connection.execute(
+                "SELECT id FROM calendars WHERE id=? AND source='custom'", (calendar_id,)).fetchone()
+            if target is None:
+                raise NotFoundError('삭제할 사용자 캘린더를 찾을 수 없습니다.')
+            connection.execute('DELETE FROM calendar_events WHERE calendar_id=?', (calendar_id,))
+            connection.execute('DELETE FROM calendars WHERE id=?', (calendar_id,))
+
     def set_visible(self, calendar_id: int, visible: bool):
         with self.database.session(write=True) as connection:
             if calendar_id == HOLIDAY_CALENDAR_ID:

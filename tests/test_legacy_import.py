@@ -280,7 +280,7 @@ def test_guardian_migration_uses_category_for_area(db, category, expected):
         row = c.execute('SELECT * FROM counseling').fetchone()
         assert row['counseling_target'] == '보호자(가족)'
         assert row['counseling_area'] == expected
-        assert row['category'] == category
+        assert row['category'] == '학부모상담'
         assert category not in row['content_markdown']
 
 
@@ -411,3 +411,24 @@ def test_special_education_import_failure_rolls_back(db):
     with db.session() as c:
         for table in ('students', 'special_educations', 'special_education_logs'):
             assert c.execute(f'SELECT count(*) FROM {table}').fetchone()[0] == 0
+
+
+@pytest.mark.parametrize('middle,area,expected_type', [
+    ('개인상담', '진로', '개인상담'),
+    ('개인상담', '대인관계', '개인상담'),
+    ('', '학업', '개인상담'),
+    ('개인상담', '', '개인상담'),
+])
+@pytest.mark.parametrize('manual', [False, True])
+def test_individual_import_maps_area_and_type_to_correct_fields(db, middle, area, expected_type, manual):
+    rows = source()
+    rows['상담대장'][0][1].update(대분류='교육' if manual else '상담', 중분류=middle, 상담구분=area)
+    batch = parse_rows(rows, 2025, PERIODS, destinations={5: '개인 상담'} if manual else None)
+    assert not batch.errors
+    assert batch.logs[0].value.counseling_area == area
+    assert batch.logs[0].value.category == expected_type
+    LegacyImportRepository(db).save(batch)
+    with db.session() as connection:
+        saved = connection.execute('SELECT * FROM counseling').fetchone()
+        assert saved['counseling_area'] == area
+        assert saved['category'] == expected_type

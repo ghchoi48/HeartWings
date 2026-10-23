@@ -31,8 +31,6 @@ class TodoList:
             with ui.row().classes('w-full items-center flex-nowrap gap-2 overflow-x-auto'):
                 self.input = ui.input('새 할 일').props('outlined dense maxlength=300').classes('flex-1 min-w-32')
                 self.input.on('keydown.enter', self.add)
-                self.due = ui.input('기한', value='').props('type=date outlined dense clearable').classes('w-40 shrink-0')
-                self.priority = ui.select(PRIORITIES, value='normal', label='우선순위').props('outlined dense').classes('w-24 shrink-0')
                 ui.button(icon='add', on_click=self.add).props('round flat aria-label="할 일 추가"').classes('shrink-0')
             self.summary = ui.label().classes('text-xs text-slate-500')
             self.items = ui.column().classes('w-full gap-1')
@@ -75,24 +73,69 @@ class TodoList:
                 self.row(item)
 
     def row(self, item):
+        due = item.get('due_date', '')
+        overdue = due and not item['done'] and due < datetime.now(KST).date().isoformat()
+        priority = item.get('priority', 'normal')
         with ui.column().classes('w-full gap-0 border-b border-slate-100 pb-2'):
-            with ui.row().classes('w-full items-center flex-nowrap gap-1'):
-                ui.checkbox(item['title'], value=bool(item['done']), on_change=lambda e: self.change(
-                    self.repository.complete_todo, item['id'], e.value)).classes(
-                        'flex-1 min-w-0 break-words' + (' line-through text-slate-400' if item['done'] else ''))
-                ui.button(icon='edit', on_click=lambda: self.edit(item)).props('flat round size=sm aria-label="할 일 수정"')
+            with ui.row().classes('w-full items-center flex-nowrap gap-1 overflow-x-auto'):
+                ui.checkbox(value=bool(item['done']), on_change=lambda e: self.change(
+                    self.repository.complete_todo, item['id'], e.value)).props(
+                        'aria-label="할 일 완료"').classes('shrink-0')
+                title = ui.input(value=item['title']).props(
+                    'dense borderless maxlength=300 aria-label="할 일 내용 수정"').classes(
+                        'flex-1 min-w-32' + (' line-through text-slate-400' if item['done'] else ''))
+                saving_title = False
+
+                async def save_title():
+                    nonlocal saving_title
+                    value = (title.value or '').strip()
+                    if saving_title or self.busy or value == item['title']:
+                        return
+                    if not value:
+                        title.value = item['title']
+                        ui.notify('할 일 내용을 입력해 주세요.', type='warning')
+                        return
+                    saving_title = True
+                    try:
+                        await self.change(self.repository.edit_todo, item['id'], value,
+                                          item.get('due_date', ''), item.get('priority', 'normal'))
+                    finally:
+                        saving_title = False
+
+                def cancel_title():
+                    title.value = item['title']
+
+                title.on('keydown.enter', save_title)
+                title.on('blur', save_title)
+                title.on('keydown.escape', cancel_title)
+                with ui.chip(PRIORITIES[priority],
+                             color={'high': 'red-1', 'normal': 'teal-1', 'low': 'grey-2'}[priority],
+                             text_color={'high': 'red-9', 'normal': 'teal-9', 'low': 'grey-8'}[priority]).props(
+                        'dense clickable aria-label="우선순위 수정"').classes('shrink-0').tooltip('우선순위 수정'):
+                    with ui.menu():
+                        for value, label in PRIORITIES.items():
+                            ui.menu_item(label, on_click=lambda value=value: self.update_details(
+                                item, priority=value))
+                with ui.button(due or '기한 없음', color='red' if overdue else 'grey').props(
+                        'flat dense size=sm no-caps aria-label="기한 수정"').style('font-size: calc(12px + 1pt)').classes('shrink-0').tooltip(
+                        '기한 지남 · 기한 수정' if overdue else '기한 수정'):
+                    with ui.menu() as due_menu:
+                        async def set_due(value):
+                            due_menu.close()
+                            await self.update_details(item, due_date=value or '')
+
+                        ui.date(value=due or None, on_change=lambda e: set_due(e.value)).props('mask=YYYY-MM-DD')
+                        ui.button('기한 없음', on_click=lambda: set_due('')).props('flat').classes('w-full')
                 ui.button(icon='close', on_click=lambda: self.change(self.repository.delete_todo, item['id'])).props(
-                    'flat round size=sm aria-label="할 일 삭제"')
-            due = item.get('due_date', '')
-            overdue = due and not item['done'] and due < datetime.now(KST).date().isoformat()
-            priority = item.get('priority', 'normal')
-            with ui.row().classes('gap-2 pl-3 items-center'):
-                ui.badge(PRIORITIES[priority], color={'high': 'red', 'normal': 'teal', 'low': 'grey'}[priority]).props('outline')
-                ui.label(('기한 지남 · ' if overdue else '기한 ') + due if due else '기한 없음').classes(
-                    'text-xs ' + ('text-red-600' if overdue else 'text-slate-500'))
-                if item.get('completed_at'):
-                    date = datetime.fromisoformat(item['completed_at']).astimezone(KST)
-                    ui.label(f'{date:%m/%d %H:%M} 완료').classes('text-xs text-slate-400')
+                    'flat round size=sm aria-label="할 일 삭제"').classes('shrink-0')
+            if item.get('completed_at'):
+                date = datetime.fromisoformat(item['completed_at']).astimezone(KST)
+                ui.label(f'{date:%m/%d %H:%M} 완료').classes('text-xs text-slate-400 pl-3')
+
+    async def update_details(self, item, *, due_date=None, priority=None):
+        await self.change(self.repository.edit_todo, item['id'], item['title'],
+                          item.get('due_date', '') if due_date is None else due_date,
+                          item.get('priority', 'normal') if priority is None else priority)
 
     async def select(self, event):
         if self.loading or event.value is None or event.value == self.selected:
@@ -112,24 +155,10 @@ class TodoList:
                 ui.button('만들기', on_click=save)
         dialog.open()
 
-    def edit(self, item):
-        with ui.dialog() as dialog, ui.card().classes('w-96 max-w-full'):
-            ui.label('할 일 수정').classes('text-lg font-bold')
-            title = ui.input('할 일', value=item['title']).props('outlined maxlength=300').classes('w-full')
-            due = ui.input('기한', value=item.get('due_date', '')).props('type=date outlined clearable').classes('w-full')
-            priority = ui.select(PRIORITIES, value=item.get('priority', 'normal'), label='우선순위').props('outlined').classes('w-full')
-            async def save():
-                if await self.change(self.repository.edit_todo, item['id'], title.value or '', due.value or '', priority.value):
-                    dialog.close()
-            with ui.row():
-                ui.button('취소', on_click=dialog.close).props('flat')
-                ui.button('저장', on_click=save)
-        dialog.open()
-
     async def add(self):
         if self.selected is not None:
             await self.change(self.repository.add_todo, self.input.value or '', self.selected,
-                              self.due.value or '', self.priority.value, clear=True)
+                              '', 'normal', clear=True)
 
     async def change(self, action, *args, clear=False):
         if self.busy:
@@ -140,8 +169,6 @@ class TodoList:
             await run.io_bound(action, *args)
             if clear:
                 self.input.value = ''
-                self.due.value = ''
-                self.priority.value = 'normal'
             await self.reload()
             if self.on_change is not None:
                 await self.on_change(self)

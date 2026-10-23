@@ -105,9 +105,11 @@ def test_editor_fields_storage_and_legacy_migration(tmp_path):
     async def check():
         with Client(page('/psychological-test-editor-fields')):
             view = PsychologicalTestView(StudentRepository(db))
+            with patch('views.psychological_test_view.ui.timer'):
+                view.build(embedded=True)
             view.selected = student
 
-            async def inspect_dialog(dialog):
+            async def inspect_editor():
                 elements = list(ui.context.client.elements.values())
                 editors = [element for element in elements if isinstance(element, ui.editor)]
                 assert len(editors) == 1
@@ -127,8 +129,9 @@ def test_editor_fields_storage_and_legacy_migration(tmp_path):
                 assert fields['시각'].parent_slot is fields['시간(분)'].parent_slot
                 return False
 
-            with patch.object(ui.dialog, '__await__', lambda dialog: inspect_dialog(dialog).__await__()):
-                await view.open_editor(updated)
+            await view.open_editor(updated)
+            await inspect_editor()
+            assert not any(isinstance(element, ui.dialog) for element in ui.context.client.elements.values())
             assert not view.editor_open
     asyncio.run(check())
 
@@ -141,3 +144,70 @@ def test_invalid_editor_values(changes):
     from pydantic import ValidationError
     with pytest.raises(ValidationError):
         PsychologicalTestInput(student_id=1, title='검사', test_date='2026-10-20', **changes)
+
+
+def test_inline_editor_save_retry_and_student_switch(tmp_path):
+    from database import DatabaseError
+
+    async def check():
+        db = Database('test-only', tmp_path / 'inline.db')
+        db.initialize()
+        students = StudentRepository(db)
+        student = students.create(StudentInput(name='학생', grade=1, classroom='1'))
+        with Client(page('/psychological-inline-save')) as client:
+            view = PsychologicalTestView(students)
+            with patch('views.psychological_test_view.ui.timer'):
+                view.build(embedded=True)
+
+            async def invoke(function, *args, **kwargs):
+                return function(*args, **kwargs)
+
+            with patch('views.psychological_test_view.run.io_bound', side_effect=invoke):
+                await view.select_student(student.id)
+                await view.open_editor()
+                elements = list(client.elements.values())
+                title = next(e for e in elements if isinstance(e, ui.select) and e.label == '검사명 *')
+                content = next(e for e in elements if isinstance(e, ui.editor))
+                title.value = 'MBTI'
+                content.value = '<p>검사 소견</p>'
+                assert view.editor_open
+                save = next(e for e in elements if isinstance(e, ui.button) and e.text == '일지 저장')
+                from inspect import getclosurevars
+                listener = next(e.handler for e in save._event_listeners.values() if e.type == 'click')
+                handler = getclosurevars(listener).nonlocals['callback']
+                with patch.object(view.repository, 'save', side_effect=DatabaseError('저장 실패')):
+                    await handler()
+                assert content.value == '<p>검사 소견</p>'
+                assert view.editor_open and save.enabled
+                await handler()
+                assert len(view.repository.list(student.id)) == 1
+                assert not view.editor_open
+                content.value = '<p>수정 소견</p>'
+                await handler()
+                records = view.repository.list(student.id)
+                assert len(records) == 1
+                assert records[0].content == '<p>수정 소견</p>'
+                content.value = '<p>미저장</p>'
+
+                async def reject(dialog):
+                    return False
+
+                with patch.object(ui.dialog, '__await__', lambda dialog: reject(dialog).__await__()):
+                    await view.select_student(None)
+                assert view.selected.id == student.id
+                assert content.value == '<p>미저장</p>'
+                content.value = '<p>수정 소견</p>'
+                await view.select_student(None)
+                assert view.selected is None
+                assert not view.editor_open
+                assert not any(isinstance(e, ui.editor) for e in client.elements.values())
+                await view.select_student(student.id)
+                card = view.logs.default_slot.children[0]
+                buttons = [e for e in card.descendants() if isinstance(e, ui.button)]
+                assert len(buttons) == 1
+                assert buttons[0]._props['icon'] == 'delete_outline'
+                assert not buttons[0].text
+                click = next(e for e in card._event_listeners.values() if e.type == 'click')
+                await click.handler()
+                assert any(isinstance(e, ui.editor) for e in view.editor_container.descendants())
+    asyncio.run(check())

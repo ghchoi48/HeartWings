@@ -92,13 +92,13 @@ class EducationEventViewTests(unittest.IsolatedAsyncioTestCase):
                     await view.select_event(1)
                     self.assertEqual(view.selected, entry)
                     self.assertEqual(view.table.selected[0]['id'], 1)
-                    self.assertTrue(view.edit.enabled)
+                    self.assertEqual(view.editor_fields['title'].value, entry.title)
                     await view.reload()
                     self.assertEqual(view.table.filter, '교육')
                     repo.get.return_value = None
                     await view.select_event(999)
                     self.assertIsNone(view.selected)
-                    self.assertFalse(view.edit.enabled)
+                    self.assertEqual(view.editor_fields, {})
                     self.assertEqual(view.table.selected, [])
             finally:
                 host.delete()
@@ -138,7 +138,9 @@ def test_editor_restores_time_and_duration():
                                event_time='15:30', duration_minutes=75, participant_count=120,
                                created_at=now, updated_at=now)
         view = EducationEventView(Mock())
-        view.open_editor(entry)
+        with patch('views.education_event_view.ui.timer'):
+            view.build()
+        view.build_editor(entry)
         elements = list(ui.context.client.elements.values())
         fields = {element.label: element for element in elements
                   if isinstance(element, (ui.input, ui.number, ui.time_input, ui.select))}
@@ -176,3 +178,57 @@ def test_group_test_category_migration_and_storage(tmp_path):
     created = repo.save(value.model_copy(update={'category': '단체심리검사'}))
     assert repo.get(created.id) == created
     assert repo.list() == [created, updated]
+
+
+def test_inline_save_retry_switch_and_close(tmp_path):
+    import asyncio
+    from inspect import getclosurevars
+    from database import DatabaseError
+
+    async def check():
+        db = Database('test-only', tmp_path / 'inline.db')
+        db.initialize()
+        repo = EducationEventRepository(db)
+        with Client(page('/education-inline')) as client:
+            view = EducationEventView(repo)
+            with patch('views.education_event_view.ui.timer'):
+                view.build()
+
+            async def invoke(function, *args, **kwargs):
+                return function(*args, **kwargs)
+
+            with patch('views.education_event_view.run.io_bound', side_effect=invoke):
+                await view.open_editor()
+                assert not any(isinstance(e, ui.dialog) for e in client.elements.values())
+                title = view.editor_fields['title']
+                title.value = '새 교육'
+                save = next(e for e in client.elements.values() if isinstance(e, ui.button) and e.text == '저장')
+                listener = next(e.handler for e in save._event_listeners.values() if e.type == 'click')
+                handler = getclosurevars(listener).nonlocals['callback']
+                with patch.object(repo, 'save', side_effect=DatabaseError('저장 실패')):
+                    await handler()
+                assert view.editor_open and title.value == '새 교육' and save.enabled
+                await handler()
+                assert len(repo.list()) == 1
+                assert not view.editor_open
+                title.value = '수정 교육'
+                await handler()
+                assert len(repo.list()) == 1
+                assert repo.list()[0].title == '수정 교육'
+                title.value = '미저장'
+
+                async def reject(dialog):
+                    return False
+
+                with patch.object(ui.dialog, '__await__', lambda dialog: reject(dialog).__await__()):
+                    await view.open_editor()
+                    await view.select_event(None)
+                assert view.editor_fields['title'] is title
+                assert title.value == '미저장'
+                title.value = '수정 교육'
+                await view.select_event(None)
+                assert view.selected is None and not view.editor_fields
+                await view.select_event(repo.list()[0].id)
+                assert view.editor_fields['title'].value == '수정 교육'
+                assert not view.editor_open
+    asyncio.run(check())

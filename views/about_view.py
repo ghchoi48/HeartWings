@@ -20,6 +20,11 @@ def build_about() -> None:
     ui.link('GitHub 바로가기', GITHUB_URL, new_tab=True).classes('font-semibold')
     ui.separator()
     ui.label('프로그램 라이선스 · MIT License').classes('text-lg font-bold text-slate-800')
+    ui.label(
+        'MIT 라이선스는 상업적 이용을 포함해 누구나 자유롭게 사용·복사·수정·배포할 수 있는 오픈소스 라이선스입니다. '
+        '복사본이나 소프트웨어의 주요 부분에는 저작권 표시와 라이선스 고지를 포함해야 하며, '
+        '프로그램은 보증 없이 제공되고 제작자는 사용으로 인한 손해에 책임을 지지 않습니다.'
+    ).classes('text-sm text-slate-600')
     license_text(program_license())
     ui.separator()
     ui.label('오픈소스 라이선스').classes('text-lg font-bold text-slate-800')

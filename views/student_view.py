@@ -108,8 +108,10 @@ class StudentView:
                     with ui.card().classes('w-full rounded-2xl shadow-sm p-6'):
                         with ui.row().classes('w-full items-center justify-between'):
                             ui.label(student.name).classes('text-2xl font-bold')
-                            delete_button(self.students.database, 'student', lambda: student, self.load_students, blocked=lambda: self.editor_open)
-                            ui.button('학생 정보 수정', icon='edit', on_click=lambda: self.open_editor(student)).props('outline')
+                            with ui.row().classes('items-center flex-nowrap gap-2'):
+                                delete_button(self.students.database, 'student', lambda: student, self.load_students,
+                                              blocked=lambda: self.editor_open, icon_only=True)
+                                ui.button('학생 정보 수정', icon='edit', on_click=lambda: self.open_editor(student)).props('outline')
                         ui.label(f'{student.school_year}학년도 · {student.grade}학년 {student.classroom}반 · 번호 {student.student_number or "미입력"}').classes('text-slate-500')
                         with ui.expansion('학년도별 학적 이력', icon='history').classes('w-full'):
                             for enrollment in enrollments:
@@ -353,7 +355,7 @@ class StudentView:
                     fields['name'] = ui.input('*이름', value=initial.get('name') or '').props('outlined').classes('flex-1 min-w-0')
                     fields['nickname'] = ui.input('별명', value=initial.get('nickname') or '').props('outlined').classes('flex-1 min-w-0')
                     fields['gender'] = ui.select(['남', '여', '기타'], label='성별',
-                                                 value=initial.get('gender')).props('outlined clearable').classes('w-24 shrink-0')
+                                                 value=initial.get('gender')).props('outlined clearable').classes('flex-1 min-w-0')
                 with ui.row().classes('w-full flex-nowrap items-start'):
                     fields['school_year'] = ui.number('*학년도', value=initial.get('school_year', current_school_year()),
                                                       min=1900, max=9999, step=1, precision=0).props('outlined').classes('flex-1 min-w-0')

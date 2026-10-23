@@ -1,5 +1,7 @@
 """XLSB 이관 옵션, 미리보기 및 명시적 저장."""
 
+from views.settings_card import settings_card
+
 from nicegui import run, ui
 import re
 
@@ -22,9 +24,8 @@ class LegacyImportView:
         self.saved_periods = self.repository.load_period_times() if database is not None else {}
 
     def build(self):
-        with ui.card().classes('w-full p-4 gap-3'):
-            ui.label('기존 상담기록관리 DB 가져오기').classes('text-lg font-bold')
-            ui.label('XLSB의 인적사항등록·상담대장을 상담·교사 자문·심리검사·교육/행사로 추가합니다. 대분류가 자문이면 인적사항의 성명을 교사로 등록합니다. 사례번호로 연결하며 기존 대상과 식별 정보가 일치하면 연결합니다.')
+        with settings_card('울산형 상담기록관리 DB 가져오기', 'drive_folder_upload',
+                           'XLSB의 인적사항등록·상담대장을 상담·교사 자문·심리검사·교육/행사로 추가합니다. 대분류가 자문이면 인적사항의 성명을 교사로 등록합니다. 사례번호로 연결하며 기존 대상과 식별 정보가 일치하면 연결합니다.'):
             self.year = ui.number('인적사항 학년도', value=current_school_year(), min=1900, max=9999, step=1)
             with ui.dialog() as self.period_dialog, ui.card().classes('w-full max-w-lg max-h-[80vh] overflow-auto'):
                 ui.label('교시별 시작 시간 (한국 시간)').classes('text-lg font-bold')

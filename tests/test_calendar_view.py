@@ -637,3 +637,74 @@ def test_event_editor_rejects_end_before_start_and_allows_correction(data):
             with patch.object(ui.dialog, '__await__', lambda dialog: interact(dialog).__await__()):
                 await view.open_event_editor()
     asyncio.run(check())
+
+
+def test_custom_calendar_update_delete_and_protected_calendars(data):
+    db, repo, custom, counseling = data
+    day = date(2026, 10, 20)
+    repo.set_visible(custom.id, False)
+    repo.update(custom.id, CalendarInput(name='수정한 일정', color='#db2777'))
+    saved = next(item for item in repo.list() if item.id == custom.id)
+    assert (saved.name, saved.color, saved.visible) == ('수정한 일정', '#db2777', False)
+    assert repo.events(day, day, [custom.id])[0].calendar_name == '수정한 일정'
+    for item in repo.list():
+        if item.source != 'custom':
+            with pytest.raises(NotFoundError):
+                repo.update(item.id, CalendarInput(name='변경 불가'))
+            with pytest.raises(NotFoundError):
+                repo.delete(item.id)
+    repo.delete(custom.id)
+    assert all(item.id != custom.id for item in repo.list())
+    with db.session() as connection:
+        assert not connection.execute('SELECT id FROM calendar_events WHERE calendar_id=?', (custom.id,)).fetchall()
+    assert CounselingRepository(db).get(counseling.id) is not None
+    with pytest.raises(NotFoundError):
+        repo.delete(custom.id)
+
+
+def test_calendar_edit_and_delete_dialogs(data):
+    import inspect
+    db, repo, custom, _ = data
+
+    async def invoke(function, *args, **kwargs):
+        return function(*args, **kwargs)
+
+    async def click(dialog, text):
+        button = next(e for e in dialog.descendants() if isinstance(e, ui.button) and e.text == text)
+        handler = next(e.handler for e in button._event_listeners.values() if e.type == 'click')
+        await inspect.getclosurevars(handler).nonlocals['callback']()
+        return dialog._result
+
+    async def check():
+        with Client(page('/calendar-management-test')), patch('views.calendar_view.ui.timer'), patch(
+                'views.calendar_view.run.io_bound', side_effect=invoke):
+            view = CalendarView(ReportingRepository(db), AsyncMock())
+            view.build()
+            await view.reload()
+            buttons = [e for e in view.calendar_list.descendants() if isinstance(e, ui.button)]
+            assert len(buttons) == 2  # Only the custom calendar gets management buttons.
+
+            async def edit(dialog):
+                fields = {e.props.get('label'): e for e in dialog.descendants() if e.props.get('label')}
+                assert fields['캘린더 이름'].value == custom.name
+                fields['캘린더 이름'].value = '새 이름'
+                fields['색상'].value = '#db2777'
+                return await click(dialog, '저장')
+
+            with patch.object(ui.dialog, '__await__', lambda dialog: edit(dialog).__await__()):
+                await view.open_calendar_editor(custom)
+            assert next(c for c in view.calendars if c.id == custom.id).name == '새 이름'
+            assert not view.editor_open
+
+            async def cancel(dialog):
+                return False
+
+            with patch.object(ui.dialog, '__await__', lambda dialog: cancel(dialog).__await__()):
+                await view.delete_calendar(custom)
+            assert any(c.id == custom.id for c in repo.list())
+            with patch.object(ui.dialog, '__await__', lambda dialog: click(dialog, '삭제').__await__()):
+                await view.delete_calendar(custom)
+            assert all(c.id != custom.id for c in view.calendars)
+            assert not view.add_event.enabled
+            assert not view.editor_open
+    asyncio.run(check())

@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 PROGRAM_NAME = '마음나래'
-AUTHOR = '전문상담교사 최규호'
+AUTHOR = '전문상담교사 최규호 with GPT-6 Astra'
 GITHUB_URL = 'https://github.com/ghchoi48/HeartWings'
 RESOURCE_ROOT = Path(__file__).resolve().parent
 
