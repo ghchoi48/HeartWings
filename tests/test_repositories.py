@@ -29,6 +29,29 @@ def counseling_input(student_id, **changes):
         content_markdown='  **상담 원문**\n') | changes))
 
 
+def test_private_note_migration_and_round_trip(db):
+    student = StudentRepository(db).create(student_input())
+    repo = CounselingRepository(db)
+    original = repo.create(counseling_input(student.id))
+    with db.session(write=True) as connection:
+        connection.execute('ALTER TABLE counseling DROP COLUMN private_note_html')
+        connection.execute('PRAGMA user_version=35')
+    db.initialize()
+    db.initialize()
+    assert repo.get(original.id) == original
+    note = '<p><b>비밀 메모</b></p>'
+    value = counseling_input(student.id, private_note_html=note)
+    updated = repo.update(original.id, value)
+    assert updated.private_note_html == note
+    assert updated.content_markdown == original.content_markdown
+    created = repo.create(value)
+    reopened = Database("test-only-'비밀번호", db.path)
+    reopened.initialize()
+    assert CounselingRepository(reopened).get(created.id).private_note_html == note
+    assert 'private_note_html' not in repo.list_timeline(student_id=student.id)[0].model_dump()
+    assert repo.update(created.id, counseling_input(student.id)).private_note_html == ''
+
+
 def test_student_crud_and_duplicate(db):
     repo = StudentRepository(db)
     assert db.student_revision == 0

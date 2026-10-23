@@ -137,7 +137,7 @@ class StudentViewTests(unittest.IsolatedAsyncioTestCase):
         with self.host:
             await self.view.load_profile(student.id)
             buttons = [element for element in self.view.detail.descendants()
-                       if isinstance(element, ui.button) and element.props.get('icon') == 'delete_outline']
+                       if isinstance(element, ui.button) and '학적 이력 삭제' in element.props.get('aria-label', '')]
             self.assertEqual(len(buttons), 2)
             self.assertTrue(all(button.enabled for button in buttons))
             self.students.enrollments.return_value = history[1:]
@@ -148,7 +148,7 @@ class StudentViewTests(unittest.IsolatedAsyncioTestCase):
         self.students.delete_enrollment.assert_called_once_with(student.id, 2026)
         self.assertEqual(self.view.selected.school_year, 2025)
         remaining = [element for element in self.view.detail.descendants()
-                     if isinstance(element, ui.button) and element.props.get('icon') == 'delete_outline']
+                     if isinstance(element, ui.button) and '학적 이력 삭제' in element.props.get('aria-label', '')]
         self.assertEqual(len(remaining), 1)
         self.assertFalse(remaining[0].enabled)
         self.assertFalse(self.view.editor_open)

@@ -8,6 +8,7 @@ from database import DatabaseError
 from models import CounselingReport
 from reporting import KST, STATUS_LABELS, date_bounds, report_csv, report_html
 from repositories.reporting_repo import ReportingRepository
+from views.journal_export_view import JournalExportView
 
 
 class StatisticsView:
@@ -23,6 +24,8 @@ class StatisticsView:
         with ui.column().classes('w-full max-w-7xl mx-auto gap-5 p-4 md:p-8'):
             ui.label('상담 통계').classes('text-3xl font-bold text-slate-800')
             ui.label('완료 상담의 학생 수·시간·유형별 현황을 살펴보세요.').classes('text-slate-500')
+            self.journal_export = JournalExportView(self.repository.database)
+            self.journal_export.build()
             with ui.card().classes('w-full rounded-2xl shadow-sm p-5'):
                 with ui.row().classes('w-full items-end'):
                     self.start = ui.input('통계 시작일', value=str(today.replace(day=1))).props('type=date outlined')

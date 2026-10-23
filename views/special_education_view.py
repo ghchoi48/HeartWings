@@ -4,6 +4,8 @@ from datetime import datetime
 
 from nicegui import run, ui
 
+from views.delete_action import delete_button
+
 from views.time_inputs import time_input
 
 from database import DatabaseError
@@ -149,6 +151,7 @@ class SpecialEducationView(CounselingView):
                         self.edit_case = ui.button('특별 교육 정보 수정', icon='edit',
                                                    on_click=lambda: self.open_case_editor(self.selected_case)).props('outline')
                         self.edit_case.disable()
+                    delete_button(self.students.database, 'special', lambda: self.selected_case, self.after_case_deleted, blocked=lambda: self.editor_open)
                     self.case_message = ui.label().classes('text-sm text-slate-500')
                     ui.separator()
                     with ui.row().classes('w-full items-center justify-between'):
@@ -302,6 +305,7 @@ class SpecialEducationView(CounselingView):
                     with ui.column().classes('gap-1'):
                         ui.label(self.selected_case.title).classes('font-semibold')
                         ui.label(f'{entry.starts_at.astimezone(KST):%Y.%m.%d %H:%M} · {STATUSES[entry.status]} · {entry.category} · {entry.duration_minutes}분').classes('text-sm text-slate-500')
+                    delete_button(self.students.database, 'special_log', lambda entry=entry: entry, self.after_log_deleted, blocked=lambda: self.editor_open)
                     ui.button('열기 / 수정', icon='edit', on_click=lambda entry_id=entry.id: self.open_editor(entry_id)).props('outline')
         self.log_message.text = f'이 페이지에 {min(len(entries), PAGE_SIZE)}건 · 한국 표준시' if entries else '등록된 특별 교육 일지가 없습니다. 새 특별 교육 일지를 작성해 보세요.'
         self.log_page_label.text = f'{self.log_offset // PAGE_SIZE + 1} 페이지'

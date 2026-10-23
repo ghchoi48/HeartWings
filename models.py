@@ -176,6 +176,7 @@ class CounselingInput(InputModel):
     """상담 예약과 일지를 함께 표현한다. 시각에는 시간대가 필수다."""
 
     student_id: int = Field(gt=0)
+    private_note_html: Annotated[str, StringConstraints(strip_whitespace=False)] = Field(default='', max_length=200000)
     case_id: int | None = Field(default=None, gt=0)
     starts_at: datetime
     duration_minutes: int = Field(default=50, ge=1, le=1440)
@@ -280,6 +281,7 @@ class GroupLogInput(InputModel):
     """집단에 종속되는 회기별 상담일지."""
 
     group_id: int = Field(gt=0)
+    status: Literal['scheduled', 'completed', 'cancelled'] = 'scheduled'
     title: str = Field(min_length=1, max_length=200)
     starts_at: datetime
     duration_minutes: int = Field(default=50, ge=1, le=1440)
@@ -371,7 +373,6 @@ class CalendarEventInput(InputModel):
     title: str = Field(min_length=1, max_length=200)
     starts_at: datetime
     duration_minutes: int = Field(default=60, ge=1)
-    status: Literal['scheduled', 'completed', 'cancelled'] = 'scheduled'
 
     @field_validator('starts_at')
     @classmethod
@@ -383,7 +384,7 @@ class CalendarEventInput(InputModel):
 
 class CalendarEvent(CalendarEventInput, AuthoredRecord):
     id: int
-    source: Literal['counseling', 'group', 'consultation', 'custom'] = 'custom'
+    source: Literal['counseling', 'group', 'consultation', 'special_education', 'custom'] = 'custom'
     status: Literal['scheduled', 'completed', 'cancelled'] | None = None
     owner_id: int | None = None
     display_name: str = ''

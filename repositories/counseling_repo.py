@@ -31,10 +31,10 @@ class CounselingRepository:
             cursor = connection.execute(
                 '''INSERT INTO counseling
                 (student_id, case_id, starts_at, duration_minutes, category, status, title,
-                 content_markdown, content_format, counseling_method, counseling_target, counseling_area, follow_up, created_at, updated_at)
+                 content_markdown, content_format, counseling_method, counseling_target, counseling_area, follow_up, private_note_html, created_at, updated_at)
                 VALUES (:student_id, :case_id, :starts_at, :duration_minutes, :category, :status, :title,
                         :content_markdown, :content_format, :counseling_method, :counseling_target, :counseling_area,
-                        :follow_up, :created_at, :updated_at)''', data)
+                        :follow_up, :private_note_html, :created_at, :updated_at)''', data)
             row = connection.execute('SELECT * FROM counseling WHERE id=?', (cursor.lastrowid,)).fetchone()
             return Counseling.model_validate(dict(row))
 
@@ -74,7 +74,7 @@ class CounselingRepository:
                 duration_minutes=:duration_minutes, category=:category, status=:status,
                 title=:title, content_markdown=:content_markdown, content_format=:content_format, follow_up=:follow_up,
                 counseling_method=:counseling_method, counseling_target=:counseling_target, counseling_area=:counseling_area,
-                updated_at=:updated_at WHERE id=:id''', data)
+                private_note_html=:private_note_html, updated_at=:updated_at WHERE id=:id''', data)
             if cursor.rowcount == 0:
                 raise NotFoundError('상담 기록을 찾을 수 없습니다.')
             row = connection.execute('SELECT * FROM counseling WHERE id=?', (counseling_id,)).fetchone()

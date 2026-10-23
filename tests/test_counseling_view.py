@@ -20,6 +20,11 @@ def form(**changes):
 
 
 class CounselingFormTests(unittest.TestCase):
+    def test_private_note_html_is_sanitized(self):
+        result = counseling_form_input(1, form(private_note_html='<p>메모</p><script>alert(1)</script>'))
+        self.assertIn('<p>메모</p>', result.private_note_html)
+        self.assertNotIn('<script', result.private_note_html)
+
     def test_native_date_time_fields(self):
         values = form()
         values.pop('starts_at')
@@ -78,12 +83,29 @@ class CounselingViewTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(self.view.editor_fields['content_markdown'].visible)
         self.assertFalse(any(isinstance(element, ui.dialog) for element in self.view.editor_container.descendants()))
 
+    async def test_entering_student_shows_prompt_until_explicit_edit(self):
+        self.students.get.return_value = self.student
+
+        async def invoke(function, *args, **kwargs):
+            return function(*args, **kwargs)
+
+        with self.host, patch('views.counseling_view.run.io_bound', side_effect=invoke):
+            await self.view.select_student(self.student.id)
+            self.assertEqual(self.view.editor_fields, {})
+            self.assertTrue(any(isinstance(e, ui.label) and e.text ==
+                '새 상담일지를 작성하거나, 상담일지를 선택해주세요'
+                for e in self.view.editor_container.descendants()))
+            await self.view.open_editor()
+            self.assertIn('private_note_html', self.view.editor_fields)
+            self.assertEqual(self.view.editor_fields['private_note_html'].value, '')
+
     async def test_inline_save_retry_then_update_preserves_fields(self):
         self.view.selected = self.student
         self.view.on_saved = AsyncMock()
         await self.view.open_editor()
         fields = self.view.editor_fields
         fields['content_markdown'].value = '<p>상담 내용</p>'
+        fields['private_note_html'].value = '<p>비밀 메모</p>'
         save_button = next(element for element in self.view.editor_container.descendants()
                            if isinstance(element, ui.button) and element.text == '일지 저장')
         handler = next(listener.handler for listener in save_button._event_listeners.values() if listener.type == 'click')
@@ -112,6 +134,7 @@ class CounselingViewTests(unittest.IsolatedAsyncioTestCase):
         self.repo.update.assert_called_once()
         self.assertEqual(self.repo.update.call_args.args[0], 5)
         self.assertEqual(self.repo.update.call_args.args[1].case_id, self.case.id)
+        self.assertEqual(self.repo.update.call_args.args[1].private_note_html, '<p>비밀 메모</p>')
         self.assertEqual(self.view.on_saved.await_count, 2)
 
     async def test_cancel_case_change_keeps_unsaved_editor(self):
@@ -228,7 +251,7 @@ class CounselingViewTests(unittest.IsolatedAsyncioTestCase):
         with patch('views.counseling_view.run.io_bound', side_effect=invoke), \
                 patch.object(self.view, 'open_editor', new_callable=AsyncMock) as editor:
             await self.view.open_record(entry.id)
-        self.assertEqual(editor.await_args_list, [call(), call(entry.id)])
+        self.assertEqual(editor.await_args_list, [call(entry.id)])
         self.assertEqual(self.view.selected, self.student)
         self.view.on_selected.assert_awaited_once_with(self.student.id)
         self.assertFalse(hasattr(self.view, "student_list"))

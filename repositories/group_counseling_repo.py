@@ -76,14 +76,14 @@ class GroupCounselingRepository:
         with self.database.session(write=True) as connection:
             if log_id is None:
                 cursor = connection.execute('''INSERT INTO group_counseling_logs
-                    (group_id, title, starts_at, duration_minutes, content_html, follow_up, created_at, updated_at)
-                    VALUES (:group_id, :title, :starts_at, :duration_minutes, :content_html, :follow_up,
+                    (group_id, title, starts_at, duration_minutes, status, content_html, follow_up, created_at, updated_at)
+                    VALUES (:group_id, :title, :starts_at, :duration_minutes, :status, :content_html, :follow_up,
                             :updated_at, :updated_at)''', data)
                 log_id = cursor.lastrowid
             else:
                 data['id'] = log_id
                 cursor = connection.execute('''UPDATE group_counseling_logs SET title=:title,
-                    starts_at=:starts_at, duration_minutes=:duration_minutes, content_html=:content_html,
+                    starts_at=:starts_at, duration_minutes=:duration_minutes, status=:status, content_html=:content_html,
                     follow_up=:follow_up, updated_at=:updated_at WHERE id=:id AND group_id=:group_id''', data)
                 if not cursor.rowcount:
                     raise NotFoundError('이 집단의 상담 일지를 찾을 수 없습니다.')

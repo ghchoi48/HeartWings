@@ -3,6 +3,8 @@
 from datetime import date, datetime, timedelta, timezone
 
 from nicegui import run, ui
+
+from views.delete_action import delete_button
 from pydantic import ValidationError
 
 from database import DatabaseError
@@ -108,6 +110,8 @@ class ConsultationView:
         with self.log_panel, ui.card().classes('w-full rounded-2xl shadow-sm p-5'):
             teacher = self.selected
             ui.label(f'{teacher.name} 선생님' if teacher else '목록에서 교사를 선택해 주세요.').classes('text-xl font-bold')
+            if teacher:
+                delete_button(self.teachers.database, 'teacher', lambda: teacher, self.after_teacher_deleted, blocked=lambda: self.editor_open)
             with ui.row().classes('w-full items-center justify-between'):
                 ui.label('자문 일지 목록').classes('text-lg font-bold')
                 self.add_log = ui.button('새 자문 일지', icon='edit_note', on_click=lambda: self.open_log_editor())
@@ -121,6 +125,17 @@ class ConsultationView:
                 ui.button('일지 새로고침', icon='refresh', on_click=self.load_logs).props('flat')
             self.previous.disable()
             self.next.disable()
+
+    async def after_teacher_deleted(self):
+        self.selection_request += 1
+        self.log_request += 1
+        self.selected = None
+        self.show_logs()
+        await self.reload()
+
+    async def after_log_deleted(self):
+        self.log_offset = 0
+        await self.load_logs()
 
     async def log_page(self, direction: int) -> None:
         self.log_offset = max(0, self.log_offset + direction * PAGE_SIZE)
@@ -151,6 +166,7 @@ class ConsultationView:
                     with ui.column().classes('gap-1'):
                         ui.label(entry.consultation_area or '자문 분야 미지정').classes('font-semibold')
                         ui.label(f'{entry.starts_at.astimezone(KST):%Y.%m.%d %H:%M} · {STATUSES[entry.status]} · 자문 · {entry.duration_minutes}분').classes('text-sm text-slate-500')
+                    delete_button(self.teachers.database, 'consultation', lambda entry=entry: entry, self.after_log_deleted, blocked=lambda: self.editor_open)
                     ui.button('열기 / 수정', icon='edit', on_click=lambda entry_id=entry.id: self.open_log_editor(entry_id)).props('outline')
         self.log_message.text = f'이 페이지에 {min(len(entries), PAGE_SIZE)}건 · 한국 표준시' if entries else '등록된 자문 일지가 없습니다. 새 자문 일지를 작성해 보세요.'
         self.page_label.text = f'{self.log_offset // PAGE_SIZE + 1} 페이지'

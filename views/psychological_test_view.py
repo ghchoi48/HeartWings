@@ -3,6 +3,8 @@ from datetime import datetime
 
 from nicegui import run, ui
 
+from views.delete_action import delete_button
+
 from views.time_inputs import storage_time, time_input
 
 from database import DatabaseError
@@ -87,6 +89,10 @@ class PsychologicalTestView:
         self.offset = max(0, self.offset + direction * PAGE_SIZE)
         await self.load_logs()
 
+    async def after_log_deleted(self):
+        self.offset = 0
+        await self.load_logs()
+
     async def load_logs(self):
         if self.selected is None:
             return
@@ -115,6 +121,7 @@ class PsychologicalTestView:
                         if entry.duration_minutes is not None:
                             details.append(f'{entry.duration_minutes}분')
                         ui.label(' · '.join(details)).classes('text-sm text-slate-500')
+                    delete_button(self.repository.database, 'test', lambda entry=entry: entry, self.after_log_deleted, blocked=lambda: self.editor_open)
                     ui.button('열기 / 수정', icon='edit', on_click=lambda entry=entry: self.open_editor(entry)).props('outline')
         self.message.text = f'이 페이지에 {min(len(entries), PAGE_SIZE)}건' if entries else '등록된 심리검사 일지가 없습니다.'
         self.page_label.text = f'{self.offset // PAGE_SIZE + 1} 페이지'

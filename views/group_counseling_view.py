@@ -5,6 +5,8 @@ from collections.abc import Awaitable, Callable
 
 from nicegui import run, ui
 
+from views.delete_action import delete_button
+
 from views.time_inputs import parse_time, time_input
 
 from database import DatabaseError
@@ -12,7 +14,7 @@ from models import GroupCounseling, GroupCounselingInput, GroupLogInput
 from repositories.group_counseling_repo import GroupCounselingRepository
 from repositories.student_repo import StudentRepository
 from views.counseling_content import clean_html
-from views.counseling_view import KST
+from views.counseling_view import KST, STATUSES
 
 PAGE_SIZE = 20
 
@@ -123,6 +125,7 @@ class GroupCounselingView:
         self.selected = group
         self.detail_message.text = ''
         with self.details:
+            delete_button(self.repository.database, 'group', lambda: group, self.after_group_deleted, blocked=lambda: self.editor_open)
             ui.label(group.name).classes('text-xl font-semibold')
             for label, value in [('진행자', group.facilitator), ('운영 기간', group.period),
                                  ('상담 영역', group.counseling_area), ('상담 목표', group.purpose), ('참여 학생', group.participant_labels),
@@ -142,6 +145,18 @@ class GroupCounselingView:
         self.add_log.enable()
         self.log_offset = 0
         await self.load_logs()
+
+    async def after_group_deleted(self):
+        await self.select_group(None)
+        await self.load_groups()
+        if self.on_saved:
+            await self.on_saved()
+
+    async def after_log_deleted(self):
+        self.log_offset = 0
+        await self.load_logs()
+        if self.on_saved:
+            await self.on_saved()
 
     async def log_page(self, direction: int) -> None:
         self.log_offset = max(0, self.log_offset + direction * PAGE_SIZE)
@@ -170,7 +185,8 @@ class GroupCounselingView:
                 with ui.row().classes('w-full items-center justify-between border rounded-xl p-4'):
                     with ui.column().classes('gap-1'):
                         ui.label(entry.title).classes('font-semibold')
-                        ui.label(f'{entry.starts_at.astimezone(KST):%Y.%m.%d %H:%M} · {entry.duration_minutes}분').classes('text-sm text-slate-500')
+                        ui.label(f'{entry.starts_at.astimezone(KST):%Y.%m.%d %H:%M} · {STATUSES[entry.status]} · {entry.duration_minutes}분').classes('text-sm text-slate-500')
+                    delete_button(self.repository.database, 'group_log', lambda entry=entry: entry, self.after_log_deleted, blocked=lambda: self.editor_open)
                     ui.button('열기 / 수정', icon='edit', on_click=lambda log_id=entry.id: self.open_editor(log=True, log_id=log_id)).props('outline')
         self.log_message.text = f'이 페이지에 {min(len(entries), PAGE_SIZE)}건 · 한국 표준시' if entries else '등록된 집단 상담 일지가 없습니다.'
         self.page_label.text = f'{self.log_offset // PAGE_SIZE + 1} 페이지'
@@ -209,6 +225,7 @@ class GroupCounselingView:
                             fields['starts_on'] = ui.date_input('상담 날짜', value=local_start.date().isoformat()).props('outlined')
                             fields['starts_time'] = time_input('시작 시각 (한국 시각)', value=local_start.time().isoformat()).props('outlined')
                             fields['duration_minutes'] = ui.number('상담 시간 (분)', value=entry.duration_minutes if entry else 50, min=1, max=1440, step=1).props('outlined')
+                            fields['status'] = ui.select(STATUSES, label='상담 상태', value=entry.status if entry else 'scheduled').props('outlined')
                         ui.label('상담 내용').classes('font-semibold')
                         fields['content_html'] = ui.editor(value=clean_html(entry.content_html) if entry else '').classes('w-full').props("""min-height=320px :toolbar='[[{"label": "머릿말", "list": "no-icons", "options": ["p", "h1", "h2", "h3"]}], ["bold", "italic", "underline", "strike"], ["unordered", "ordered"], ["left", "center", "right"], ["undo", "redo"]]'""")
                         fields['follow_up'] = ui.textarea('후속 조치', value=entry.follow_up if entry else '').props('outlined maxlength=20000').classes('w-full')

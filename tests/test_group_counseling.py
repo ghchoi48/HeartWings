@@ -48,6 +48,69 @@ async def invoke(function, *args, **kwargs):
     return function(*args, **kwargs)
 
 
+def test_group_status_migration_and_calendar_filter(tmp_path):
+    from datetime import timedelta
+    from pydantic import ValidationError
+    from repositories.calendar_repo import CalendarRepository
+    db = Database('test-groups', tmp_path / 'status.db')
+    db.initialize()
+    repo = GroupCounselingRepository(db)
+    group = repo.save(GroupCounselingInput(name='집단'))
+    start = datetime(2026, 10, 23, 9, tzinfo=timezone(timedelta(hours=9)))
+    value = GroupLogInput(group_id=group.id, title='회기', starts_at=start, content_html='<p>기록</p>')
+    log = repo.save_log(value)
+    assert log.status == 'scheduled'
+    with db.session(write=True) as connection:
+        connection.execute('ALTER TABLE group_counseling_logs DROP COLUMN status')
+        connection.execute('PRAGMA user_version=34')
+    db.initialize()
+    db.initialize()
+    migrated = repo.get_log(log.id)
+    assert migrated.status == 'completed'
+    assert migrated.model_dump(exclude={'status'}) == log.model_dump(exclude={'status'})
+    calendars = CalendarRepository(db)
+    calendar = next(c for c in calendars.list() if c.source == 'counseling')
+    for status in ('scheduled', 'completed', 'cancelled'):
+        repo.save_log(value.model_copy(update={'status': status}), log.id)
+        assert repo.list_logs(group.id)[0].status == status
+        assert calendars.events(start.date(), start.date(), [calendar.id], status)[0].status == status
+        other = 'completed' if status != 'completed' else 'scheduled'
+        assert calendars.events(start.date(), start.date(), [calendar.id], other) == []
+    with pytest.raises(ValidationError):
+        GroupLogInput(group_id=group.id, title='회기', starts_at=start, status='invalid')
+
+
+def test_group_editor_saves_selected_status():
+    import inspect
+    from models import GroupLog
+
+    async def check():
+        now = datetime.now(timezone.utc)
+        group = GroupCounseling(id=1, name='집단', created_at=now, updated_at=now)
+        log = GroupLog(id=1, group_id=1, title='회기', starts_at=now,
+                       status='completed', created_at=now, updated_at=now)
+        repo = Mock()
+        repo.get_log.return_value = log
+        with Client(page('/group-status-editor')), patch('views.group_counseling_view.run.io_bound', side_effect=invoke):
+            view = GroupCounselingView(repo)
+            view.selected = group
+
+            async def interact(dialog):
+                status = next(e for e in dialog.descendants() if isinstance(e, ui.select) and e.props.get('label') == '상담 상태')
+                assert status.value == 'completed'
+                status.value = 'cancelled'
+                save = next(e for e in dialog.descendants() if isinstance(e, ui.button) and e.text == '저장')
+                handler = next(e.handler for e in save._event_listeners.values() if e.type == 'click')
+                await inspect.getclosurevars(handler).nonlocals['callback']()
+                return None
+
+            with patch.object(ui.dialog, '__await__', lambda dialog: interact(dialog).__await__()):
+                await view.open_editor(log=True, log_id=1)
+            assert repo.save_log.call_args.args[0].status == 'cancelled'
+            assert repo.save_log.call_args.args[1] == 1
+    asyncio.run(check())
+
+
 @pytest.mark.anyio
 async def test_group_selection_and_stale_response():
     with Client(page('/group-test')):

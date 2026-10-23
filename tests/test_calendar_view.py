@@ -8,7 +8,7 @@ import pytest
 from nicegui import Client, ui
 from nicegui.page import page
 
-from database import Database, NotFoundError
+from database import Database, NotFoundError, SCHEMA_VERSION
 from models import CalendarInput, CalendarEventInput, CounselingInput, StudentInput
 from reporting import KST
 from repositories.calendar_repo import CalendarRepository
@@ -61,6 +61,69 @@ def test_calendar_storage_filtering_and_migration(data):
     db.initialize()
     assert len(repo.list()) == 3
     assert len(repo.events(date(2026, 10, 21), date(2026, 10, 21), [custom.id])) == 1
+
+
+def test_event_status_column_removed_preserving_records(data):
+    db, repo, custom, counseling = data
+    assert 'status' not in CalendarEventInput.model_fields
+    with db.session(write=True) as connection:
+        assert 'status' not in {row['name'] for row in connection.execute('PRAGMA table_info(calendar_events)')}
+        # 버전 33의 상태 열이 있는 DB를 재현한다.
+        connection.execute("ALTER TABLE calendar_events ADD COLUMN status TEXT NOT NULL DEFAULT 'cancelled' CHECK(status IN ('scheduled', 'completed', 'cancelled'))")
+        connection.execute('PRAGMA user_version=33')
+        original = dict(connection.execute('SELECT * FROM calendar_events').fetchone())
+    db.initialize()
+    db.initialize()  # 재실행해도 데이터나 스키마를 바꾸지 않는다.
+    with db.session() as connection:
+        saved = dict(connection.execute('SELECT * FROM calendar_events').fetchone())
+        assert saved == {key: value for key, value in original.items() if key != 'status'}
+        assert connection.execute('PRAGMA user_version').fetchone()[0] == SCHEMA_VERSION
+        assert not connection.execute('PRAGMA foreign_key_check').fetchall()
+    day = date(2026, 10, 20)
+    event = repo.events(day, day, [custom.id])[0]
+    assert event.status is None
+    assert CounselingRepository(db).get(counseling.id).status == 'scheduled'
+    repo.save_event(CalendarEventInput(calendar_id=custom.id, title='수정 일정', starts_at=event.starts_at), event.id)
+    assert repo.events(day, day, [custom.id])[0].title == '수정 일정'
+
+
+def test_special_education_calendar_sync_and_open(data):
+    from models import SpecialEducationInput
+    from repositories.special_education_repo import SpecialEducationRepository, SpecialEducationLogRepository
+    from repositories.deletion_repo import DeletionRepository
+    from views.app_layout import AppLayout
+
+    db, repo, _, counseling = data
+    case = SpecialEducationRepository(db).save(SpecialEducationInput(
+        student_id=counseling.student_id, title='특별교육', law='교원지위법'))
+    logs = SpecialEducationLogRepository(db)
+    value = CounselingInput(student_id=counseling.student_id, case_id=case.id,
+        title='비공개 일지 제목', starts_at=datetime(2026, 10, 20, 23, 30, tzinfo=KST), duration_minutes=90)
+    log = logs.create(value)
+    calendar = next(c for c in repo.list() if c.source == 'counseling')
+    day = date(2026, 10, 21)
+    entry = repo.events(day, day, [calendar.id])[0]
+    assert entry.source == 'special_education'
+    assert entry.id == log.id and entry.owner_id == counseling.student_id
+    assert entry.display_name == '학생 · 특별교육'
+    assert not entry.content
+    assert repo.events(day, day, [calendar.id], 'completed') == []
+    logs.update(log.id, value.model_copy(update={'status': 'completed'}))
+    assert repo.events(day, day, [calendar.id], 'completed')[0].status == 'completed'
+
+    async def check():
+        with Client(page('/special-calendar-test')):
+            layout = AppLayout(Mock(), Mock(), Mock())
+            layout.navigate = Mock()
+            layout.special_education_view = SimpleNamespace(open_record=AsyncMock())
+            view = CalendarView(ReportingRepository(db), AsyncMock(), layout.open_linked_schedule)
+            await view.open_event(entry)
+            layout.navigate.assert_called_once_with('special_education')
+            layout.special_education_view.open_record.assert_awaited_once_with(log.id)
+            assert not layout.opening_schedule
+    asyncio.run(check())
+    DeletionRepository(db).delete('special_log', log.id)
+    assert repo.events(day, day, [calendar.id]) == []
 
 
 def test_calendar_selection_navigation_and_open(data):

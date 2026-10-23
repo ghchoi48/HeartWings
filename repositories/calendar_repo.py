@@ -1,4 +1,4 @@
-"""캘린더 설정과 사용자 일정, 개인상담·집단상담·자문 일정의 통합 조회."""
+"""캘린더 설정과 사용자 일정, 개인상담·집단상담·자문·특별교육 일정의 통합 조회."""
 from datetime import date
 
 from database import Database, NotFoundError
@@ -46,12 +46,12 @@ class CalendarRepository:
         params.update({f'calendar_{i}': value for i, value in enumerate(calendar_ids)})
         with self.database.session() as connection:
             rows = connection.execute(f'''SELECT e.id AS id, e.calendar_id AS calendar_id, e.title, e.starts_at,
-                    e.duration_minutes, e.status, c.source, c.name AS calendar_name, c.color,
+                    e.duration_minutes, NULL AS status, c.source, c.name AS calendar_name, c.color,
                     '' AS student_name, e.author, '' AS display_name, NULL AS owner_id, e.location, e.content, e.all_day
                 FROM calendar_events e JOIN calendars c ON c.id=e.calendar_id
                 WHERE c.id IN ({slots}) AND e.starts_at<:end
                     AND julianday(e.starts_at) + e.duration_minutes / 1440.0 > julianday(:start)
-                    AND (:status IS NULL OR e.status=:status)
+                    AND :status IS NULL
                 UNION ALL
                 SELECT e.id, c.id AS calendar_id, e.title, e.starts_at,
                     e.duration_minutes, e.status, c.source, '상담 일정' AS calendar_name, c.color,
@@ -63,18 +63,27 @@ class CalendarRepository:
                     AND (:status IS NULL OR e.status=:status)
                 UNION ALL
                 SELECT e.id, c.id, e.title, e.starts_at, e.duration_minutes,
-                    NULL AS status, 'group' AS source, '상담 일정', c.color,
+                    e.status, 'group' AS source, '상담 일정', c.color,
                     '', e.author, g.name, g.id, '', '', 0
                 FROM group_counseling_logs e JOIN counseling_groups g ON g.id=e.group_id
                     JOIN calendars c ON c.source='counseling'
                 WHERE c.id IN ({slots}) AND e.starts_at<:end
                     AND julianday(e.starts_at) + e.duration_minutes / 1440.0 > julianday(:start)
-                    AND :status IS NULL
+                    AND (:status IS NULL OR e.status=:status)
                 UNION ALL
                 SELECT e.id, c.id, e.title, e.starts_at, e.duration_minutes,
                     e.status, 'consultation' AS source, '상담 일정', c.color,
                     '', e.author, t.name, t.id, '', '', 0
                 FROM consultations e JOIN teachers t ON t.id=e.teacher_id
+                    JOIN calendars c ON c.source='counseling'
+                WHERE c.id IN ({slots}) AND e.starts_at<:end
+                    AND julianday(e.starts_at) + e.duration_minutes / 1440.0 > julianday(:start)
+                    AND (:status IS NULL OR e.status=:status)
+                UNION ALL
+                SELECT e.id, c.id, e.title, e.starts_at, e.duration_minutes,
+                    e.status, 'special_education' AS source, '상담 일정', c.color,
+                    s.name, e.author, s.name || ' · 특별교육', s.id, '', '', 0
+                FROM special_education_logs e JOIN students s ON s.id=e.student_id
                     JOIN calendars c ON c.source='counseling'
                 WHERE c.id IN ({slots}) AND e.starts_at<:end
                     AND julianday(e.starts_at) + e.duration_minutes / 1440.0 > julianday(:start)
@@ -91,12 +100,12 @@ class CalendarRepository:
                 raise NotFoundError('일정을 등록할 사용자 캘린더를 찾을 수 없습니다.')
             if entry_id is None:
                 connection.execute('''INSERT INTO calendar_events
-                    (calendar_id, title, starts_at, duration_minutes, status, location, content, all_day, created_at, updated_at)
-                    VALUES (:calendar_id, :title, :starts_at, :duration_minutes, :status, :location, :content, :all_day, :now, :now)''', data)
+                    (calendar_id, title, starts_at, duration_minutes, location, content, all_day, created_at, updated_at)
+                    VALUES (:calendar_id, :title, :starts_at, :duration_minutes, :location, :content, :all_day, :now, :now)''', data)
             else:
                 data['id'] = entry_id
                 cursor = connection.execute('''UPDATE calendar_events SET title=:title, starts_at=:starts_at,
-                    duration_minutes=:duration_minutes, status=:status, location=:location, content=:content, all_day=:all_day, updated_at=:now
+                    duration_minutes=:duration_minutes, location=:location, content=:content, all_day=:all_day, updated_at=:now
                     WHERE id=:id AND calendar_id=:calendar_id''', data)
                 if not cursor.rowcount:
                     raise NotFoundError('일정을 찾을 수 없습니다.')

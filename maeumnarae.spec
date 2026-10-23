@@ -9,6 +9,7 @@ root = Path(SPECPATH)
 datas = [(str(Path(nicegui.__file__).parent), 'nicegui'), (str(root / 'icon.ico'), '.')]
 datas += [(str(root / name), '.') for name in ('icon-dark.ico', 'icon-dark.png')]
 datas += [(str(root / 'fonts'), 'fonts')]
+datas += [(str(root / 'resources' / 'templates'), 'resources/templates')]
 datas += [(str(root / 'LICENSE'), '.'), (str(root / 'licenses'), 'licenses')]
 datas += collect_data_files('webview')
 datas += collect_data_files('holidays')

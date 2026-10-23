@@ -3,6 +3,8 @@ from datetime import datetime
 
 from nicegui import run, ui
 
+from views.delete_action import delete_button
+
 from views.time_inputs import storage_time, time_input
 
 from database import DatabaseError
@@ -101,6 +103,7 @@ class EducationEventView:
             return
         self.edit.enable()
         with self.details:
+            delete_button(self.repository.database, 'education', lambda: entry, self.after_deleted)
             ui.badge(entry.category).props('outline')
             ui.label(entry.title).classes('text-2xl font-bold break-words w-full')
             with ui.element('div').classes('w-full grid grid-cols-1 sm:grid-cols-2 gap-4'):
@@ -117,6 +120,10 @@ class EducationEventView:
                 ui.html(editor_html(entry.content, entry.content_format)).classes('w-full break-words leading-relaxed')
             else:
                 ui.label('등록된 상세 내용이 없습니다.').classes('text-slate-500')
+
+    async def after_deleted(self):
+        await self.select_event(None)
+        await self.reload()
 
     def open_editor(self, entry=None):
         initial = entry.model_dump() if entry else dict(title='', category='교육',

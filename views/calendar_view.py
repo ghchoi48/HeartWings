@@ -7,6 +7,8 @@ from datetime import date, datetime, time, timedelta
 
 from nicegui import run, ui
 
+from views.delete_action import delete_button
+
 from views.time_inputs import parse_time, time_input
 from pydantic import ValidationError
 
@@ -16,6 +18,26 @@ from models import CalendarInput, CalendarEvent, CalendarEventInput
 from reporting import KST, STATUS_LABELS
 from repositories.calendar_repo import CalendarRepository
 from repositories.reporting_repo import ReportingRepository
+
+
+JOURNAL_ICONS = {
+    'counseling': ('edit_note', '개인상담'),
+    'group': ('groups', '집단상담'),
+    'special_education': ('menu_book', '특별교육'),
+    'consultation': ('forum', '자문'),
+}
+
+
+def render_event_icons(entry: CalendarEvent) -> None:
+    """상태와 일지 종류를 나란히 표시한다."""
+    if entry.status is not None:
+        ui.icon({'scheduled': 'schedule', 'completed': 'check_circle',
+                 'cancelled': 'cancel'}[entry.status], size='16px').classes('shrink-0 ml-1').props(
+                     f'role=img aria-label="{STATUS_LABELS[entry.status]}"').tooltip(STATUS_LABELS[entry.status])
+    if entry.source in JOURNAL_ICONS:
+        icon, label = JOURNAL_ICONS[entry.source]
+        ui.icon(icon, size='16px').classes('shrink-0 ml-1').props(
+            f'role=img aria-label="{label}"').tooltip(label)
 
 
 def visible_days(anchor: date, mode: str) -> list[date]:
@@ -250,10 +272,7 @@ class CalendarView:
                             bar.props['aria-label'] = caption
                             if first:
                                 ui.label(caption).classes('flex-1 min-w-0 truncate text-left')
-                                if entry.status is not None:
-                                    ui.icon({'scheduled': 'schedule', 'completed': 'check_circle',
-                                             'cancelled': 'cancel'}[entry.status], size='16px').classes('shrink-0 ml-1').props(
-                                                 f'role=img aria-label="{STATUS_LABELS[entry.status]}"').tooltip(STATUS_LABELS[entry.status])
+                                render_event_icons(entry)
                     for col, day in enumerate(week):
                         height = 'min-h-64' if self.mode.value == 'week' else 'min-h-20'
                         with ui.column().classes(f'min-w-0 p-2 gap-1 {height} max-h-96 overflow-y-auto').style(
@@ -265,12 +284,9 @@ class CalendarView:
                                 name = entry.title if entry.source == 'custom' else entry.display_name or entry.student_name
                                 caption = f'{entry.starts_at.astimezone(KST):%H:%M} {name}'.strip()
                                 with ui.button(on_click=lambda entry=entry: self.open_event(entry)).props('flat dense no-caps align=left').classes(
-                                        'w-full text-xs').style(f'border-left:3px solid {entry.color}; color:{entry.color}').tooltip(entry.calendar_name):
+                                        'w-full text-xs').style(f'border-left:3px solid {entry.color}; color:{entry.color}'):
                                     ui.label(caption).classes('flex-1 min-w-0 break-words text-left')
-                                    if entry.status is not None:
-                                        ui.icon({'scheduled': 'schedule', 'completed': 'check_circle',
-                                                 'cancelled': 'cancel'}[entry.status], size='16px').classes('shrink-0 ml-1').props(
-                                                     f'role=img aria-label="{STATUS_LABELS[entry.status]}"').tooltip(STATUS_LABELS[entry.status])
+                                    render_event_icons(entry)
                             if len(entries) > limit:
                                 ui.button(f'+{len(entries) - limit}개 더 보기', on_click=lambda day=day: self.choose(day)).props('flat dense').classes('text-xs')
 
@@ -281,7 +297,7 @@ class CalendarView:
     async def open_event(self, entry):
         if entry.source == 'counseling':
             await self.on_open(entry.id)
-        elif entry.source in ('group', 'consultation'):
+        elif entry.source in ('group', 'consultation', 'special_education'):
             if self.on_open_linked is not None:
                 await self.on_open_linked(entry)
         else:
@@ -372,6 +388,11 @@ class CalendarView:
                     with ui.row().classes('w-full justify-end'):
                         cancel = ui.button('작성 닫기').props('flat')
                         save = ui.button('일정 저장', icon='save')
+                        if entry:
+                            async def after_deleted():
+                                dialog.submit(False)
+                                await self.reload()
+                            delete = delete_button(self.repository.database, 'event', lambda: entry, after_deleted, blocked=lambda: saving)
             fields = (target, title, day, start, end, end_day, all_day, location, content)
             original = tuple(field.value for field in fields)
             saving = False
@@ -437,7 +458,7 @@ class CalendarView:
                         return
                     duration_minutes = (ends_at - moment).total_seconds() / 60
                     value = CalendarEventInput(calendar_id=target.value, title=title.value, starts_at=moment,
-                                               duration_minutes=duration_minutes, status=entry.status if entry else 'scheduled',
+                                               duration_minutes=duration_minutes,
                                                all_day=all_day.value,
                                                location=location.value or '', content=content.value or '')
                 except (ValueError, TypeError):
@@ -446,6 +467,8 @@ class CalendarView:
                 saving = True
                 for field in (*fields, save, cancel):
                     field.disable()
+                if entry:
+                    delete.disable()
                 try:
                     await run.io_bound(self.repository.save_event, value, entry.id if entry else None)
                     dialog.submit(True)
@@ -455,6 +478,8 @@ class CalendarView:
                     saving = False
                     for field in (*fields, save, cancel):
                         field.enable()
+                    if entry:
+                        delete.enable()
                     update_time_fields()
                     if entry:
                         target.disable()

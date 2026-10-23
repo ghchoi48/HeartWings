@@ -4,6 +4,8 @@ from collections.abc import Awaitable, Callable
 from datetime import date, datetime, timedelta, timezone
 
 from nicegui import run, ui
+
+from views.delete_action import delete_button
 from pydantic import ValidationError
 
 from database import DatabaseError
@@ -25,6 +27,8 @@ STATUSES = {'scheduled': '예약', 'completed': '완료', 'cancelled': '취소'}
 def counseling_form_input(student_id: int, values: dict) -> CounselingInput:
     """화면의 한국 시각을 시간대가 포함된 모델로 바꾼다. HTML은 정화한다."""
     data = dict(values)
+    if 'private_note_html' in data:
+        data['private_note_html'] = clean_html(data['private_note_html'] or '')
     for key in ('counseling_method', 'counseling_target', 'counseling_area'):
         if key in data:
             data[key] = data[key] or ''
@@ -107,7 +111,7 @@ class CounselingView:
         self.editor_original = {}
         self.editor_container.clear()
         with self.editor_container:
-            ui.label('사례를 선택한 뒤 새 상담 일지를 작성하거나 목록에서 일지를 열어 주세요.').classes('text-slate-500')
+            ui.label('새 상담일지를 작성하거나, 상담일지를 선택해주세요').classes('text-slate-500')
 
     def build(self) -> None:
         """선택 학생의 상담 사례 목록과 사례별 일지를 구성한다."""
@@ -122,6 +126,7 @@ class CounselingView:
                         self.add_case.disable()
                     self.case_select = ui.select({}, label='상담 사례', on_change=self.change_case).props('outlined').classes('w-full')
                     self.case_select.disable()
+                    delete_button(self.students.database, 'case', lambda: self.selected_case, self.after_case_deleted, blocked=lambda: self.editor_open)
                     self.case_message = ui.label().classes('text-sm text-slate-500')
                     ui.separator()
                     with ui.row().classes('w-full items-center justify-between'):
@@ -199,6 +204,20 @@ class CounselingView:
         self.log_offset = 0
         await self.load_cases()
 
+    async def after_case_deleted(self):
+        self.clear_editor()
+        self.log_offset = 0
+        await self.load_cases()
+        if self.on_saved and self.selected:
+            await self.on_saved(self.selected.id)
+
+    async def after_log_deleted(self):
+        self.clear_editor()
+        self.log_offset = 0
+        await self.load_logs()
+        if self.on_saved and self.selected:
+            await self.on_saved(self.selected.id)
+
     async def load_cases(self, preferred_id: int | None = None) -> None:
         if self.selected is None:
             return
@@ -256,8 +275,6 @@ class CounselingView:
         self.log_offset = 0
         self.add.enable()
         await self.load_logs()
-        if self.selected_case == case and not self.editor_fields:
-            await self.open_editor()
 
     async def open_case_editor(self, case: CounselingCase | None = None, report_field: str = 'report_html') -> None:
         if self.report_open or self.editor_saving or self.selected is None:
@@ -368,6 +385,7 @@ class CounselingView:
                     with ui.column().classes('gap-1'):
                         ui.label(entry.counseling_area or '상담 분야 미지정').classes('font-semibold')
                         ui.label(f'{entry.starts_at.astimezone(KST):%Y.%m.%d %H:%M} · {STATUSES[entry.status]} · {entry.category} · {entry.duration_minutes}분').classes('text-sm text-slate-500')
+                    delete_button(self.students.database, 'counseling', lambda entry=entry: entry, self.after_log_deleted, blocked=lambda: self.editor_open)
                     ui.button('열기 / 수정', icon='edit', on_click=lambda entry_id=entry.id: self.open_editor(entry_id)).props('outline')
         self.log_message.text = f'이 페이지에 {min(len(entries), PAGE_SIZE)}건 · 한국 표준시' if entries else '등록된 상담 일지가 없습니다. 새 상담 일지를 작성해 보세요.'
         self.log_page_label.text = f'{self.log_offset // PAGE_SIZE + 1} 페이지'
@@ -507,12 +525,19 @@ class CounselingView:
                 fields['counseling_area'] = ui.select(
                     COUNSELING_AREAS, label='상담 분야', value=initial.get('counseling_area') or None,
                 ).props('outlined clearable').classes('grow')
-            with ui.column().classes('w-full gap-3'):
-                ui.label('상담 내용').classes('font-semibold')
-                fields['content_markdown'] = ui.editor(
-                    value=editor_html(initial['content_markdown'], initial.get('content_format', 'markdown')),
-                    placeholder='상담 내용을 입력하세요.',
-                ).classes('w-full').props("""min-height=320px :toolbar='[["bold", "italic", "underline", "strike"], ["unordered", "ordered"], ["left", "center", "right"], ["undo", "redo"]]'""")
+            with ui.element('div').classes('w-full grid grid-cols-1 lg:grid-cols-2 gap-4 items-start'):
+                with ui.column().classes('w-full min-w-0 gap-3'):
+                    ui.label('상담 내용').classes('font-semibold')
+                    fields['content_markdown'] = ui.editor(
+                        value=editor_html(initial['content_markdown'], initial.get('content_format', 'markdown')),
+                        placeholder='상담 내용을 입력하세요.',
+                    ).classes('w-full').props("""min-height=320px :toolbar='[["bold", "italic", "underline", "strike"], ["unordered", "ordered"], ["left", "center", "right"], ["undo", "redo"]]'""")
+                with ui.column().classes('w-full min-w-0 gap-3'):
+                    ui.label('비밀 메모').classes('font-semibold')
+                    fields['private_note_html'] = ui.editor(
+                        value=clean_html(initial.get('private_note_html', '')),
+                        placeholder='비밀 메모를 입력하세요.',
+                    ).classes('w-full').props("""min-height=320px :toolbar='[["bold", "italic", "underline", "strike"], ["unordered", "ordered"], ["left", "center", "right"], ["undo", "redo"]]'""")
             fields['follow_up'] = ui.textarea('후속 조치', value=initial['follow_up']).props('outlined rows=2 maxlength=20000').classes('w-full')
             message = ui.label().classes('text-sm text-red-700')
             for field in fields.values():

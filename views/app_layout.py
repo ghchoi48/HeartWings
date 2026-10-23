@@ -246,6 +246,8 @@ class AppLayout:
         """참여자 변경과 일지 저장을 열려 있는 학생 타임라인에 반영한다."""
         if self.student_view and self.student_view.selected:
             await self.student_view.load_profile(self.student_view.selected.id)
+        if self.calendar_view:
+            await self.calendar_view.reload()
 
     async def refresh_student_timeline(self, student_id: int) -> None:
         """상담 저장 후 열려 있는 관련 뷰의 스냅샷도 갱신한다."""
@@ -269,7 +271,7 @@ class AppLayout:
             self.opening_schedule = False
 
     async def open_linked_schedule(self, entry) -> None:
-        """연동 일정의 집단상담 또는 자문 일지를 연다."""
+        """연동 일정의 집단상담·자문·특별교육 일지를 연다."""
         if self.opening_schedule:
             return
         self.opening_schedule = True
@@ -282,5 +284,8 @@ class AppLayout:
                 self.navigate('consultation')
                 await self.consultation_view.select_teacher(entry.owner_id)
                 await self.consultation_view.open_log_editor(entry.id)
+            elif entry.source == 'special_education':
+                self.navigate('special_education')
+                await self.special_education_view.open_record(entry.id)
         finally:
             self.opening_schedule = False

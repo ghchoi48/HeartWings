@@ -4,6 +4,8 @@ from collections.abc import Awaitable, Callable
 from datetime import timedelta, timezone
 
 from nicegui import run, ui
+
+from views.delete_action import delete_button
 from pydantic import ValidationError
 
 from database import DatabaseError
@@ -106,6 +108,7 @@ class StudentView:
                     with ui.card().classes('w-full rounded-2xl shadow-sm p-6'):
                         with ui.row().classes('w-full items-center justify-between'):
                             ui.label(student.name).classes('text-2xl font-bold')
+                            delete_button(self.students.database, 'student', lambda: student, self.load_students, blocked=lambda: self.editor_open)
                             ui.button('학생 정보 수정', icon='edit', on_click=lambda: self.open_editor(student)).props('outline')
                         ui.label(f'{student.school_year}학년도 · {student.grade}학년 {student.classroom}반 · 번호 {student.student_number or "미입력"}').classes('text-slate-500')
                         with ui.expansion('학년도별 학적 이력', icon='history').classes('w-full'):

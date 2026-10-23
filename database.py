@@ -11,7 +11,7 @@ from threading import Lock, RLock
 from weakref import WeakValueDictionary
 from models import SchoolSettings, current_school_year
 
-SCHEMA_VERSION = 33
+SCHEMA_VERSION = 36
 
 
 class DatabaseError(RuntimeError):
@@ -530,7 +530,7 @@ class Database:
                         connection.execute(f"ALTER TABLE school_settings ADD COLUMN {column} TEXT NOT NULL DEFAULT ''")
                 connection.execute('PRAGMA user_version = 26')
                 version = 26
-            if version not in (26, 27, 28, 29, 30, 31, 32, SCHEMA_VERSION):
+            if version not in (26, 27, 28, 29, 30, 31, 32, 33, 34, 35, SCHEMA_VERSION):
                 raise DatabaseError('지원하지 않는 DB 버전입니다. 앱 버전을 확인하세요.')
             if new_database and school is not None:
                 school = SchoolSettings.model_validate(school.model_dump())
@@ -638,4 +638,23 @@ class Database:
                 connection.execute('ALTER TABLE calendar_events_new RENAME TO calendar_events')
                 for statement in objects:
                     connection.execute(statement)
+                connection.execute('PRAGMA user_version = 33')
+                version = 33
+            if version == 33:
+                columns = {row['name'] for row in connection.execute('PRAGMA table_info(calendar_events)')}
+                if 'status' in columns:
+                    connection.execute('ALTER TABLE calendar_events DROP COLUMN status')
+                connection.execute('PRAGMA user_version = 34')
+                version = 34
+            if version == 34:
+                columns = {row['name'] for row in connection.execute('PRAGMA table_info(group_counseling_logs)')}
+                if 'status' not in columns:
+                    connection.execute("""ALTER TABLE group_counseling_logs ADD COLUMN status TEXT NOT NULL
+                        DEFAULT 'completed' CHECK(status IN ('scheduled', 'completed', 'cancelled'))""")
+                connection.execute('PRAGMA user_version = 35')
+                version = 35
+            if version == 35:
+                columns = {row['name'] for row in connection.execute('PRAGMA table_info(counseling)')}
+                if 'private_note_html' not in columns:
+                    connection.execute("ALTER TABLE counseling ADD COLUMN private_note_html TEXT NOT NULL DEFAULT ''")
                 connection.execute(f'PRAGMA user_version = {SCHEMA_VERSION}')
