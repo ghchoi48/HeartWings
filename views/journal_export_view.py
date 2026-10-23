@@ -27,6 +27,7 @@ class JournalExportView:
                                         value='all', label='내보낼 일지 상태').props('outlined')
                 self.wee = ui.select(['Wee클래스', '일반'], value='Wee클래스', label='Wee클래스 구분').props('outlined')
             ui.label('학년도는 일지 날짜의 3월~다음 해 2월 기준입니다. 상담분류는 전문상담, 상담사소속은 전문상담교사로 입력합니다.').classes('text-sm text-slate-500')
+            ui.label('개인상담의 상담분야와 교원자문의 자문분야는 상담구분에 저장된 값 그대로 입력합니다.').classes('text-sm text-slate-500')
             ui.label('상담제목·상담내용은 상담구분과 동일하게 입력합니다. 실제 제목·본문·비밀 메모·이름·연락처는 포함하지 않습니다.').classes('text-sm text-slate-500')
             ui.label('특별교육은 개인상담으로 분류합니다. 학년·성별은 모두 빈칸입니다. 집단 인원은 현재 연결된 참여 학생, 교육/행사 인원은 저장된 참여인원 기준입니다. 상태가 없는 심리검사·교육/행사는 완료만 선택해도 포함됩니다.').classes('text-sm text-slate-500')
             ui.label('상담매체구분은 개인상담만 저장된 값을 사용하고, 나머지는 면담으로 입력합니다.').classes('text-sm text-slate-500')

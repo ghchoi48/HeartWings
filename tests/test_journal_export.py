@@ -147,7 +147,7 @@ def test_missing_demographics_are_not_guessed_and_all_rows_are_kept():
     assert len(rows) == 1001 and len(issues) == 1001
     assert rows[0][6:10] == (2026, '20260301', '', '')  # 한국 시각으로 3월 1일
     assert rows[0][1] == '일반' and rows[0][15] == ''
-    assert rows[0][4] == '기타'
+    assert rows[0][4] == ''
     with pytest.raises(ValueError):
         export_rows(snapshot, ExportOptions(start=date(2026, 3, 2), end=date(2026, 3, 1)))
 
@@ -187,3 +187,23 @@ def test_media_only_uses_individual_record_and_demographics_are_blank(kind):
     assert rows[0][8:10] == ('', '')
     if kind == 'education':
         assert rows[0][5] == 0
+
+
+@pytest.mark.parametrize('kind,target,area,middle', [
+    ('individual', '학생본인', '진로', '개인상담'),
+    ('individual', '학생본인', '기존 상담분야', '개인상담'),
+    ('individual', '보호자(가족)', '학업', '학부모상담'),
+    ('consultation', '', '정서발달', '교원자문'),
+    ('consultation', '', '', '교원자문'),
+])
+def test_saved_area_is_exported_to_counseling_category(kind, target, area, middle):
+    record = dict(kind=kind, id=1, starts_at='2026-10-23T09:00:00+09:00',
+                  duration_minutes=30, area=area, target=target, method='면담')
+    rows, issues, _ = export_rows(JournalSnapshot((record,), {}), ExportOptions())
+    sheet = read_workbook(workbook_bytes(rows))['입력']
+    assert sheet['E1'].value == '*상담구분'
+    assert sheet['D2'].value == middle
+    assert sheet['E2'].value == (area or None)
+    assert sheet['K2'].value == sheet['L2'].value == sheet['E2'].value
+    if area in ('기존 상담분야', '학업', ''):
+        assert any('저장된 값 유지' in issue for issue in issues)

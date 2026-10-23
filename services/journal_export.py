@@ -80,7 +80,6 @@ def export_rows(snapshot: JournalSnapshot, options: ExportOptions):
         major, middle = '상담', '개인상담'
         if kind == 'individual' and target in ('보호자(가족)', '보호자', '학부모'):
             middle = '학부모상담'
-            area = '학습' if area == '학업' else area
         elif kind == 'group':
             middle = '집단상담'
         elif kind == 'consultation':
@@ -93,8 +92,12 @@ def export_rows(snapshot: JournalSnapshot, options: ExportOptions):
             else:
                 major, middle, area = '교육', '프로그램운영', '기타'
         if middle in AREAS and area not in AREAS[middle]:
-            area = '기타'
-            problems.append('상담 분야 미입력 또는 서식에 없는 값 → 기타')
+            if kind in ('individual', 'consultation'):
+                # 개인상담의 상담분야와 교원자문의 자문분야를 E열에 그대로 옮긴다.
+                problems.append('상담/자문 분야 미입력 또는 서식에 없는 값(저장된 값 유지)')
+            else:
+                area = '기타'
+                problems.append('상담 분야 미입력 또는 서식에 없는 값 → 기타')
 
         headcount = 1
         if kind == 'group':

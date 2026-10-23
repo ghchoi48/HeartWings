@@ -2,7 +2,7 @@
 
 from dataclasses import replace
 
-from models import StudentInput, TeacherInput, ConsultationInput, PsychologicalTestInput, CounselingInput
+from models import StudentInput, TeacherInput, ConsultationInput, PsychologicalTestInput, CounselingInput, EducationEventInput
 from repositories._support import now_text, values
 from repositories.student_repo import StudentRepository
 from services.legacy_import import parse_legacy
@@ -59,14 +59,14 @@ class LegacyImportRepository:
                 actions.append((person.key, '기존 DB 대상 연결' if candidates else '신규 등록'))
         return errors, resolutions, tuple(actions)
 
-    def preview(self, content, school_year, period_times=None):
-        batch = parse_legacy(content, school_year, period_times)
+    def preview(self, content, school_year, period_times=None, **options):
+        batch = parse_legacy(content, school_year, period_times, **options)
         with self.database.session() as connection:
             errors, _, actions = self._resolve(connection, batch)
             return replace(batch, errors=tuple(errors), actions=actions)
 
     def save(self, batch):
-        if batch.errors or not batch.people:
+        if batch.errors or not (batch.people or batch.logs):
             raise ValueError('파일 오류를 수정하고 다시 검사하세요.')
         with self.database.session(write=True) as connection:
             errors, resolutions, _ = self._resolve(connection, batch)
@@ -76,6 +76,7 @@ class LegacyImportRepository:
             connection.execute('''CREATE TABLE IF NOT EXISTS legacy_imports (
                 fingerprint TEXT PRIMARY KEY, imported_at TEXT NOT NULL)''')
             ids, cases, created = {}, {}, 0
+            special_cases = {}
             timestamp = now_text()
 
             def insert(table, data):
@@ -107,12 +108,23 @@ class LegacyImportRepository:
                 data = values(log.value)
                 if log.author:
                     data['author'] = log.author
-                if isinstance(log.value, ConsultationInput):
+                if isinstance(log.value, EducationEventInput):
+                    table = 'education_events'
+                elif isinstance(log.value, ConsultationInput):
                     data['teacher_id'] = ids[log.key]
                     table = 'consultations'
                 elif isinstance(log.value, PsychologicalTestInput):
                     data['student_id'] = ids[log.key]
                     table = 'psychological_tests'
+                elif isinstance(log.value, CounselingInput) and log.special_law:
+                    case_key = (log.key, log.special_law)
+                    if case_key not in special_cases:
+                        special_cases[case_key] = insert('special_educations', dict(
+                            student_id=ids[log.key], title=f'이관 특별교육 {log.key}'[:200],
+                            law=log.special_law, case_number=log.key[:100]))
+                    data.update(student_id=ids[log.key], case_id=special_cases[case_key])
+                    data.pop('private_note_html')
+                    table = 'special_education_logs'
                 elif isinstance(log.value, CounselingInput):
                     if log.key not in cases:
                         cases[log.key] = insert('counseling_cases', dict(student_id=ids[log.key], title=f'이관 사례 {log.key}'[:200]))
@@ -128,3 +140,20 @@ class LegacyImportRepository:
             connection.execute('INSERT INTO legacy_imports VALUES (?, ?)', (batch.fingerprint, timestamp))
         self.database.student_revision += 1
         return created, len(batch.logs)
+
+    def load_period_times(self):
+        import json
+        with self.database.session() as connection:
+            if not connection.execute("SELECT 1 FROM sqlite_master WHERE name='legacy_import_settings'").fetchone():
+                return {}
+            row = connection.execute('SELECT period_times FROM legacy_import_settings WHERE id=1').fetchone()
+            return json.loads(row[0]) if row else {}
+
+    def save_period_times(self, periods):
+        import json
+        from services.legacy_import import period_clocks
+        normalized = {key: value.strftime('%H:%M') for key, value in period_clocks(periods).items()}
+        with self.database.session(write=True) as connection:
+            connection.execute('CREATE TABLE IF NOT EXISTS legacy_import_settings (id INTEGER PRIMARY KEY, period_times TEXT NOT NULL)')
+            connection.execute('INSERT OR REPLACE INTO legacy_import_settings VALUES (1, ?)',
+                               (json.dumps(normalized),))

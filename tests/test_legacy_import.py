@@ -70,7 +70,7 @@ def test_missing_link_and_duplicate_case_block_whole_batch(db):
     rows['상담대장'][0][1]['사례번호'] = 'missing'
     rows['인적사항등록'].append(rows['인적사항등록'][0])
     batch = parse_rows(rows, 2025, PERIODS)
-    assert len(batch.errors) == 2
+    assert len(batch.errors) == 1
     with pytest.raises(ValueError):
         LegacyImportRepository(db).save(batch)
     assert StudentRepository(db).list() == []
@@ -92,8 +92,8 @@ def test_atomic_rollback_after_student_insert(db):
 
 def test_existing_student_conflict(db):
     batch = parse_rows(source(), 2025, PERIODS)
-    StudentRepository(db).create(StudentInput(name='학생A', school_year=2025, grade=2, classroom='3'))
-    with pytest.raises(ValueError, match='자동 병합하지 않습니다'):
+    StudentRepository(db).create(StudentInput(name='학생A', school_year=2025, grade=2, classroom='3', gender='남'))
+    with pytest.raises(ValueError, match='식별 정보가 충돌'):
         LegacyImportRepository(db).save(batch)
 
 
@@ -185,7 +185,7 @@ def test_named_period_and_duplicate_mapping():
 def consultation_source():
     rows = source()
     rows['인적사항등록'][0][1].update({'성명/집단명': '교사A', '학년': '', '반': '', '비고': '원본 교사 메모'})
-    rows['상담대장'][0][1].update({'대분류': ' 자문 ', '중분류': '학교학습', '성명/집단명': '교사A'})
+    rows['상담대장'][0][1].update({'대분류': ' 자문 ', '중분류': '교원자문', '상담구분': '학교학습', '성명/집단명': '교사A'})
     return rows
 
 
@@ -193,7 +193,7 @@ def test_consultation_import_links_teacher_and_preserves_fields(db):
     from models import TeacherInput, ConsultationInput
     from repositories.consultation_repo import ConsultationRepository
     rows = consultation_source()
-    second = dict(rows['상담대장'][0][1], 상담제목='두 번째 자문', 중분류='원본 영역')
+    second = dict(rows['상담대장'][0][1], 상담제목='두 번째 자문', 중분류='원본 영역', 상담구분='기타')
     rows['상담대장'].append((7, second))
     batch = parse_rows(rows, 2025, PERIODS)
     assert not batch.errors
@@ -212,8 +212,8 @@ def test_consultation_import_links_teacher_and_preserves_fields(db):
     logs = ConsultationRepository(db).list(teacher['id'])
     assert len(logs) == 2
     assert all(log.author == '원본 교사' and log.duration_minutes == 40 for log in logs)
-    assert {log.consultation_area for log in logs} == {'학교학습', ''}
-    assert all('원본 교사 메모' in log.content_html and '&lt;script&gt;' in log.content_html for log in logs)
+    assert {log.consultation_area for log in logs} == {'학교학습', '기타'}
+    assert all('원본 교사 메모' not in log.content_html and '&lt;script&gt;' in log.content_html for log in logs)
     with pytest.raises(ValueError, match='이미 가져온'):
         LegacyImportRepository(db).save(batch)
 
@@ -238,8 +238,8 @@ def test_consultation_failure_rolls_back_teacher_and_other_records(db):
 def test_existing_teacher_name_blocks_automatic_merge(db):
     from models import TeacherInput
     from repositories.teacher_repo import TeacherRepository
-    TeacherRepository(db).create_many([TeacherInput(name='교사A')])
-    with pytest.raises(ValueError, match='교사명'):
+    TeacherRepository(db).create_many([TeacherInput(name='교사A', contact='010-9999-9999')])
+    with pytest.raises(ValueError, match='식별 정보가 충돌'):
         LegacyImportRepository(db).save(parse_rows(consultation_source(), 2025, PERIODS))
 
 
@@ -281,7 +281,7 @@ def test_guardian_migration_uses_category_for_area(db, category, expected):
         assert row['counseling_target'] == '보호자(가족)'
         assert row['counseling_area'] == expected
         assert row['category'] == category
-        assert category in row['content_markdown']
+        assert category not in row['content_markdown']
 
 
 def test_individual_test_rejects_group_and_rolls_back_on_failure(db):
@@ -298,3 +298,116 @@ def test_individual_test_rejects_group_and_rolls_back_on_failure(db):
     with db.session() as c:
         assert c.execute('SELECT count(*) FROM students').fetchone()[0] == 0
         assert c.execute('SELECT count(*) FROM psychological_tests').fetchone()[0] == 0
+
+
+@pytest.mark.parametrize('major', ['교육', '연구', '의뢰'])
+@pytest.mark.parametrize('route', ['개인 상담', '교사 자문', '심리검사', '교육/행사'])
+def test_manual_destination_and_original_fingerprint(major, route):
+    from models import CounselingInput, ConsultationInput, PsychologicalTestInput, EducationEventInput
+    rows = source()
+    rows['상담대장'][0][1]['대분류'] = major
+    initial = parse_rows(rows, 2025, PERIODS)
+    assert any('일지를 직접 선택' in error for error in initial.errors)
+    batch = parse_rows(rows, 2025, PERIODS, destinations={5: route})
+    assert not batch.errors
+    assert isinstance(batch.logs[0].value, {'개인 상담': CounselingInput, '교사 자문': ConsultationInput,
+                      '심리검사': PsychologicalTestInput, '교육/행사': EducationEventInput}[route])
+    assert batch.fingerprint == initial.fingerprint
+
+
+def test_group_test_event_without_people_and_atomic_save(db):
+    from models import EducationEventInput
+    rows = source()
+    rows['인적사항등록'] = []
+    rows['상담대장'] = [rows['상담대장'][1]]
+    rows['상담대장'][0][1].update(대분류='검사', 중분류='심리검사', 상담구분='집단심리검사', 상담인원=12,
+                                  상담내용='검사 내용', 상담자성명='검사 교사')
+    batch = parse_rows(rows, 2025, PERIODS)
+    assert not batch.errors
+    assert isinstance(batch.logs[0].value, EducationEventInput)
+    assert LegacyImportRepository(db).save(batch) == (0, 1)
+    with db.session() as connection:
+        event = connection.execute('SELECT * FROM education_events').fetchone()
+        assert event['category'] == '단체심리검사'
+        assert event['participant_count'] == 12
+        assert event['event_time'] == '13:20'
+        assert event['author'] == '검사 교사'
+        assert event['content'] == '<p>검사 내용</p>'
+    with pytest.raises(ValueError, match='이미 가져온'):
+        LegacyImportRepository(db).save(batch)
+
+
+def test_correction_exclusion_and_notes(db):
+    from copy import deepcopy
+    rows = source()
+    rows['상담대장'][0][1]['일자'] = '잘못된 날짜'
+    rows['인적사항등록'][0][1]['비고'] = '실제 비고'
+    original = deepcopy(rows)
+    batch = parse_rows(rows, 2025, PERIODS,
+        corrections={('상담대장', 5): {'일자': '2025-12-10', '상담내용': '수정 내용'}},
+        excluded={('상담대장', 6), ('인적사항등록', 8)})
+    assert not batch.errors
+    assert rows == original
+    assert len(batch.logs) == len(batch.people) == 1
+    assert batch.people[0].value.notes == '실제 비고'
+    assert batch.logs[0].value.content_markdown == '<p>수정 내용</p>'
+    assert batch.fingerprint == parse_rows(rows, 2025, PERIODS).fingerprint
+    LegacyImportRepository(db).save(batch)
+    with pytest.raises(ValueError, match='이미 가져온'):
+        LegacyImportRepository(db).save(parse_rows(rows, 2025, PERIODS,
+            corrections={('상담대장', 5): {'일자': '2025-12-11'}}))
+
+
+def test_period_settings_persist_and_invalid_update_preserves_previous(db):
+    repository = LegacyImportRepository(db)
+    assert repository.load_period_times() == {}
+    repository.save_period_times({'01교시': '08:50', '점심': '12:30'})
+    assert LegacyImportRepository(db).load_period_times() == {'1': '08:50', '점심': '12:30'}
+    with pytest.raises(ValueError):
+        repository.save_period_times({'1': '25:00'})
+    assert repository.load_period_times()['1'] == '08:50'
+
+
+@pytest.mark.parametrize('major', ['교육', '연구', '의뢰'])
+@pytest.mark.parametrize('law', ['학교폭력예방법', '교원지위법'])
+def test_special_education_destination_saves_separate_case_and_logs(db, major, law):
+    rows = source()
+    rows['상담대장'][0][1]['대분류'] = major
+    rows['상담대장'].append((7, dict(rows['상담대장'][0][1], 상담제목='두 번째 교육')))
+    batch = parse_rows(rows, 2025, PERIODS, destinations={5: '특별교육', 7: '특별교육'},
+                       special_laws={5: law, 7: law})
+    assert not batch.errors
+    assert batch.logs[0].special_law == law
+    LegacyImportRepository(db).save(batch)
+    with db.session() as c:
+        case = c.execute('SELECT * FROM special_educations').fetchone()
+        assert case['law'] == law and case['case_number'] == 'P1'
+        assert c.execute('SELECT count(*) FROM special_educations').fetchone()[0] == 1
+        logs = c.execute('SELECT * FROM special_education_logs').fetchall()
+        assert len(logs) == 2
+        assert all(log['case_id'] == case['id'] and log['student_id'] == case['student_id'] for log in logs)
+        assert logs[0]['author'] == '원본 교사'
+        assert logs[0]['duration_minutes'] == 40
+        assert '&lt;script&gt;' in logs[0]['content_markdown']
+        assert c.execute('SELECT count(*) FROM counseling').fetchone()[0] == 0
+        assert c.execute('SELECT count(*) FROM counseling_cases').fetchone()[0] == 0
+
+
+def test_special_education_requires_student_and_law():
+    assert any('근거 법률' in error for error in
+               parse_rows(source(), 2025, PERIODS, destinations={5: '특별교육'}).errors)
+    assert any('학생 인적사항' in error for error in
+               parse_rows(source(), 2025, PERIODS, destinations={6: '특별교육'},
+                          special_laws={6: '교원지위법'}).errors)
+
+
+def test_special_education_import_failure_rolls_back(db):
+    from database import DatabaseError
+    batch = parse_rows(source(), 2025, PERIODS, destinations={5: '특별교육'}, special_laws={5: '교원지위법'})
+    with db.session(write=True) as c:
+        c.execute("CREATE TRIGGER fail_special BEFORE INSERT ON special_education_logs BEGIN SELECT RAISE(ABORT, 'test'); END")
+    with pytest.raises(DatabaseError):
+        LegacyImportRepository(db).save(batch)
+    with db.session() as c:
+        for table in ('students', 'special_educations', 'special_education_logs'):
+            assert c.execute(f'SELECT count(*) FROM {table}').fetchone()[0] == 0

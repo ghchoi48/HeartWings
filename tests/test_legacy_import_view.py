@@ -12,8 +12,8 @@ from views.legacy_import_view import LegacyImportView
 
 def test_preview_save_and_option_invalidation(tmp_path):
     async def check():
-        async def inline(function, *args):
-            return function(*args)
+        async def inline(function, *args, **kwargs):
+            return function(*args, **kwargs)
 
         with Client(page('/legacy-test')):
             db = Database('key', tmp_path / 'view.db')
@@ -104,3 +104,128 @@ def test_psychological_test_preview_uses_test_date_and_time():
         assert tables[1].rows[0]['kind'] == '심리검사'
         assert tables[1].rows[0]['starts'] == '2025-05-01 10:30'
         assert tables[1].rows[0]['target'] == '학생'
+
+
+def test_edit_dialog_applies_fields_route_exclusion_and_cancel(tmp_path):
+    import inspect
+    from services.legacy_import import LOG_HEADERS
+
+    async def check():
+        with Client(page('/legacy-edit')) as client:
+            database = Database('key', tmp_path / 'edit.db')
+            database.initialize()
+            view = LegacyImportView(database, lambda: False, lambda _: None, AsyncMock())
+            view.build()
+            view.period_inputs['1'].set_value('09:10')
+            view.rows = {'상담대장': [(5, dict.fromkeys(LOG_HEADERS, '') | {
+                '일자': 46000, '교시': 1, '대분류': '연구', '상담내용': '본문'})], '인적사항등록': []}
+            view.content = b'file'
+            view.batch = parse_rows(view.rows, 2026, {'1': '09:10'})
+            view.open_corrections()
+            elements = list(client.elements.values())
+            route = next(e for e in elements if isinstance(e, ui.select) and e.label == '등록할 일지')
+            route.set_value('교육/행사')
+            title = next(e for e in elements if isinstance(e, ui.input) and e.label == '상담제목')
+            title.set_value('수정 제목')
+            excluded = next(e for e in elements if isinstance(e, ui.checkbox) and e.text == '이 행 제외')
+            excluded.set_value(True)
+            button = next(e for e in elements if isinstance(e, ui.button) and e.text == '수정사항 저장 후 다음 오류')
+            handler = next(e.handler for e in button._event_listeners.values() if e.type == 'click')
+            with patch.object(view, 'check', new_callable=AsyncMock) as recheck:
+                await inspect.getclosurevars(handler).nonlocals['callback']()
+                recheck.assert_awaited_once()
+            assert view.corrections == {('상담대장', 5): {'상담제목': '수정 제목'}}
+            assert view.destinations == {5: '교육/행사'}
+            assert view.excluded == {('상담대장', 5)}
+            view.cancel_file()
+            assert view.content is None and view.batch is None
+            assert not view.rows and not view.corrections and not view.destinations and not view.excluded
+            assert not view.recheck.enabled and not view.save_button.enabled
+            reopened = LegacyImportView(database, lambda: False, lambda _: None, AsyncMock())
+            reopened.build()
+            assert reopened.period_inputs['1'].value == '09:10'
+    asyncio.run(check())
+
+
+def test_corrections_only_errors_and_continuous_save():
+    import inspect
+    from services.legacy_import import LOG_HEADERS
+
+    async def check():
+        with Client(page('/legacy-continuous')) as client:
+            view = LegacyImportView(None, lambda: False, lambda _: None, AsyncMock())
+            view.build()
+            view.rows = {'인적사항등록': [], '상담대장': [
+                (number, dict.fromkeys(LOG_HEADERS, '') | {'일자': '2026-10-23', '교시': 1,
+                 '시간(분)': 30, '대분류': major, '중분류': '심리검사', '상담구분': '집단심리검사'})
+                for number, major in [(5, '교육'), (6, '연구'), (7, '검사')]]}
+            view.content = b'file'
+
+            async def recheck():
+                view.clear()
+                view.batch = parse_rows(view.rows, 2026, {'1': '09:10'},
+                    corrections=view.corrections, destinations=view.destinations, excluded=view.excluded)
+                view.render_results()
+
+            await recheck()
+            view.open_corrections()
+            selector = next(e for e in client.elements.values() if isinstance(e, ui.select) and e.label == '수정할 행')
+            button = next(e for e in client.elements.values() if isinstance(e, ui.button) and e.text == '수정사항 저장 후 다음 오류')
+            dialog = next(e for e in client.elements.values() if isinstance(e, ui.dialog) and e.value)
+            handler = next(e.handler for e in button._event_listeners.values() if e.type == 'click')
+            apply = inspect.getclosurevars(handler).nonlocals['callback']
+            assert set(selector.options) == {'상담대장:5', '상담대장:6'}
+            with patch.object(view, 'check', side_effect=recheck):
+                # 해결되지 않은 오류는 같은 행을 유지한다.
+                await apply()
+                assert selector.value == '상담대장:5'
+                for number in (5, 6):
+                    route = next(e for e in dialog.descendants() if isinstance(e, ui.select) and e.label == '등록할 일지')
+                    route.set_value('교육/행사')
+                    await apply()
+                    assert dialog.value
+                    assert f'상담대장:{number}' not in selector.options
+                assert not view.batch.errors
+                assert not selector.options and not button.enabled
+                assert view.destinations == {5: '교육/행사', 6: '교육/행사'}
+                assert any(isinstance(e, ui.label) and '모든 오류가 해결' in e.text for e in dialog.descendants())
+    asyncio.run(check())
+
+
+def test_special_education_option_law_and_preview():
+    import inspect
+    from services.legacy_import import LOG_HEADERS
+
+    async def check():
+        with Client(page('/legacy-special')) as client:
+            view = LegacyImportView(None, lambda: False, lambda _: None, AsyncMock())
+            view.build()
+            view.rows = {'인적사항등록': [(7, dict.fromkeys(PERSON_HEADERS, '') | {
+                '사례번호': 'P1', '성명/집단명': '학생', '성별/인원': '남', '학년': 1, '반': '1'})],
+                '상담대장': [(5, dict.fromkeys(LOG_HEADERS, '') | {'사례번호': 'P1',
+                '일자': '2026-10-23', '교시': 1, '시간(분)': 40, '대분류': '교육'})]}
+            view.batch = parse_rows(view.rows, 2026, {'1': '09:10'})
+            view.open_corrections()
+            route = next(e for e in client.elements.values() if isinstance(e, ui.select) and e.label == '등록할 일지')
+            assert '특별교육' in route.options
+            route.set_value('특별교육')
+            law = next(e for e in client.elements.values() if isinstance(e, ui.select) and e.label == '특별교육 근거 법률')
+            law.set_value('교원지위법')
+            button = next(e for e in client.elements.values() if isinstance(e, ui.button) and e.text == '수정사항 저장 후 다음 오류')
+            handler = next(e.handler for e in button._event_listeners.values() if e.type == 'click')
+
+            async def recheck():
+                view.clear()
+                view.batch = parse_rows(view.rows, 2026, {'1': '09:10'}, destinations=view.destinations,
+                                        special_laws=view.special_laws)
+                view.render_results()
+
+            with patch.object(view, 'check', side_effect=recheck):
+                await inspect.getclosurevars(handler).nonlocals['callback']()
+            assert view.special_laws == {5: '교원지위법'}
+            assert not view.batch.errors
+            tables = [e for e in view.preview.descendants() if isinstance(e, ui.table)]
+            assert tables[-1].rows[0]['kind'] == '특별교육'
+            view.cancel_file()
+            assert not view.special_laws
+    asyncio.run(check())
