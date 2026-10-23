@@ -4,6 +4,8 @@ from datetime import date, datetime, timedelta, timezone
 
 from nicegui import run, ui
 
+from views.attachment_view import attachment_button
+
 from views.delete_action import delete_button
 from pydantic import ValidationError
 
@@ -167,6 +169,7 @@ class ConsultationView:
                         ui.label(entry.consultation_area or '자문 분야 미지정').classes('font-semibold')
                         ui.label(f'{entry.starts_at.astimezone(KST):%Y.%m.%d %H:%M} · {STATUSES[entry.status]} · 자문 · {entry.duration_minutes}분').classes('text-sm text-slate-500')
                     delete_button(self.teachers.database, 'consultation', lambda entry=entry: entry, self.after_log_deleted, blocked=lambda: self.editor_open)
+                    attachment_button(self.teachers.database, 'consultation', entry.id)
                     ui.button('열기 / 수정', icon='edit', on_click=lambda entry_id=entry.id: self.open_log_editor(entry_id)).props('outline')
         self.log_message.text = f'이 페이지에 {min(len(entries), PAGE_SIZE)}건 · 한국 표준시' if entries else '등록된 자문 일지가 없습니다. 새 자문 일지를 작성해 보세요.'
         self.page_label.text = f'{self.log_offset // PAGE_SIZE + 1} 페이지'
@@ -272,6 +275,7 @@ class ConsultationView:
             ui.label('자문 내용').classes('font-semibold')
             fields['content_html'] = ui.editor(value=clean_html(initial['content_html']), placeholder='자문 내용을 입력하세요.').classes('w-full').props(
                 """min-height=320px :toolbar='[["bold", "italic", "underline", "strike"], ["unordered", "ordered"], ["left", "center", "right"], ["undo", "redo"]]'""")
+            attachment_button(self.teachers.database, 'consultation', entry.id if entry else None)
             fields['follow_up'] = ui.textarea('후속 조치', value=initial['follow_up']).props('outlined rows=2 maxlength=20000').classes('w-full')
             message = ui.label().classes('text-sm text-red-700')
             with ui.row().classes('w-full justify-end'):

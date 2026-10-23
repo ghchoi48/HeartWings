@@ -18,6 +18,8 @@ def test_storage_and_migration(tmp_path):
     db = Database('test-only', tmp_path / 'events.db')
     db.initialize()
     with db.session(write=True) as connection:
+        # 이전 버전에는 첨부 테이블이 없으므로 부모 테이블보다 먼저 제거한다.
+        connection.execute('DROP TABLE IF EXISTS journal_attachments')
         connection.execute('DROP TABLE education_events')
         connection.execute('ALTER TABLE consultations DROP COLUMN consultation_area')
         connection.execute('PRAGMA user_version=13')
@@ -40,6 +42,30 @@ def test_storage_and_migration(tmp_path):
         repo.save(value, 999)
     with pytest.raises(ValidationError):
         EducationEventInput(title=' ', event_date='2026-02-30')
+
+
+def test_participant_count_migration_and_round_trip(tmp_path):
+    db = Database('test-only', tmp_path / 'participants.db')
+    db.initialize()
+    repo = EducationEventRepository(db)
+    value = EducationEventInput(title='행사', event_date='2026-10-23')
+    saved = repo.save(value)
+    with db.session(write=True) as connection:
+        connection.execute('ALTER TABLE education_events DROP COLUMN participant_count')
+        connection.execute('PRAGMA user_version=36')
+    db.initialize()
+    db.initialize()
+    assert repo.get(saved.id) == saved
+    for count in (135, 0, None):
+        updated = repo.save(value.model_copy(update={'participant_count': count}), saved.id)
+        assert updated.participant_count == count
+        assert updated.created_at == saved.created_at
+        assert repo.get(saved.id) == updated
+    created = repo.save(value.model_copy(update={'participant_count': 27}))
+    assert repo.get(created.id).participant_count == 27
+    for count in (-1, 1.5, 2147483648):
+        with pytest.raises(ValidationError):
+            EducationEventInput(title='행사', event_date='2026-10-23', participant_count=count)
 
 
 class EducationEventViewTests(unittest.IsolatedAsyncioTestCase):
@@ -109,7 +135,7 @@ def test_editor_restores_time_and_duration():
     with Client(page('/education-event-editor-test')):
         now = datetime.now(timezone.utc)
         entry = EducationEvent(id=1, title='행사', category='단체심리검사', event_date='2026-10-20',
-                               event_time='15:30', duration_minutes=75,
+                               event_time='15:30', duration_minutes=75, participant_count=120,
                                created_at=now, updated_at=now)
         view = EducationEventView(Mock())
         view.open_editor(entry)
@@ -120,6 +146,7 @@ def test_editor_restores_time_and_duration():
         assert fields['구분'].value == '단체심리검사'
         assert fields['시각'].value == '오후 03:30'
         assert fields['운영 시간(분)'].value == 75
+        assert fields['참여인원(명)'].value == 120
         assert fields['시각'].parent_slot is fields['운영 시간(분)'].parent_slot
 
 
@@ -136,6 +163,8 @@ def test_group_test_category_migration_and_storage(tmp_path):
             "'교육', '행사', '단체심리검사'", "'교육', '행사'")
         connection.execute(legacy_schema)
         connection.execute('INSERT INTO education_events_legacy SELECT * FROM education_events')
+        # 이전 버전에는 첨부 테이블이 없으므로 부모 테이블보다 먼저 제거한다.
+        connection.execute('DROP TABLE IF EXISTS journal_attachments')
         connection.execute('DROP TABLE education_events')
         connection.execute('ALTER TABLE education_events_legacy RENAME TO education_events')
         connection.execute('PRAGMA user_version=18')

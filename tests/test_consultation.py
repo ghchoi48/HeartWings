@@ -24,6 +24,8 @@ def test_migration_and_teacher_isolation(tmp_path):
     first = teachers.save(TeacherInput(name='첫 교사'))
     second = teachers.save(TeacherInput(name='다른 교사'))
     with db.session(write=True) as connection:
+        # 이전 버전에는 첨부 테이블이 없으므로 부모 테이블보다 먼저 제거한다.
+        connection.execute('DROP TABLE IF EXISTS journal_attachments')
         connection.execute('DROP TABLE special_education_logs')
         connection.execute('DROP TABLE special_educations')
         connection.execute('DROP TABLE consultations')

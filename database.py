@@ -11,7 +11,7 @@ from threading import Lock, RLock
 from weakref import WeakValueDictionary
 from models import SchoolSettings, current_school_year
 
-SCHEMA_VERSION = 36
+SCHEMA_VERSION = 38
 
 
 class DatabaseError(RuntimeError):
@@ -530,7 +530,7 @@ class Database:
                         connection.execute(f"ALTER TABLE school_settings ADD COLUMN {column} TEXT NOT NULL DEFAULT ''")
                 connection.execute('PRAGMA user_version = 26')
                 version = 26
-            if version not in (26, 27, 28, 29, 30, 31, 32, 33, 34, 35, SCHEMA_VERSION):
+            if version not in (26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, SCHEMA_VERSION):
                 raise DatabaseError('지원하지 않는 DB 버전입니다. 앱 버전을 확인하세요.')
             if new_database and school is not None:
                 school = SchoolSettings.model_validate(school.model_dump())
@@ -657,4 +657,30 @@ class Database:
                 columns = {row['name'] for row in connection.execute('PRAGMA table_info(counseling)')}
                 if 'private_note_html' not in columns:
                     connection.execute("ALTER TABLE counseling ADD COLUMN private_note_html TEXT NOT NULL DEFAULT ''")
+                connection.execute('PRAGMA user_version = 36')
+                version = 36
+            if version == 36:
+                columns = {row['name'] for row in connection.execute('PRAGMA table_info(education_events)')}
+                if 'participant_count' not in columns:
+                    connection.execute('ALTER TABLE education_events ADD COLUMN participant_count INTEGER CHECK(participant_count >= 0 AND participant_count <= 2147483647)')
+                connection.execute('PRAGMA user_version = 37')
+                version = 37
+            if version == 37:
+                connection.execute('''CREATE TABLE IF NOT EXISTS journal_attachments (
+                    id INTEGER PRIMARY KEY,
+                    counseling_id INTEGER REFERENCES counseling(id) ON DELETE CASCADE,
+                    group_log_id INTEGER REFERENCES group_counseling_logs(id) ON DELETE CASCADE,
+                    special_log_id INTEGER REFERENCES special_education_logs(id) ON DELETE CASCADE,
+                    consultation_id INTEGER REFERENCES consultations(id) ON DELETE CASCADE,
+                    test_id INTEGER REFERENCES psychological_tests(id) ON DELETE CASCADE,
+                    education_id INTEGER REFERENCES education_events(id) ON DELETE CASCADE,
+                    filename TEXT NOT NULL CHECK(length(filename) BETWEEN 1 AND 255),
+                    content BLOB NOT NULL CHECK(length(content) <= 20971520),
+                    created_at TEXT NOT NULL,
+                    CHECK((counseling_id IS NOT NULL) + (group_log_id IS NOT NULL)
+                        + (special_log_id IS NOT NULL) + (consultation_id IS NOT NULL)
+                        + (test_id IS NOT NULL) + (education_id IS NOT NULL) = 1)
+                )''')
+                for column in ('counseling_id', 'group_log_id', 'special_log_id', 'consultation_id', 'test_id', 'education_id'):
+                    connection.execute(f'CREATE INDEX IF NOT EXISTS attachments_{column} ON journal_attachments({column})')
                 connection.execute(f'PRAGMA user_version = {SCHEMA_VERSION}')

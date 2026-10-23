@@ -31,15 +31,14 @@ class ExportOptions:
     end: date | None = None
     wee_class: str = 'Wee클래스'
     status: str = 'all'
-    default_method: str = '면담'
 
     def validate(self):
         if (self.start is None) != (self.end is None):
             raise ValueError('시작일과 종료일을 함께 입력해 주세요.')
         if self.start is not None:
             date_bounds(self.start, self.end)
-        if self.wee_class not in ('일반', 'Wee클래스') or self.default_method not in METHODS:
-            raise ValueError('Wee클래스와 기본 상담매체를 확인해 주세요.')
+        if self.wee_class not in ('일반', 'Wee클래스'):
+            raise ValueError('Wee클래스 구분을 확인해 주세요.')
         if self.status not in ('all', 'completed'):
             raise ValueError('내보낼 상태를 확인해 주세요.')
 
@@ -97,41 +96,22 @@ def export_rows(snapshot: JournalSnapshot, options: ExportOptions):
             area = '기타'
             problems.append('상담 분야 미입력 또는 서식에 없는 값 → 기타')
 
-        participants = ()
         headcount = 1
-        grade, gender = '해당없음', ''
         if kind == 'group':
-            participants = snapshot.members.get(record['group_id'], ())
-            headcount = len(participants) or None
-        elif kind in ('individual', 'special', 'test'):
-            # 학생의 성별을 보호자·교사의 성별로 잘못 내보내지 않는다.
-            student_target = target in ('', '학생', '학생본인') or kind == 'special'
-            if student_target:
-                participants = (record['student_id'],)
+            headcount = len(snapshot.members.get(record['group_id'], ())) or None
         elif kind == 'education':
-            headcount, grade = None, ''
-        if participants:
-            grade_values = [snapshot.grades.get((student_id, year)) for student_id in participants]
-            if all(value is not None and 1 <= value <= 6 for value in grade_values):
-                grade = f'{grade_values[0]}학년' if len(set(grade_values)) == 1 else '혼합'
-            else:
-                grade = ''
-                problems.append('해당 학년도 학적이 없거나 서식의 학년 범위(1~6학년) 밖 → 학년 빈칸')
-            gender_values = [snapshot.genders.get(student_id) for student_id in participants]
-            if all(value in ('남', '여') for value in gender_values):
-                gender = gender_values[0] if len(set(gender_values)) == 1 else '혼성'
+            headcount = record.get('participant_count')
         if headcount is None:
             problems.append('상담인원 확인 필요(빈칸)')
         duration = record['duration_minutes']
         hours, minutes = divmod(duration, 60) if duration is not None else (None, None)
         if duration is None:
             problems.append('상담시간 확인 필요(빈칸)')
-        method = record.get('method', '')
-        method = {'전화': '전화상담', '사이버': '사이버상담'}.get(method, method)
-        if method not in METHODS:
-            method = options.default_method
+        method = (record.get('method') or '') if kind == 'individual' else '면담'
+        if kind == 'individual' and method not in METHODS:
+            problems.append('개인상담의 상담매체 미입력 또는 서식에 없는 값(저장된 값 유지)')
         rows.append(('전문상담', options.wee_class, major, middle, area, headcount, year,
-                     day.strftime('%Y%m%d'), grade, gender, area, area, hours, minutes,
+                     day.strftime('%Y%m%d'), '', '', area, area, hours, minutes,
                      '전문상담교사', method))
         counts[KINDS[kind]] += 1
         if problems:

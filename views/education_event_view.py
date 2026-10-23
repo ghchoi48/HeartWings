@@ -3,6 +3,8 @@ from datetime import datetime
 
 from nicegui import run, ui
 
+from views.attachment_view import attachment_button
+
 from views.delete_action import delete_button
 
 from views.time_inputs import storage_time, time_input
@@ -104,13 +106,15 @@ class EducationEventView:
         self.edit.enable()
         with self.details:
             delete_button(self.repository.database, 'education', lambda: entry, self.after_deleted)
+            attachment_button(self.repository.database, 'education', entry.id)
             ui.badge(entry.category).props('outline')
             ui.label(entry.title).classes('text-2xl font-bold break-words w-full')
             with ui.element('div').classes('w-full grid grid-cols-1 sm:grid-cols-2 gap-4'):
                 for label, value in [('날짜', entry.event_date.isoformat()), ('시각', entry.event_time),
                                      ('운영 시간', f'{entry.duration_minutes}분' if entry.duration_minutes is not None else ''),
                                      ('장소', entry.location),
-                                     ('대상', entry.audience), ('담당자 / 강사', entry.facilitator)]:
+                                     ('대상', entry.audience),
+                                     ('참여인원', f'{entry.participant_count}명' if entry.participant_count is not None else ''), ('담당자 / 강사', entry.facilitator)]:
                     with ui.column().classes('gap-1 min-w-0'):
                         ui.label(label).classes('text-sm text-slate-500')
                         ui.label(value or '미입력').classes('whitespace-pre-wrap break-words w-full')
@@ -139,9 +143,11 @@ class EducationEventView:
                 fields['duration_minutes'] = ui.number('운영 시간(분)', value=initial['duration_minutes'], min=1, max=1440, step=1).props('outlined').classes('w-36')
             for key, label, maximum in [('location', '장소', 200), ('audience', '대상', 200), ('facilitator', '담당자 / 강사', 100)]:
                 fields[key] = ui.input(label, value=initial[key]).props(f'outlined maxlength={maximum}').classes('w-full')
+            fields['participant_count'] = ui.number('참여인원(명)', value=initial.get('participant_count'), min=0, max=2147483647, step=1).props('outlined clearable').classes('w-full')
             ui.label('상세 내용').classes('font-semibold')
             fields['content'] = ui.editor(value=editor_html(initial['content'], initial.get('content_format', 'text')),
                                           placeholder='상세 내용을 입력하세요.').classes('w-full').props("""min-height=320px :toolbar='[["bold", "italic", "underline", "strike"], ["unordered", "ordered"], ["left", "center", "right"], ["undo", "redo"]]'""")
+            attachment_button(self.repository.database, 'education', entry.id if entry else None)
             message = ui.label().classes('text-sm text-red-700')
             with ui.row().classes('w-full justify-end'):
                 ui.button('취소', on_click=dialog.close).props('flat')
@@ -154,7 +160,7 @@ class EducationEventView:
                 data['content'] = clean_html(data['content'] or '')
                 value = EducationEventInput(**data, content_format='html')
             except (ValueError, TypeError):
-                message.text = '교육/행사명, 날짜, 시각(오전/오후 hh:mm), 운영 시간(1~1440분 정수), 내용 길이(서식 포함 최대 20,000자)를 확인해 주세요.'
+                message.text = '교육/행사명, 날짜, 시각(오전/오후 hh:mm), 운영 시간(1~1440분 정수), 참여인원(0 이상 정수), 내용 길이(서식 포함 최대 20,000자)를 확인해 주세요.'
                 return
             save_button.disable()
             try:

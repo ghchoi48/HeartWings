@@ -10,7 +10,8 @@
     {"name": "pywebview"},
     {"name": "openpyxl", "license": "MIT"},
     {"name": "et_xmlfile", "license": "MIT"},
-    {"name": "defusedxml", "license": "PSF-2.0"}
+    {"name": "defusedxml", "license": "PSF-2.0"},
+    {"name": "pyxlsb", "license": "LGPL-3.0-or-later", "source": "https://github.com/willtrnr/pyxlsb", "text_file": "pyxlsb/COPYING.LESSER"}
   ],
   "fonts": [
     {"name": "Pretendard"},

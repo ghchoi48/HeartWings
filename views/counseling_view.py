@@ -5,11 +5,13 @@ from datetime import date, datetime, timedelta, timezone
 
 from nicegui import run, ui
 
+from views.attachment_view import attachment_button
+
 from views.delete_action import delete_button
 from pydantic import ValidationError
 
 from database import DatabaseError
-from models import Counseling, CounselingInput, Student, CounselingCase, CounselingCaseInput
+from models import Counseling, CounselingInput, Student, CounselingCase, CounselingCaseInput, GUARDIAN_COUNSELING_AREAS
 from repositories.case_repo import CaseRepository
 from repositories.counseling_repo import CounselingRepository
 from repositories.student_repo import StudentRepository
@@ -386,6 +388,7 @@ class CounselingView:
                         ui.label(entry.counseling_area or '상담 분야 미지정').classes('font-semibold')
                         ui.label(f'{entry.starts_at.astimezone(KST):%Y.%m.%d %H:%M} · {STATUSES[entry.status]} · {entry.category} · {entry.duration_minutes}분').classes('text-sm text-slate-500')
                     delete_button(self.students.database, 'counseling', lambda entry=entry: entry, self.after_log_deleted, blocked=lambda: self.editor_open)
+                    attachment_button(self.counseling.database, 'counseling', entry.id)
                     ui.button('열기 / 수정', icon='edit', on_click=lambda entry_id=entry.id: self.open_editor(entry_id)).props('outline')
         self.log_message.text = f'이 페이지에 {min(len(entries), PAGE_SIZE)}건 · 한국 표준시' if entries else '등록된 상담 일지가 없습니다. 새 상담 일지를 작성해 보세요.'
         self.log_page_label.text = f'{self.log_offset // PAGE_SIZE + 1} 페이지'
@@ -522,9 +525,24 @@ class CounselingView:
                 fields['counseling_target'] = ui.select(
                     targets, label='상담 대상', value=target or None,
                 ).props('outlined clearable').classes('grow')
+                areas = list(GUARDIAN_COUNSELING_AREAS if target == '보호자(가족)' else COUNSELING_AREAS)
+                area = initial.get('counseling_area') or None
+                if area and area not in areas:
+                    if target == '보호자(가족)':
+                        ui.label(f'기존 상담 분야: {area}. 보호자 상담 분야를 다시 선택하세요.').classes('text-sm text-amber-700')
+                        area = None
+                    else:
+                        areas.append(area)
                 fields['counseling_area'] = ui.select(
-                    COUNSELING_AREAS, label='상담 분야', value=initial.get('counseling_area') or None,
+                    areas, label='상담 분야', value=area,
                 ).props('outlined clearable').classes('grow')
+
+                def update_areas(event):
+                    options = list(GUARDIAN_COUNSELING_AREAS if event.value == '보호자(가족)' else COUNSELING_AREAS)
+                    selected = fields['counseling_area'].value
+                    fields['counseling_area'].set_options(options, value=selected if selected in options else None)
+
+                fields['counseling_target'].on_value_change(update_areas)
             with ui.element('div').classes('w-full grid grid-cols-1 lg:grid-cols-2 gap-4 items-start'):
                 with ui.column().classes('w-full min-w-0 gap-3'):
                     ui.label('상담 내용').classes('font-semibold')
@@ -538,6 +556,7 @@ class CounselingView:
                         value=clean_html(initial.get('private_note_html', '')),
                         placeholder='비밀 메모를 입력하세요.',
                     ).classes('w-full').props("""min-height=320px :toolbar='[["bold", "italic", "underline", "strike"], ["unordered", "ordered"], ["left", "center", "right"], ["undo", "redo"]]'""")
+            attachment_button(self.counseling.database, 'counseling', entry.id if entry else None)
             fields['follow_up'] = ui.textarea('후속 조치', value=initial['follow_up']).props('outlined rows=2 maxlength=20000').classes('w-full')
             message = ui.label().classes('text-sm text-red-700')
             for field in fields.values():

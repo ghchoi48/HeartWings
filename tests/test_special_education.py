@@ -24,6 +24,8 @@ def test_special_education_storage_and_migration(tmp_path):
     student = students.create(StudentInput(name='학생', grade=1, classroom='1'))
     other = students.create(StudentInput(name='다른 학생', grade=1, classroom='1'))
     with db.session(write=True) as connection:
+        # 이전 버전에는 첨부 테이블이 없으므로 부모 테이블보다 먼저 제거한다.
+        connection.execute('DROP TABLE IF EXISTS journal_attachments')
         connection.execute('DROP TABLE special_education_logs')
         connection.execute('DROP TABLE special_educations')
         connection.execute('DROP TABLE IF EXISTS education_events')

@@ -50,6 +50,7 @@ class Teacher(TeacherInput, AuthoredRecord):
 
 
 CONSULTATION_AREAS = ['학교학습', '사회성발달', '정서발달', '진로발달', '행동발달', '기타']
+GUARDIAN_COUNSELING_AREAS = ['학생관련상담', '교사관련상담', '학습', '기타']
 
 
 class ConsultationInput(InputModel):
@@ -326,6 +327,7 @@ class EducationEventInput(InputModel):
     duration_minutes: int | None = Field(default=None, ge=1, le=1440)
     location: str = Field(default='', max_length=200)
     audience: str = Field(default='', max_length=200)
+    participant_count: int | None = Field(default=None, ge=0, le=2147483647)
     facilitator: str = Field(default='', max_length=100)
     content: str = Field(default='', max_length=20000)
     content_format: Literal['text', 'html'] = 'text'

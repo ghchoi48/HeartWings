@@ -32,6 +32,8 @@ def delete_button(database, kind, record, on_deleted, *, blocked=lambda: False):
                     ui.label(f'“{getattr(item, "name", None) or item.title}”을(를) 삭제할까요?').classes('break-words')
                     if impact:
                         ui.label(impact)
+                    if kind != 'event':
+                        ui.label('삭제되는 일지에 연결된 첨부파일도 함께 삭제됩니다.')
                     ui.label('삭제한 데이터는 되돌릴 수 없습니다.').classes('text-red-700')
                     with ui.row().classes('w-full justify-end'):
                         ui.button('취소', on_click=lambda: dialog.submit(False)).props('flat')

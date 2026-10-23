@@ -50,6 +50,32 @@ class CounselingFormTests(unittest.TestCase):
 
 
 class CounselingViewTests(unittest.IsolatedAsyncioTestCase):
+    async def test_guardian_areas_change_with_target_and_reload(self):
+        from models import GUARDIAN_COUNSELING_AREAS
+        from views.counseling_view import COUNSELING_AREAS
+        with self.host:
+            _, fields, _, _, _ = self.view.build_editor(self.student, None)
+        fields['counseling_area'].value = '진로'
+        fields['counseling_target'].value = '보호자(가족)'
+        self.assertEqual(fields['counseling_area'].options, GUARDIAN_COUNSELING_AREAS)
+        self.assertIsNone(fields['counseling_area'].value)
+        fields['counseling_area'].value = '학생관련상담'
+        value = counseling_form_input(self.student.id, {key: field.value for key, field in fields.items()})
+        self.assertEqual(value.counseling_target, '보호자(가족)')
+        self.assertEqual(value.counseling_area, '학생관련상담')
+        now = datetime.now(timezone.utc)
+        entry = Counseling(id=1, created_at=now, updated_at=now, **value.model_dump())
+        with self.host:
+            _, restored, _, _, _ = self.view.build_editor(self.student, entry)
+        self.assertEqual(restored['counseling_area'].options, GUARDIAN_COUNSELING_AREAS)
+        self.assertEqual(restored['counseling_area'].value, '학생관련상담')
+        fields['counseling_target'].value = '학생본인'
+        self.assertEqual(fields['counseling_area'].options, COUNSELING_AREAS)
+        self.assertIsNone(fields['counseling_area'].value)
+        fields['counseling_area'].value = '기타'
+        fields['counseling_target'].value = '보호자(가족)'
+        self.assertEqual(fields['counseling_area'].value, '기타')
+
     def setUp(self):
         self.client = Client(page('/test_counseling_view'))
         self.client.__enter__()

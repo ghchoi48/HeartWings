@@ -4,6 +4,8 @@ from datetime import datetime
 
 from nicegui import run, ui
 
+from views.attachment_view import attachment_button
+
 from views.delete_action import delete_button
 
 from views.time_inputs import time_input
@@ -306,6 +308,7 @@ class SpecialEducationView(CounselingView):
                         ui.label(self.selected_case.title).classes('font-semibold')
                         ui.label(f'{entry.starts_at.astimezone(KST):%Y.%m.%d %H:%M} · {STATUSES[entry.status]} · {entry.category} · {entry.duration_minutes}분').classes('text-sm text-slate-500')
                     delete_button(self.students.database, 'special_log', lambda entry=entry: entry, self.after_log_deleted, blocked=lambda: self.editor_open)
+                    attachment_button(self.counseling.database, 'special_log', entry.id)
                     ui.button('열기 / 수정', icon='edit', on_click=lambda entry_id=entry.id: self.open_editor(entry_id)).props('outline')
         self.log_message.text = f'이 페이지에 {min(len(entries), PAGE_SIZE)}건 · 한국 표준시' if entries else '등록된 특별 교육 일지가 없습니다. 새 특별 교육 일지를 작성해 보세요.'
         self.log_page_label.text = f'{self.log_offset // PAGE_SIZE + 1} 페이지'
@@ -342,6 +345,7 @@ class SpecialEducationView(CounselingView):
                     value=editor_html(initial['content_markdown'], initial.get('content_format', 'markdown')),
                     placeholder='교육 내용을 입력하세요.',
                 ).classes('w-full').props("""min-height=320px :toolbar='[["bold", "italic", "underline", "strike"], ["unordered", "ordered"], ["left", "center", "right"], ["undo", "redo"]]'""")
+            attachment_button(self.counseling.database, 'special_log', entry.id if entry else None)
             fields['follow_up'] = ui.textarea('후속 조치', value=initial['follow_up']).props('outlined rows=2 maxlength=20000').classes('w-full')
             message = ui.label().classes('text-sm text-red-700')
             for field in fields.values():

@@ -5,7 +5,7 @@ from nicegui import run, ui
 
 from database import DatabaseError
 from reporting import KST
-from services.journal_export import ExportOptions, METHODS, XLSX_MIME, export_journals
+from services.journal_export import ExportOptions, XLSX_MIME, export_journals
 
 
 class JournalExportView:
@@ -26,16 +26,16 @@ class JournalExportView:
                 self.status = ui.select({'all': '모든 상태(예약·취소 포함)', 'completed': '완료만'},
                                         value='all', label='내보낼 일지 상태').props('outlined')
                 self.wee = ui.select(['Wee클래스', '일반'], value='Wee클래스', label='Wee클래스 구분').props('outlined')
-                self.method = ui.select(list(METHODS), value='면담', label='기록에 없는 상담매체').props('outlined')
             ui.label('학년도는 일지 날짜의 3월~다음 해 2월 기준입니다. 상담분류는 전문상담, 상담사소속은 전문상담교사로 입력합니다.').classes('text-sm text-slate-500')
             ui.label('상담제목·상담내용은 상담구분과 동일하게 입력합니다. 실제 제목·본문·비밀 메모·이름·연락처는 포함하지 않습니다.').classes('text-sm text-slate-500')
-            ui.label('특별교육은 개인상담으로 분류합니다. 학년은 해당 학년도 학적, 집단 인원·학년·성별은 현재 연결된 참여 학생 기준입니다. 상태가 없는 심리검사·교육/행사는 완료만 선택해도 포함됩니다.').classes('text-sm text-slate-500')
+            ui.label('특별교육은 개인상담으로 분류합니다. 학년·성별은 모두 빈칸입니다. 집단 인원은 현재 연결된 참여 학생, 교육/행사 인원은 저장된 참여인원 기준입니다. 상태가 없는 심리검사·교육/행사는 완료만 선택해도 포함됩니다.').classes('text-sm text-slate-500')
+            ui.label('상담매체구분은 개인상담만 저장된 값을 사용하고, 나머지는 면담으로 입력합니다.').classes('text-sm text-slate-500')
             with ui.row():
                 self.prepare = ui.button('일지 XLSX 만들기', icon='table_view', on_click=self.generate)
                 self.download_button = ui.button('XLSX 다운로드', icon='download', on_click=self.download).props('outline')
             self.message = ui.label().classes('text-sm text-slate-600')
             self.issues = ui.column().classes('w-full')
-        self.controls = (self.all_dates, self.start, self.end, self.status, self.wee, self.method)
+        self.controls = (self.all_dates, self.start, self.end, self.status, self.wee)
         for control in self.controls:
             control.on_value_change(self.invalidate)
         self.invalidate()
@@ -56,7 +56,7 @@ class JournalExportView:
             options = ExportOptions(
                 start=None if self.all_dates.value else date.fromisoformat(self.start.value or ''),
                 end=None if self.all_dates.value else date.fromisoformat(self.end.value or ''),
-                wee_class=self.wee.value, status=self.status.value, default_method=self.method.value)
+                wee_class=self.wee.value, status=self.status.value)
             options.validate()
         except (ValueError, TypeError):
             self.message.text = '내보낼 기간과 선택 항목을 확인해 주세요.'

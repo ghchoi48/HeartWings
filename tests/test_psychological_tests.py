@@ -20,6 +20,8 @@ def test_storage_and_migration(tmp_path):
     first = students.create(StudentInput(name='첫 학생', grade=1, classroom='1'))
     second = students.create(StudentInput(name='다른 학생', grade=2, classroom='2'))
     with db.session(write=True) as connection:
+        # 이전 버전에는 첨부 테이블이 없으므로 부모 테이블보다 먼저 제거한다.
+        connection.execute('DROP TABLE IF EXISTS journal_attachments')
         connection.execute('DROP TABLE psychological_tests')
         connection.execute('PRAGMA user_version=17')
     db.initialize()

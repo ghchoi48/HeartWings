@@ -5,6 +5,8 @@ from collections.abc import Awaitable, Callable
 
 from nicegui import run, ui
 
+from views.attachment_view import attachment_button
+
 from views.delete_action import delete_button
 
 from views.time_inputs import parse_time, time_input
@@ -187,6 +189,7 @@ class GroupCounselingView:
                         ui.label(entry.title).classes('font-semibold')
                         ui.label(f'{entry.starts_at.astimezone(KST):%Y.%m.%d %H:%M} · {STATUSES[entry.status]} · {entry.duration_minutes}분').classes('text-sm text-slate-500')
                     delete_button(self.repository.database, 'group_log', lambda entry=entry: entry, self.after_log_deleted, blocked=lambda: self.editor_open)
+                    attachment_button(self.repository.database, 'group_log', entry.id)
                     ui.button('열기 / 수정', icon='edit', on_click=lambda log_id=entry.id: self.open_editor(log=True, log_id=log_id)).props('outline')
         self.log_message.text = f'이 페이지에 {min(len(entries), PAGE_SIZE)}건 · 한국 표준시' if entries else '등록된 집단 상담 일지가 없습니다.'
         self.page_label.text = f'{self.log_offset // PAGE_SIZE + 1} 페이지'
@@ -228,6 +231,7 @@ class GroupCounselingView:
                             fields['status'] = ui.select(STATUSES, label='상담 상태', value=entry.status if entry else 'scheduled').props('outlined')
                         ui.label('상담 내용').classes('font-semibold')
                         fields['content_html'] = ui.editor(value=clean_html(entry.content_html) if entry else '').classes('w-full').props("""min-height=320px :toolbar='[[{"label": "머릿말", "list": "no-icons", "options": ["p", "h1", "h2", "h3"]}], ["bold", "italic", "underline", "strike"], ["unordered", "ordered"], ["left", "center", "right"], ["undo", "redo"]]'""")
+                        attachment_button(self.repository.database, 'group_log', entry.id if entry else None)
                         fields['follow_up'] = ui.textarea('후속 조치', value=entry.follow_up if entry else '').props('outlined maxlength=20000').classes('w-full')
                     else:
                         fields['name'] = ui.input('집단명', value=group.name if group else '').props(

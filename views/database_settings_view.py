@@ -7,6 +7,7 @@ from nicegui import events, run, ui
 from database import Database, DatabaseError
 from services.database_maintenance import create_backup, database_info, restore_backup
 from views.roster_import_view import RosterImportView
+from views.legacy_import_view import LegacyImportView
 
 
 def build_database_settings(database: Database, on_roster_import=None) -> None:
@@ -151,4 +152,7 @@ def build_database_settings(database: Database, on_roster_import=None) -> None:
         view = RosterImportView(database, kind, lambda: busy, set_busy, imported)
         view.build()
         import_views.append(view)
+    legacy = LegacyImportView(database, lambda: busy, set_busy, imported)
+    legacy.build()
+    import_views.append(legacy)
     ui.timer(0.01, refresh_info, once=True)

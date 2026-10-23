@@ -3,6 +3,8 @@ from datetime import datetime
 
 from nicegui import run, ui
 
+from views.attachment_view import attachment_button
+
 from views.delete_action import delete_button
 
 from views.time_inputs import storage_time, time_input
@@ -122,6 +124,7 @@ class PsychologicalTestView:
                             details.append(f'{entry.duration_minutes}분')
                         ui.label(' · '.join(details)).classes('text-sm text-slate-500')
                     delete_button(self.repository.database, 'test', lambda entry=entry: entry, self.after_log_deleted, blocked=lambda: self.editor_open)
+                    attachment_button(self.repository.database, 'test', entry.id)
                     ui.button('열기 / 수정', icon='edit', on_click=lambda entry=entry: self.open_editor(entry)).props('outline')
         self.message.text = f'이 페이지에 {min(len(entries), PAGE_SIZE)}건' if entries else '등록된 심리검사 일지가 없습니다.'
         self.page_label.text = f'{self.offset // PAGE_SIZE + 1} 페이지'
@@ -161,6 +164,7 @@ class PsychologicalTestView:
                     ui.label('검사 결과 및 소견').classes('font-semibold')
                     content = ui.editor(value=editor_html(entry.content, entry.content_format) if entry else '',
                                         placeholder='검사 결과 및 소견을 입력하세요.').classes('w-full').props("""min-height=320px :toolbar='[["bold", "italic", "underline", "strike"], ["unordered", "ordered"], ["left", "center", "right"], ["undo", "redo"]]'""")
+                    attachment_button(self.repository.database, 'test', entry.id if entry else None)
                     message = ui.label().classes('text-sm text-red-700')
                     with ui.row().classes('w-full justify-end'):
                         cancel_button = ui.button('작성 닫기').props('flat')

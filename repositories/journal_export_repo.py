@@ -7,8 +7,6 @@ from database import Database
 @dataclass(frozen=True)
 class JournalSnapshot:
     records: tuple[dict, ...]
-    genders: dict[int, str | None]
-    grades: dict[tuple[int, int], int]
     members: dict[int, tuple[int, ...]]
 
 
@@ -35,11 +33,8 @@ class JournalExportRepository:
                 SELECT id, student_id, test_date AS day, test_time AS clock, duration_minutes, target
                 FROM psychological_tests'''))
             records.extend(dict(row, kind='education') for row in connection.execute('''
-                SELECT id, event_date AS day, event_time AS clock, duration_minutes, category FROM education_events'''))
-            genders = {row['id']: row['gender'] for row in connection.execute('SELECT id, gender FROM students')}
-            grades = {(row['student_id'], row['school_year']): row['grade'] for row in connection.execute(
-                'SELECT student_id, school_year, grade FROM student_enrollments')}
+                SELECT id, event_date AS day, event_time AS clock, duration_minutes, category, participant_count FROM education_events'''))
             members = {}
             for row in connection.execute('SELECT group_id, student_id FROM group_counseling_members ORDER BY student_id'):
                 members.setdefault(row['group_id'], []).append(row['student_id'])
-        return JournalSnapshot(tuple(records), genders, grades, {key: tuple(value) for key, value in members.items()})
+        return JournalSnapshot(tuple(records), {key: tuple(value) for key, value in members.items()})

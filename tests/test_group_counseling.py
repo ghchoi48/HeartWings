@@ -271,6 +271,8 @@ def test_version_eight_membership_migration_preserves_legacy_text(tmp_path):
         connection.execute('DROP TABLE group_counseling_members')
         connection.execute('ALTER TABLE counseling_groups DROP COLUMN period')
         connection.execute('ALTER TABLE counseling_groups DROP COLUMN counseling_area')
+        # 이전 버전에는 첨부 테이블이 없으므로 부모 테이블보다 먼저 제거한다.
+        connection.execute('DROP TABLE IF EXISTS journal_attachments')
         connection.execute('DROP TABLE special_education_logs')
         connection.execute('DROP TABLE special_educations')
         connection.execute('DROP TABLE consultations')
@@ -312,6 +314,8 @@ def test_version_nine_group_fields_migration(tmp_path):
     with db.session(write=True) as connection:
         connection.execute('ALTER TABLE counseling_groups DROP COLUMN period')
         connection.execute('ALTER TABLE counseling_groups DROP COLUMN counseling_area')
+        # 이전 버전에는 첨부 테이블이 없으므로 부모 테이블보다 먼저 제거한다.
+        connection.execute('DROP TABLE IF EXISTS journal_attachments')
         connection.execute('DROP TABLE special_education_logs')
         connection.execute('DROP TABLE special_educations')
         connection.execute('DROP TABLE consultations')

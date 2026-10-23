@@ -115,7 +115,13 @@ class AppLayout:
             ui.navigate.to('/')
 
     async def refresh_roster(self, kind: str) -> None:
-        if kind == 'students':
+        if kind == 'legacy':
+            await self.refresh_students()
+            if self.consultation_view is not None:
+                await self.consultation_view.reload()
+            if self.group_view and not self.group_view.editor_open:
+                await self.group_view.load_groups()
+        elif kind == 'students':
             await self.refresh_students()
         elif self.consultation_view is not None:
             await self.consultation_view.reload()
