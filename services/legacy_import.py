@@ -47,6 +47,7 @@ class LegacyBatch:
     logs: tuple[LegacyLog, ...]
     errors: tuple[str, ...]
     fingerprint: str
+    actions: tuple[tuple[str, str], ...] = ()
 
 
 def text(value):
@@ -166,8 +167,6 @@ def parse_rows(rows, school_year, period_times=None):
             key, name, gender = (text(row[k]) for k in ('사례번호', '성명/집단명', '성별/인원'))
             if not key or not name:
                 raise ValueError('사례번호와 성명/집단명이 필요합니다.')
-            if key in identities:
-                raise ValueError('사례번호가 중복되었습니다.')
             notes = '[XLSB 인적사항 원본]\n' + original(row)
             if key in consultation_keys:
                 if key in counseling_keys:
@@ -182,6 +181,10 @@ def parse_rows(rows, school_year, period_times=None):
                 value = GroupCounselingInput(name=name, participants=f'원본 인원: {gender}명', notes=notes)
             else:
                 raise ValueError('성별(남/여/기타) 또는 집단 인원(양의 정수)을 확인하세요.')
+            if key in identities:
+                if identities[key] == value:
+                    continue
+                raise ValueError('같은 사례번호의 인적사항이 서로 다릅니다.')
             identities[key] = value
             originals[key] = notes
             people.append(LegacyPerson(number, key, value))

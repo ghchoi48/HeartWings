@@ -12,47 +12,70 @@ class LegacyImportRepository:
     def __init__(self, database):
         self.database = database
 
-    def _errors(self, connection, batch):
+    def _resolve(self, connection, batch):
         errors = list(batch.errors)
         exists = connection.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='legacy_imports'").fetchone()
         if exists and connection.execute('SELECT 1 FROM legacy_imports WHERE fingerprint=?', (batch.fingerprint,)).fetchone():
             errors.append('이미 가져온 원본 자료입니다.')
-        students = {tuple(row) for row in connection.execute('''SELECT s.name, e.school_year, e.grade, e.classroom
-            FROM students s JOIN student_enrollments e ON e.student_id=s.id''')}
-        groups = {row[0] for row in connection.execute('SELECT name FROM counseling_groups')}
-        teachers = {row[0] for row in connection.execute('SELECT name FROM teachers')}
+        existing = {}
+        for row in connection.execute('''SELECT s.*, e.school_year AS match_year, e.grade AS match_grade,
+                e.classroom AS match_classroom FROM students s JOIN student_enrollments e ON e.student_id=s.id'''):
+            key = ('student', row['name'], row['match_year'], row['match_grade'], row['match_classroom'])
+            existing.setdefault(key, []).append(dict(row))
+        for kind, table in [('teacher', 'teachers'), ('group', 'counseling_groups')]:
+            for row in connection.execute(f'SELECT * FROM {table}'):
+                existing.setdefault((kind, row['name']), []).append(dict(row))
+        source, resolutions, actions = {}, {}, []
         for person in batch.people:
             value = person.value
             if isinstance(value, StudentInput):
-                identity = (value.name, value.school_year, value.grade, value.classroom)
-                duplicate = identity in students
-                students.add(identity)
+                identity = ('student', value.name, value.school_year, value.grade, value.classroom)
+                fields = ('birth_date', 'gender', 'student_contact')
             elif isinstance(value, TeacherInput):
-                duplicate = value.name in teachers
-                teachers.add(value.name)
+                identity, fields = ('teacher', value.name), ('contact',)
             else:
-                duplicate = value.name in groups
-                groups.add(value.name)
-            if duplicate:
-                errors.append(f'인적사항등록 {person.row}행: 같은 학생(이름·학년도·학년·반), 교사명 또는 집단명이 있습니다. 자동 병합하지 않습니다.')
-        return errors
+                identity, fields = ('group', value.name), ()
+            data = values(value)
+
+            def compatible(other):
+                return all(not data.get(field) or not other.get(field) or data[field] == other[field] for field in fields)
+
+            candidates = [row for row in existing.get(identity, []) if compatible(row)]
+            if len(candidates) > 1 or (existing.get(identity) and not candidates):
+                errors.append(f'인적사항등록 {person.row}행: 동일 대상 후보가 여러 명이거나 식별 정보가 충돌합니다.')
+                continue
+            # 같은 파일의 여러 사례번호도 같은 대상을 재사용한다.
+            if identity in source:
+                first_key, previous = source[identity]
+                if not compatible(previous):
+                    errors.append(f'인적사항등록 {person.row}행: 같은 대상의 식별 정보가 충돌합니다.')
+                    continue
+                previous.update({field: data[field] for field in fields if data.get(field)})
+                resolutions[person.key] = resolutions[first_key]
+                actions.append((person.key, '파일 내 동일 대상 연결'))
+            else:
+                source[identity] = (person.key, data)
+                resolutions[person.key] = ('existing', candidates[0]['id']) if candidates else ('new', person.key)
+                actions.append((person.key, '기존 DB 대상 연결' if candidates else '신규 등록'))
+        return errors, resolutions, tuple(actions)
 
     def preview(self, content, school_year, period_times=None):
         batch = parse_legacy(content, school_year, period_times)
         with self.database.session() as connection:
-            return replace(batch, errors=tuple(self._errors(connection, batch)))
+            errors, _, actions = self._resolve(connection, batch)
+            return replace(batch, errors=tuple(errors), actions=actions)
 
     def save(self, batch):
         if batch.errors or not batch.people:
             raise ValueError('파일 오류를 수정하고 다시 검사하세요.')
         with self.database.session(write=True) as connection:
-            errors = self._errors(connection, batch)
+            errors, resolutions, _ = self._resolve(connection, batch)
             if errors:
                 raise ValueError('\n'.join(errors[:30]))
             # 이관 이력 역시 암호화된 DB에 보관하고 데이터와 함께 커밋한다.
             connection.execute('''CREATE TABLE IF NOT EXISTS legacy_imports (
                 fingerprint TEXT PRIMARY KEY, imported_at TEXT NOT NULL)''')
-            ids, cases = {}, {}
+            ids, cases, created = {}, {}, 0
             timestamp = now_text()
 
             def insert(table, data):
@@ -63,6 +86,13 @@ class LegacyImportRepository:
                                           tuple(data.values())).lastrowid
 
             for person in batch.people:
+                mode, target = resolutions[person.key]
+                if mode == 'existing':
+                    ids[person.key] = target
+                    continue
+                if target != person.key:
+                    ids[person.key] = ids[target]
+                    continue
                 data = values(person.value)
                 if isinstance(person.value, StudentInput):
                     ids[person.key] = insert('students', data)
@@ -72,6 +102,7 @@ class LegacyImportRepository:
                 else:
                     data.pop('student_ids')
                     ids[person.key] = insert('counseling_groups', data)
+                created += 1
             for log in batch.logs:
                 data = values(log.value)
                 if log.author:
@@ -96,4 +127,4 @@ class LegacyImportRepository:
                     connection.execute(f'UPDATE {table} SET author=? WHERE id=?', (log.author, log_id))
             connection.execute('INSERT INTO legacy_imports VALUES (?, ?)', (batch.fingerprint, timestamp))
         self.database.student_revision += 1
-        return len(batch.people), len(batch.logs)
+        return created, len(batch.logs)
