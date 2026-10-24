@@ -99,6 +99,13 @@
       "source": "https://github.com/notofonts/noto-cjk",
       "license_source": "https://raw.githubusercontent.com/google/fonts/main/ofl/notosanskr/OFL.txt",
       "text_file": "fonts/noto.txt"
+    },
+    {
+      "name": "Spoqa Han Sans Neo",
+      "license": "OFL-1.1",
+      "source": "https://github.com/spoqa/spoqa-han-sans",
+      "license_source": "https://raw.githubusercontent.com/spoqa/spoqa-han-sans/master/LICENSE",
+      "text_file": "fonts/spoqa.txt"
     }
   ]
 }

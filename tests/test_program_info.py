@@ -48,7 +48,7 @@ def test_manifest_rejects_license_path_outside_folder(tmp_path):
 def test_bundled_notices_have_license_source_and_full_text():
     notices = program_info.third_party_notices()
     assert len(notices['libraries']) == 12
-    assert {entry['name'] for entry in notices['fonts']} == {'Pretendard', 'Noto Sans KR'}
+    assert {entry['name'] for entry in notices['fonts']} == {'Pretendard', 'Noto Sans KR', 'Spoqa Han Sans Neo'}
     for entries in notices.values():
         for entry in entries:
             assert entry['license']

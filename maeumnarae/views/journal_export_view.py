@@ -6,6 +6,7 @@ from nicegui import run, ui
 from maeumnarae.core.database import DatabaseError
 from maeumnarae.services.reporting import KST
 from maeumnarae.services.journal_export import ExportOptions, XLSX_MIME, export_journals
+from maeumnarae.views.settings_card import settings_card
 
 
 class JournalExportView:
@@ -16,9 +17,8 @@ class JournalExportView:
 
     def build(self):
         today = datetime.now(KST).date()
-        with ui.card().classes('w-full rounded-2xl shadow-sm p-5 gap-3'):
-            ui.label('NEIS 업로드용 파일 내보내기').classes('text-xl font-bold')
-            ui.label('개인상담·집단상담·특별교육·자문·심리검사·교육/행사를 상담관리 업로드 서식으로 내보냅니다.').classes('text-slate-600')
+        with settings_card('NEIS 업로드용 파일 내보내기', 'file_download',
+                           '개인상담·집단상담·특별교육·자문·심리검사·교육/행사를 상담관리 업로드 서식으로 내보냅니다.'):
             with ui.row().classes('w-full items-end'):
                 self.all_dates = ui.checkbox('전체 기간', value=True)
                 self.start = ui.date_input('일지 시작일', value=str(today.replace(month=3, day=1) if today.month >= 3 else date(today.year - 1, 3, 1))).props('outlined')

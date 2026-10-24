@@ -56,7 +56,7 @@ class DisplaySettings:
     def __init__(self, path: Path | None = None):
         self.path = path
         self.store = SettingsStore(path)
-        self.values = {'mode': 'auto', 'size': 16, 'font': 'system', 'primary': DEFAULT_PRIMARY}
+        self.values = {'mode': 'auto', 'size': 16, 'font': 'SpoqaHanSansNeo', 'primary': DEFAULT_PRIMARY}
         if path and path.exists():
             try:
                 data = json.loads(path.read_text(encoding='utf-8'))
