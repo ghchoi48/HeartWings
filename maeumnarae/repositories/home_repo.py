@@ -10,7 +10,7 @@ from maeumnarae.views.home_layout import COLUMNS, MIN_HEIGHT, MAX_HEIGHT, DEFAUL
 from maeumnarae.views.counseling_content import clean_html
 
 WIDGET_KINDS = ('clock', 'todo', 'teacher_search', 'meal', 'memo', 'weather')
-DEFAULT_LAYOUT = [{'id': kind, 'kind': kind, 'span': 1} for kind in WIDGET_KINDS[:3]]
+DEFAULT_LAYOUT = [{'id': kind, 'kind': kind, 'span': 1} for kind in ('clock', 'meal', 'todo')]
 
 
 class HomeRepository:

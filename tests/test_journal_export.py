@@ -152,6 +152,17 @@ def test_missing_demographics_are_not_guessed_and_all_rows_are_kept():
         export_rows(snapshot, ExportOptions(start=date(2026, 3, 2), end=date(2026, 3, 1)))
 
 
+@pytest.mark.parametrize('status, expected', [('completed', 2), ('completed_scheduled', 3)])
+def test_export_status_excludes_cancelled_and_includes_records_without_status(status, expected):
+    record = dict(kind='individual', id=1, starts_at='2026-03-01T00:00:00+00:00',
+                  duration_minutes=30, area='진로', target='학생본인', method='면담')
+    records = [dict(record, id=index, status=value)
+               for index, value in enumerate(('completed', 'scheduled', 'cancelled'))]
+    records.append(dict(record, id=3))
+    rows, _, _ = export_rows(JournalSnapshot(tuple(records), {}), ExportOptions(status=status))
+    assert len(rows) == expected
+
+
 def test_export_view_download_and_invalidate():
     async def check():
         with Client(page('/journal-export-test')):
@@ -161,7 +172,7 @@ def test_export_view_download_and_invalidate():
             with patch('maeumnarae.views.journal_export_view.run.io_bound', new_callable=AsyncMock, return_value=result) as io:
                 await view.generate()
                 assert view.download_button.enabled
-                assert io.await_args.args[2] == ExportOptions()
+                assert io.await_args.args[2] == ExportOptions(status='completed_scheduled')
                 with patch('maeumnarae.views.journal_export_view.ui.download.content') as download:
                     view.download()
                     assert download.call_args.args[0] == b'xlsx-test'

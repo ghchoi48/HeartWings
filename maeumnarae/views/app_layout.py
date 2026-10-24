@@ -89,7 +89,7 @@ class AppLayout:
                 self.home_view = HomeView(HomeRepository(self.students.database,
                                                           self.display.store if self.display else None),
                                           TeacherRepository(self.students.database),
-                                          lambda: self.navigate('students'))
+                                          lambda: self.navigate('students'), school=self.school)
                 self.home_view.build()
             self.panels['students'] = ui.column().classes('w-full')
             self.panels['counseling'] = ui.column().classes('w-full')

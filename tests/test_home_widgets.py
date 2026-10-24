@@ -154,7 +154,7 @@ class HomeViewTests(unittest.IsolatedAsyncioTestCase):
                 await view.change_geometry('clock', {'x': 13, 'y': 40})
                 assert not any(overlaps(a, b) for i, a in enumerate(view.layout) for b in view.layout[i+1:])
                 await view.remove(1)
-                assert [item['kind'] for item in view.layout] == ['clock', 'teacher_search']
+                assert [item['kind'] for item in view.layout] == ['clock', 'todo']
                 saved = [dict(item) for item in view.layout]
                 repo.save_layout.side_effect = DatabaseError('저장 실패')
                 with patch('maeumnarae.views.home_view.ui.notify') as notify:

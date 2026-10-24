@@ -39,7 +39,7 @@ class ExportOptions:
             date_bounds(self.start, self.end)
         if self.wee_class not in ('일반', 'Wee클래스'):
             raise ValueError('Wee클래스 구분을 확인해 주세요.')
-        if self.status not in ('all', 'completed'):
+        if self.status not in ('all', 'completed', 'completed_scheduled'):
             raise ValueError('내보낼 상태를 확인해 주세요.')
 
 
@@ -72,6 +72,8 @@ def export_rows(snapshot: JournalSnapshot, options: ExportOptions):
             continue
         # 상태 필드가 없는 검사/교육 기록은 완료만 선택해도 포함한다.
         if options.status == 'completed' and record.get('status', 'completed') != 'completed':
+            continue
+        if options.status == 'completed_scheduled' and record.get('status', 'completed') not in ('completed', 'scheduled'):
             continue
         kind, year = record['kind'], school_year(day)
         problems = []

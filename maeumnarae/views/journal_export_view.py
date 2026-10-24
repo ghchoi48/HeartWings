@@ -19,13 +19,12 @@ class JournalExportView:
         today = datetime.now(KST).date()
         with settings_card('NEIS 업로드용 파일 내보내기', 'file_download',
                            '개인상담·집단상담·특별교육·자문·심리검사·교육/행사를 상담관리 업로드 서식으로 내보냅니다.'):
-            with ui.row().classes('w-full items-end'):
-                self.all_dates = ui.checkbox('전체 기간', value=True)
-                self.start = ui.date_input('일지 시작일', value=str(today.replace(month=3, day=1) if today.month >= 3 else date(today.year - 1, 3, 1))).props('outlined')
-                self.end = ui.date_input('일지 종료일', value=str(today)).props('outlined')
-                self.status = ui.select({'all': '모든 상태(예약·취소 포함)', 'completed': '완료만'},
-                                        value='all', label='내보낼 일지 상태').props('outlined')
-                self.wee = ui.select(['Wee클래스', '일반'], value='Wee클래스', label='Wee클래스 구분').props('outlined')
+            with ui.row().classes('w-full items-end flex-nowrap overflow-x-auto'):
+                self.all_dates = ui.checkbox('전체 기간', value=True).classes('shrink-0 whitespace-nowrap')
+                self.start = ui.date_input('일지 시작일', value=str(today.replace(month=3, day=1) if today.month >= 3 else date(today.year - 1, 3, 1))).props('outlined').classes('flex-1 min-w-[200px]')
+                self.end = ui.date_input('일지 종료일', value=str(today)).props('outlined').classes('flex-1 min-w-[200px]')
+                self.status = ui.select({'completed': '완료만', 'completed_scheduled': '완료 및 예약'},
+                                        value='completed_scheduled', label='내보낼 일지 상태').props('outlined').classes('flex-1 min-w-[200px]')
             ui.label('학년도는 일지 날짜의 3월~다음 해 2월 기준입니다. 상담분류는 전문상담, 상담사소속은 전문상담교사로 입력합니다.').classes('text-sm text-slate-500')
             ui.label('개인상담의 상담분야와 교원자문의 자문분야는 상담구분에 저장된 값 그대로 입력합니다.').classes('text-sm text-slate-500')
             ui.label('상담제목·상담내용은 상담구분과 동일하게 입력합니다. 실제 제목·본문·비밀 메모·이름·연락처는 포함하지 않습니다.').classes('text-sm text-slate-500')
@@ -36,7 +35,7 @@ class JournalExportView:
                 self.download_button = ui.button('XLSX 다운로드', icon='download', on_click=self.download).props('outline')
             self.message = ui.label().classes('text-sm text-slate-600')
             self.issues = ui.column().classes('w-full')
-        self.controls = (self.all_dates, self.start, self.end, self.status, self.wee)
+        self.controls = (self.all_dates, self.start, self.end, self.status)
         for control in self.controls:
             control.on_value_change(self.invalidate)
         self.invalidate()
@@ -57,7 +56,7 @@ class JournalExportView:
             options = ExportOptions(
                 start=None if self.all_dates.value else date.fromisoformat(self.start.value or ''),
                 end=None if self.all_dates.value else date.fromisoformat(self.end.value or ''),
-                wee_class=self.wee.value, status=self.status.value)
+                wee_class='Wee클래스', status=self.status.value)
             options.validate()
         except (ValueError, TypeError):
             self.message.text = '내보낼 기간과 선택 항목을 확인해 주세요.'

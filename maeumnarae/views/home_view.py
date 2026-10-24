@@ -1,6 +1,8 @@
 ﻿"""세밀한 홈 격자와 위젯 배치 편집."""
 
 from copy import deepcopy
+from functools import partial
+from random import choice
 from uuid import uuid4
 
 from nicegui import run, ui
@@ -11,11 +13,27 @@ from maeumnarae.widgets import WIDGETS
 from maeumnarae.views.home_interactions import POINTER, KEYBOARD
 
 
+WELCOME_MESSAGES = (
+    '오늘도 만나서 반가워요.',
+    '마음을 잇는 하루를 함께 시작해요.',
+    '오늘도 따뜻한 만남이 기다리고 있어요.',
+    '선생님의 하루를 응원해요.',
+    '잠시 숨을 고르고 하루를 시작해 볼까요?',
+    '오늘도 선생님의 따뜻한 마음을 응원해요.',
+    '작은 미소로 하루를 열어 보세요.',
+    '선생님 자신을 돌보는 시간도 챙겨 주세요.',
+    '오늘도 함께할 수 있어 기뻐요.',
+    '편안한 마음으로 오늘을 준비해요.',
+)
+
+
 class HomeView:
-    def __init__(self, repository, teachers, on_students):
+    def __init__(self, repository, teachers, on_students, school=None):
         self.repository = repository
         self.teachers = teachers
         self.on_students = on_students
+        self.school = school
+        self.welcome_message = choice(WELCOME_MESSAGES)
         self.layout = []
         self.default_sizes = {kind: {'width': w, 'height': h} for kind, (w, h) in DEFAULT_SIZES.items()}
         self.editing = False
@@ -56,10 +74,10 @@ class HomeView:
                 with ui.column().classes('gap-1'):
                     ui.label('홈').classes('text-sm font-semibold text-teal-700')
                     ui.label('오늘도, 마음을 잇는 시간').classes('text-3xl font-bold text-slate-800')
-                    ui.label('나에게 필요한 위젯으로 하루를 준비하세요.').classes('text-slate-500')
+                    self.greeting = ui.label(f'선생님, {self.welcome_message}').classes('text-slate-500')
                 self.edit_button = ui.button('위젯 편집', icon='dashboard_customize', on_click=self.toggle_edit)
                 self.edit_button.disable()
-            with ui.row().classes('w-full items-center gap-3'):
+            with ui.row().classes('w-full items-center gap-3') as self.controls:
                 self.add_button = ui.button('위젯 추가', icon='add', on_click=self.open_picker).props('outline')
                 self.add_button.disable()
                 self.add_button.set_visibility(False)
@@ -70,6 +88,10 @@ class HomeView:
 
     async def load(self):
         try:
+            if self.school is not None:
+                settings = await run.io_bound(self.school.get)
+                name = settings.counselor_name.strip()
+                self.greeting.text = f'{name + " " if name else ""}선생님, {self.welcome_message}'
             self.layout = arrange(await run.io_bound(self.repository.layout))
             self.default_sizes = await run.io_bound(self.repository.widget_sizes)
             self.loaded = True
@@ -98,8 +120,9 @@ class HomeView:
         self.edit_button.text = '편집 완료' if self.editing else '위젯 편집'
         self.add_button.set_visibility(self.editing)
         self.add_button.set_enabled(self.editing and not self.busy)
+        self.controls.set_visibility(self.editing)
         self.status.text = ('제목을 끌어 빈 곳으로 이동 · 가장자리로 크기 조절 · 방향키로 미세 조절 · 자동 저장'
-                            if self.editing else '배치는 자동 저장됩니다.')
+                            if self.editing else '')
         with self.grid:
             if not self.layout:
                 with ui.column().classes('items-center w-full p-10 text-slate-500').style('grid-column: 1 / -1; grid-row: span 5'):
@@ -154,21 +177,22 @@ class HomeView:
             return
         with ui.dialog() as dialog, ui.card().classes('w-[480px] max-w-full p-6'):
             ui.label('위젯 추가').classes('text-xl font-bold')
-            kind = ui.select({key: widget.title for key, widget in WIDGETS.items()},
-                             value='clock', label='위젯').classes('w-full')
             ui.label('추가한 뒤 제목을 끌어 이동하고 가장자리로 크기를 조절하세요.').classes('text-sm text-slate-500')
 
-            async def add():
+            async def add(kind):
                 if self.busy or not self.editing:
                     return
-                w = self.default_sizes[kind.value]['width']
-                h = self.default_sizes[kind.value]['height']
-                if await self.commit(arrange([*self.layout, {'id': uuid4().hex, 'kind': kind.value,
+                w = self.default_sizes[kind]['width']
+                h = self.default_sizes[kind]['height']
+                if await self.commit(arrange([*self.layout, {'id': uuid4().hex, 'kind': kind,
                                                             'width': int(w), 'height': int(h)}])):
                     dialog.close()
+            with ui.column().classes('w-full gap-2'):
+                for kind, widget in WIDGETS.items():
+                    ui.button(widget.title, icon=widget.icon, on_click=partial(add, kind)).props(
+                        'outline align=left').classes('w-full')
             with ui.row().classes('self-end'):
                 ui.button('닫기', on_click=dialog.close).props('flat')
-                ui.button('추가', icon='add', on_click=add)
         dialog.open()
 
     async def change_geometry(self, instance_id, size):
