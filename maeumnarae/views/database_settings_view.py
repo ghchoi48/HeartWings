@@ -112,7 +112,7 @@ def build_database_settings(database: Database, on_roster_import=None) -> None:
         finally:
             secret = ''
 
-    with settings_card('DB 관리', 'storage', '상담 데이터의 보관 상태와 백업을 관리하세요.'):
+    with settings_card('DB 관리', 'storage', '상담 데이터의 보관 상태와 백업을 관리하세요.', collapsible=True):
         folder_button = ui.button('DB 폴더 열기', icon='folder_open', on_click=open_database_folder).props('outline')
         ui.separator()
         ui.label('DB 백업').classes('font-semibold text-slate-700')
@@ -135,18 +135,18 @@ def build_database_settings(database: Database, on_roster_import=None) -> None:
                 restore = ui.button('복원', icon='restore', on_click=restore_database)
         dialog.on('hide', clear_restore)
         open_restore = ui.button('백업 파일에서 복원', icon='restore', on_click=dialog.open).props('outline')
-    JournalExportView(database).build()
+    JournalExportView(database).build(collapsible=True)
 
     async def imported(kind):
         if on_roster_import is not None:
             await on_roster_import(kind)
 
     with settings_card('학생·교사 일괄 등록', 'group_add',
-                       'XLSX 파일로 새 명부를 추가합니다. 기존 정보는 변경하지 않으며 오류가 있으면 전체 등록을 중단합니다.'):
+                       'XLSX 파일로 새 명부를 추가합니다. 기존 정보는 변경하지 않으며 오류가 있으면 전체 등록을 중단합니다.', collapsible=True):
         for kind in ('students', 'teachers'):
             view = RosterImportView(database, kind, lambda: busy, set_busy, imported)
             view.build()
             import_views.append(view)
     legacy = LegacyImportView(database, lambda: busy, set_busy, imported)
-    legacy.build()
+    legacy.build(collapsible=True)
     import_views.append(legacy)

@@ -8,7 +8,20 @@ from nicegui import ui
 
 @contextmanager
 def settings_card(title: str, icon: str, description: str,
-                  badge: str | None = None) -> Iterator[None]:
+                  badge: str | None = None, *, collapsible: bool = False) -> Iterator[None]:
+    if collapsible:
+        with ui.card().classes(
+            'w-full min-w-0 rounded-2xl border border-slate-200 shadow-sm bg-white p-0 overflow-hidden'
+        ):
+            with ui.expansion(title, icon=icon, caption=description).classes('w-full').props(
+                'header-class="p-6 text-slate-800 font-semibold"'
+            ):
+                with ui.column().classes('w-full min-w-0 gap-5 px-6 pb-6'):
+                    if badge:
+                        ui.label(badge).classes('text-xs text-slate-500')
+                    ui.separator()
+                    yield
+        return
     with ui.card().classes(
         'w-full min-w-0 rounded-2xl border border-slate-200 shadow-sm bg-white p-6 gap-5'
     ):

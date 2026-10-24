@@ -15,10 +15,10 @@ class JournalExportView:
         self.busy = False
         self.result = None
 
-    def build(self):
+    def build(self, *, collapsible: bool = False):
         today = datetime.now(KST).date()
         with settings_card('NEIS 업로드용 파일 내보내기', 'file_download',
-                           '개인상담·집단상담·특별교육·자문·심리검사·교육/행사를 상담관리 업로드 서식으로 내보냅니다.'):
+                           '개인상담·집단상담·특별교육·자문·심리검사·교육/행사를 상담관리 업로드 서식으로 내보냅니다.', collapsible=collapsible):
             with ui.row().classes('w-full items-end flex-nowrap overflow-x-auto'):
                 self.all_dates = ui.checkbox('전체 기간', value=True).classes('shrink-0 whitespace-nowrap')
                 self.start = ui.date_input('일지 시작일', value=str(today.replace(month=3, day=1) if today.month >= 3 else date(today.year - 1, 3, 1))).props('outlined').classes('flex-1 min-w-[200px]')

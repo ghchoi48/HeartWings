@@ -378,3 +378,96 @@ async def test_group_list_school_year_from_start_date(period, school_year):
         await view.load_groups()
         assert view.table.rows[0]['school_year'] == (school_year if school_year is not None else '미입력')
         assert view.table.columns[0]['label'] == '학년도'
+
+
+def test_attendance_round_trip_and_membership_changes(tmp_path):
+    from maeumnarae.core.models import StudentInput
+    from maeumnarae.repositories.student_repo import StudentRepository
+
+    db = Database('attendance', tmp_path / 'attendance.db')
+    db.initialize()
+    students = StudentRepository(db)
+    first = students.create(StudentInput(name='동명이인', grade=1, classroom='1'))
+    second = students.create(StudentInput(name='동명이인', grade=2, classroom='1'))
+    repo = GroupCounselingRepository(db)
+    group = repo.save(GroupCounselingInput(name='집단', student_ids=[first.id, second.id]))
+    value = GroupLogInput(group_id=group.id, title='출석 기록', starts_at=datetime.now(timezone.utc),
+                          attendance=[dict(student_id=first.id, name=group.participant_labels[0],
+                                           attended=True, attitude='활동에 적극적으로 참여함'),
+                                      dict(student_id=second.id, name=group.participant_labels[1],
+                                           attended=False, attitude='결석')])
+    entry = repo.save_log(value)
+    repo.save(GroupCounselingInput(name='집단', student_ids=[second.id]), group.id)
+    db.initialize()
+    assert repo.get_log(entry.id).attendance == value.attendance
+    assert repo.list_logs(group.id)[0].attendance == value.attendance
+    changed = value.model_dump()
+    changed['attendance'][0].update(attended=False, attitude='수정')
+    repo.save_log(GroupLogInput(**changed), entry.id)
+    assert repo.get_log(entry.id).attendance[0].attitude == '수정'
+    assert not repo.get_log(entry.id).attendance[0].attended
+    another = repo.save_log(GroupLogInput(group_id=group.id, title='다음 회기', starts_at=value.starts_at))
+    assert another.attendance == []
+
+
+def test_existing_database_adds_attendance_without_losing_log(tmp_path):
+    db = Database('attendance', tmp_path / 'old-attendance.db')
+    db.initialize()
+    repo = GroupCounselingRepository(db)
+    group = repo.save(GroupCounselingInput(name='기존 집단'))
+    entry = repo.save_log(GroupLogInput(group_id=group.id, title='기존 일지',
+                                      starts_at=datetime.now(timezone.utc), content_html='<p>기존 내용</p>'))
+    with db.session(write=True) as connection:
+        connection.execute('ALTER TABLE group_counseling_logs DROP COLUMN attendance')
+    reopened = Database('attendance', db.path)
+    reopened.initialize()
+    reopened.initialize()
+    assert GroupCounselingRepository(reopened).get_log(entry.id) == entry
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize('existing', [False, True])
+async def test_attendance_table_edits_are_saved(existing):
+    import inspect
+    from types import SimpleNamespace
+    from maeumnarae.core.models import GroupLog
+
+    now = datetime.now(timezone.utc)
+    group = GroupCounseling(id=1, name='집단', student_ids=[10, 20],
+                            participant_labels=['학생 A · 1학년 1반', '학생 B · 2학년 1반'],
+                            created_at=now, updated_at=now)
+    log = GroupLog(id=1, group_id=1, title='회기', starts_at=now, created_at=now, updated_at=now,
+                   attendance=[dict(student_id=30, name='이전 참여 학생', attended=True, attitude='기존 태도')])
+    repo = Mock()
+    repo.get_log.return_value = log
+    with Client(page('/attendance-editor')), patch(
+            'maeumnarae.views.group_counseling_view.run.io_bound', side_effect=invoke):
+        view = GroupCounselingView(repo)
+        view.selected = group
+
+        async def interact(dialog):
+            table = next(e for e in dialog.descendants() if isinstance(e, ui.table))
+            assert [c['label'] for c in table.columns] == ['이름', '출석', '참여 태도']
+            assert table.row_key == 'student_id'
+            if existing:
+                assert table.rows == [row.model_dump() for row in log.attendance]
+            else:
+                assert [row['student_id'] for row in table.rows] == [10, 20]
+                assert not any(row['attended'] for row in table.rows)
+                title = next(e for e in dialog.descendants() if isinstance(e, ui.input) and e.label == '일지 제목')
+                title.value = '새 회기'
+            change = next(e.handler for e in table._event_listeners.values() if e.type == 'attendance_change')
+            student_id = table.rows[0]['student_id']
+            change(SimpleNamespace(args=dict(student_id=student_id, field='attended', value=True)))
+            change(SimpleNamespace(args=dict(student_id=student_id, field='attitude', value='표에서 입력한 태도')))
+            save = next(e for e in dialog.descendants() if isinstance(e, ui.button) and e.text == '저장')
+            handler = next(e.handler for e in save._event_listeners.values() if e.type == 'click')
+            await inspect.getclosurevars(handler).nonlocals['callback']()
+            return None
+
+        with patch.object(ui.dialog, '__await__', lambda dialog: interact(dialog).__await__()):
+            await view.open_editor(log=True, log_id=1 if existing else None)
+        value = repo.save_log.call_args.args[0]
+        assert value.attendance[0].attended
+        assert value.attendance[0].attitude == '표에서 입력한 태도'
+        assert value.attendance[0].student_id == (30 if existing else 10)

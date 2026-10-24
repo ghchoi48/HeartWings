@@ -49,8 +49,10 @@ class OnboardingView:
                     ui.label('학교 정보를 알려주세요').classes('text-xl font-bold')
                     self.fields = {}
                     self.fields['neis_office_code'] = ui.select(OFFICES, value=self.settings.neis_office_code or None, label='교육청')
-                    self.fields['school_level'] = ui.select(['초등학교', '중학교', '고등학교'], value=self.settings.school_level, label='학교급')
+                    self.fields['school_level'] = ui.select(['초등학교', '중학교', '고등학교', 'Wee센터'], value=self.settings.school_level, label='학교급')
                     self.fields['school_name'] = ui.input('학교명', value=self.settings.school_name).props('maxlength=100')
+                    self.fields['school_name'].bind_label_from(
+                        self.fields['school_level'], 'value', backward=lambda level: '센터명' if level == 'Wee센터' else '학교명')
                     self.fields['neis_school_code'] = ui.input('학교 나이스 번호', value=self.settings.neis_school_code).props('readonly')
                     self.button('불러오기', self.search_school, icon='search').props('outline')
                     ui.label('검색 결과에서 학교를 선택하면 나이스 번호가 자동 저장됩니다.').classes('text-sm text-slate-500')

@@ -1,6 +1,7 @@
 """집단 목록, 선택 집단의 상세 정보와 회기별 상담일지."""
 
 from datetime import date, datetime
+from copy import deepcopy
 from collections.abc import Awaitable, Callable
 
 from maeumnarae.views.journal_pagination import PAGE_SIZE, load_page
@@ -230,6 +231,8 @@ class GroupCounselingView:
                         break
                     offset += len(students)
             fields = {}
+            attendance_table = None
+            saving = False
             with ui.context.client.content:
                 with ui.dialog().props('persistent') as dialog, ui.card().classes('w-full max-w-5xl p-6 gap-4'):
                     ui.label(('집단 상담 일지 수정' if entry else '새 집단 상담 일지') if log else ('집단 정보 수정' if group else '새 집단 상담')).classes('text-2xl font-bold')
@@ -242,6 +245,47 @@ class GroupCounselingView:
                             fields['starts_time'] = time_input('시작 시각 (한국 시각)', value=local_start.time().isoformat()).props('outlined')
                             fields['duration_minutes'] = ui.number('상담 시간 (분)', value=entry.duration_minutes if entry else 50, min=1, max=1440, step=1).props('outlined')
                             fields['status'] = ui.select(STATUSES, label='상담 상태', value=entry.status if entry else 'scheduled').props('outlined')
+                        ui.label('참여 학생 출석 및 참여 태도').classes('font-semibold')
+                        attendance_rows = ([row.model_dump() for row in entry.attendance]
+                                           if entry and entry.attendance else [
+                                               dict(student_id=student_id, name=label, attended=False, attitude='')
+                                               for student_id, label in zip(group.student_ids, group.participant_labels)
+                                           ])
+                        attendance_table = ui.table(columns=[
+                            dict(name=key, label=label, field=key, align='left',
+                                 style='width: 1%; white-space: nowrap' if key != 'attitude' else 'width: 100%',
+                                 headerStyle='width: 1%; white-space: nowrap' if key != 'attitude' else 'width: 100%')
+                            for key, label in [('name', '이름'), ('attended', '출석'), ('attitude', '참여 태도')]
+                        ], rows=attendance_rows, row_key='student_id').classes('w-full').props(
+                            'flat bordered wrap-cells hide-bottom no-data-label="집단 정보에서 참여 학생을 먼저 등록해 주세요"')
+                        attendance_table.add_slot('body-cell-attended', '''
+                            <q-td :props="props" auto-width>
+                                <q-checkbox v-model="props.row.attended"
+                                    :aria-label="props.row.name + ' 출석'"
+                                    @update:model-value="value => $parent.$emit('attendance_change', {student_id: props.row.student_id, field: 'attended', value})" />
+                            </q-td>
+                        ''')
+                        attendance_table.add_slot('body-cell-attitude', '''
+                            <q-td :props="props" style="min-width: 240px; width: 100%">
+                                <q-input v-model="props.row.attitude" outlined dense autogrow
+                                    type="textarea" maxlength="2000" placeholder="참여 태도를 입력하세요"
+                                    :aria-label="props.row.name + ' 참여 태도'"
+                                    @update:model-value="value => $parent.$emit('attendance_change', {student_id: props.row.student_id, field: 'attitude', value})" />
+                            </q-td>
+                        ''')
+
+                        def update_attendance(event):
+                            if saving:
+                                return
+                            args = event.args
+                            if args.get('field') not in ('attended', 'attitude'):
+                                return
+                            for row in attendance_table.rows:
+                                if row['student_id'] == args.get('student_id'):
+                                    row[args['field']] = args['value']
+                                    break
+
+                        attendance_table.on('attendance_change', update_attendance)
                         ui.label('상담 내용').classes('font-semibold')
                         fields['content_html'] = ui.editor(value=clean_html(entry.content_html) if entry else '').classes('w-full').props("""min-height=320px :toolbar='[[{"label": "머릿말", "list": "no-icons", "options": ["p", "h1", "h2", "h3"]}], ["bold", "italic", "underline", "strike"], ["unordered", "ordered"], ["left", "center", "right"], ["undo", "redo"]]'""")
                         fields['follow_up'] = ui.textarea('후속 조치', value=entry.follow_up if entry else '').props('outlined maxlength=20000').classes('w-full')
@@ -270,13 +314,18 @@ class GroupCounselingView:
                         ui.space()
                         cancel_button = ui.button('취소').props('flat')
                         save_button = ui.button('저장', icon='save')
-            original = {key: list(field.value) if isinstance(field.value, list) else field.value for key, field in fields.items()}
-            saving = False
+            def form_data():
+                data = {key: field.value for key, field in fields.items()}
+                if attendance_table is not None:
+                    data['attendance'] = attendance_table.rows
+                return deepcopy(data)
+
+            original = form_data()
 
             async def cancel():
                 if saving:
                     return
-                if original != {key: field.value for key, field in fields.items()}:
+                if original != form_data():
                     with ui.dialog().props('persistent') as confirm, ui.card():
                         ui.label('저장하지 않은 내용을 버릴까요?')
                         ui.button('계속 작성', on_click=lambda: confirm.submit(False))
@@ -291,7 +340,7 @@ class GroupCounselingView:
                 nonlocal saving
                 if saving:
                     return
-                data = {key: field.value for key, field in fields.items()}
+                data = form_data()
                 try:
                     if log:
                         data['starts_at'] = datetime.combine(
@@ -314,6 +363,8 @@ class GroupCounselingView:
                                     '집단명과 입력 길이를 확인해 주세요. 운영 기간은 YYYY-MM-DD 또는 YYYY-MM-DD - YYYY-MM-DD 형식이며 종료일은 시작일 이후여야 합니다.')
                     return
                 saving = True
+                if attendance_table is not None:
+                    attendance_table.props('inert')
                 for field in (*fields.values(), save_button, cancel_button):
                     field.disable()
                 try:
@@ -326,6 +377,8 @@ class GroupCounselingView:
                     message.text = str(error)
                 finally:
                     saving = False
+                    if attendance_table is not None:
+                        attendance_table.props(remove='inert')
                     for field in (*fields.values(), save_button, cancel_button):
                         field.enable()
 

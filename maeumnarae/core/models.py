@@ -22,12 +22,17 @@ class AuthoredRecord(InputModel):
 
 class SchoolSettings(InputModel):
     school_name: str = Field(default='', max_length=100)
-    school_level: Literal['초등학교', '중학교', '고등학교'] = '중학교'
+    school_level: Literal['초등학교', '중학교', '고등학교', 'Wee센터'] = '중학교'
     counselor_name: str = Field(default='', max_length=100)
     office_number: str = Field(default='', max_length=50)
     neis_office_code: str = Field(default='', pattern=r'^(?:[B-HIJKMNPQRST]10)?$')
     neis_school_code: str = Field(default='', pattern=r'^(?:[0-9]{7})?$')
     neis_api_key: str = Field(default='', max_length=200)
+
+    @property
+    def header_title(self) -> str:
+        organization = 'Wee센터' if self.school_level == 'Wee센터' else 'Wee클래스'
+        return f'마음나래 · {self.school_name} {organization}' if self.school_name else f'마음나래 · {organization}'
 
     @property
     def grade_options(self) -> dict[int, str]:
@@ -286,6 +291,15 @@ class GroupCounseling(GroupCounselingInput, AuthoredRecord):
         return start.year if start.month >= 3 else start.year - 1
 
 
+class GroupAttendanceInput(InputModel):
+    """회기 당시 참여 학생과 출석·참여 태도의 스냅샷."""
+
+    student_id: int = Field(gt=0)
+    name: str = Field(min_length=1, max_length=300)
+    attended: bool = False
+    attitude: str = Field(default='', max_length=2000)
+
+
 class GroupLogInput(InputModel):
     """집단에 종속되는 회기별 상담일지."""
 
@@ -296,6 +310,19 @@ class GroupLogInput(InputModel):
     duration_minutes: int = Field(default=50, ge=1, le=1440)
     content_html: Annotated[str, StringConstraints(strip_whitespace=False)] = Field(default='', max_length=200000)
     follow_up: str = Field(default='', max_length=20000)
+    attendance: list[GroupAttendanceInput] = Field(default_factory=list)
+
+    @field_validator('attendance', mode='before')
+    @classmethod
+    def parse_attendance(cls, value):
+        return json.loads(value) if isinstance(value, str) else value
+
+    @field_validator('attendance')
+    @classmethod
+    def unique_students(cls, value):
+        if len({row.student_id for row in value}) != len(value):
+            raise ValueError('참여 학생은 중복될 수 없습니다.')
+        return value
 
     @field_validator('starts_at')
     @classmethod

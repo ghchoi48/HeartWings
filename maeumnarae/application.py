@@ -65,8 +65,7 @@ def register_page(path: Path) -> None:
                       ReportingRepository(database), on_lock=lock_database,
                       display=display,
                       on_school_change=lambda settings: school_heading.set_text(
-                          f'마음나래 · {settings.school_name} Wee클래스'
-                          if settings.school_name else '마음나래 · Wee클래스',
+                          settings.header_title,
                       )).build(root, drawer, header)
             drawer.set_visibility(True)
             drawer.show()

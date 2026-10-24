@@ -20,9 +20,11 @@ def build_school_settings(repository: SchoolSettingsRepository,
         fields['neis_office_code'] = ui.select({'': '선택 안 함', **OFFICES}, value='',
                                               label='시도교육청').props('outlined').classes('w-full')
         fields['school_level'] = ui.select(
-            ['초등학교', '중학교', '고등학교'], value='중학교', label='학교급',
+            ['초등학교', '중학교', '고등학교', 'Wee센터'], value='중학교', label='학교급',
         ).props('outlined').classes('w-full')
         fields['school_name'] = ui.input('학교명').props('outlined maxlength=100').classes('w-full')
+        fields['school_name'].bind_label_from(
+            fields['school_level'], 'value', backward=lambda level: '센터명' if level == 'Wee센터' else '학교명')
     ui.separator()
     ui.label('상담실 정보').classes('font-semibold text-slate-700')
     fields['counselor_name'] = ui.input('상담교사 이름').props('outlined maxlength=100').classes('w-full')

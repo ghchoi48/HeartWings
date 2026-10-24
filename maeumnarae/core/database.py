@@ -94,6 +94,7 @@ SCHEMA = (
         duration_minutes INTEGER NOT NULL CHECK(duration_minutes BETWEEN 1 AND 1440),
         content_html TEXT NOT NULL,
         follow_up TEXT NOT NULL,
+        attendance TEXT NOT NULL DEFAULT '[]',
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         author TEXT NOT NULL DEFAULT '',
@@ -207,7 +208,7 @@ SCHEMA = (
     """CREATE TABLE school_settings (
         id INTEGER PRIMARY KEY CHECK(id = 1),
         school_name TEXT NOT NULL DEFAULT '',
-        school_level TEXT NOT NULL DEFAULT '중학교' CHECK(school_level IN ('초등학교', '중학교', '고등학교')),
+        school_level TEXT NOT NULL DEFAULT '중학교' CHECK(school_level IN ('초등학교', '중학교', '고등학교', 'Wee센터')),
         counselor_name TEXT NOT NULL DEFAULT '',
         office_number TEXT NOT NULL DEFAULT '',
         neis_office_code TEXT NOT NULL DEFAULT '',
@@ -585,10 +586,24 @@ class Database:
             connection.close()
 
     def initialize(self, school: SchoolSettings | None = None, *, onboarding: bool = False) -> None:
-        """현재 구조를 버전 1로 생성한다. 기존 DB는 변경하거나 초기화하지 않는다."""
+        """버전 1 구조를 생성하고 출석 저장 및 Wee센터 지원을 보완한다."""
         with self._session_lock, self._transaction(write=True) as connection:
             version = connection.execute('PRAGMA user_version').fetchone()[0]
             if version == SCHEMA_VERSION:
+                columns = {row['name'] for row in connection.execute('PRAGMA table_info(group_counseling_logs)')}
+                if columns and 'attendance' not in columns:
+                    connection.execute("ALTER TABLE group_counseling_logs ADD COLUMN attendance TEXT NOT NULL DEFAULT '[]'")
+                school_schema = connection.execute(
+                    "SELECT sql FROM sqlite_master WHERE type='table' AND name='school_settings'"
+                ).fetchone()
+                if school_schema and 'Wee센터' not in school_schema[0]:
+                    # CHECK 제약을 확장하되 설정값과 최초 작성자 스냅샷은 그대로 보존한다.
+                    connection.execute('CREATE TEMP TABLE school_settings_copy AS SELECT * FROM school_settings')
+                    connection.execute('DROP TABLE school_settings')
+                    connection.execute(next(sql for sql in SCHEMA if sql.startswith('CREATE TABLE school_settings (')))
+                    connection.execute('INSERT INTO school_settings SELECT * FROM school_settings_copy')
+                    connection.execute('DROP TABLE school_settings_copy')
+                    connection.execute(next(sql for sql in SCHEMA if sql.startswith('CREATE TRIGGER "school_settings_snapshot_author"')))
                 return
             if version != 0 or connection.execute(
                 "SELECT 1 FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' LIMIT 1"

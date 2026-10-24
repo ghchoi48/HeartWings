@@ -1,5 +1,7 @@
 """집단 상담과 집단별 일지의 조회 및 저장."""
 
+import json
+
 from maeumnarae.core.database import Database, NotFoundError
 from maeumnarae.core.models import GroupCounseling, GroupCounselingInput, GroupLog, GroupLogInput
 from maeumnarae.repositories._support import check_page, now_text, values
@@ -77,19 +79,20 @@ class GroupCounselingRepository:
 
     def save_log(self, value: GroupLogInput, log_id: int | None = None) -> GroupLog:
         data = values(GroupLogInput.model_validate(value.model_dump(include=set(GroupLogInput.model_fields))))
+        data['attendance'] = json.dumps(data['attendance'], ensure_ascii=False)
         data['updated_at'] = now_text()
         with self.database.session(write=True) as connection:
             if log_id is None:
                 cursor = connection.execute('''INSERT INTO group_counseling_logs
-                    (group_id, title, starts_at, duration_minutes, status, content_html, follow_up, created_at, updated_at)
+                    (group_id, title, starts_at, duration_minutes, status, content_html, follow_up, attendance, created_at, updated_at)
                     VALUES (:group_id, :title, :starts_at, :duration_minutes, :status, :content_html, :follow_up,
-                            :updated_at, :updated_at)''', data)
+                            :attendance, :updated_at, :updated_at)''', data)
                 log_id = cursor.lastrowid
             else:
                 data['id'] = log_id
                 cursor = connection.execute('''UPDATE group_counseling_logs SET title=:title,
                     starts_at=:starts_at, duration_minutes=:duration_minutes, status=:status, content_html=:content_html,
-                    follow_up=:follow_up, updated_at=:updated_at WHERE id=:id AND group_id=:group_id''', data)
+                    follow_up=:follow_up, attendance=:attendance, updated_at=:updated_at WHERE id=:id AND group_id=:group_id''', data)
                 if not cursor.rowcount:
                     raise NotFoundError('이 집단의 상담 일지를 찾을 수 없습니다.')
             row = connection.execute('SELECT * FROM group_counseling_logs WHERE id=?', (log_id,)).fetchone()
