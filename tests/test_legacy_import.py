@@ -4,11 +4,11 @@ from datetime import date
 
 import pytest
 
-from database import Database
-from models import SchoolSettings, StudentInput
-from repositories.legacy_import_repo import LegacyImportRepository
-from repositories.student_repo import StudentRepository
-from services.legacy_import import PERSON_HEADERS, LOG_HEADERS, parse_rows, read_rows
+from maeumnarae.core.database import Database
+from maeumnarae.core.models import SchoolSettings, StudentInput
+from maeumnarae.repositories.legacy_import_repo import LegacyImportRepository
+from maeumnarae.repositories.student_repo import StudentRepository
+from maeumnarae.services.legacy_import import PERSON_HEADERS, LOG_HEADERS, parse_rows, read_rows
 
 PERIODS = {'1': '10:30', '2': '13:20'}
 
@@ -81,7 +81,7 @@ def test_atomic_rollback_after_student_insert(db):
     # 실제 SQL 오류를 개인 저장 이후의 집단 일지에서 일으킨다.
     with db.session(write=True) as c:
         c.execute("CREATE TRIGGER fail_legacy BEFORE INSERT ON group_counseling_logs BEGIN SELECT RAISE(ABORT, 'test'); END")
-    from database import DatabaseError
+    from maeumnarae.core.database import DatabaseError
     with pytest.raises(DatabaseError):
         LegacyImportRepository(db).save(batch)
     with db.session() as c:
@@ -115,7 +115,7 @@ def test_header_detection_and_formula_only_rows(monkeypatch):
     from contextlib import nullcontext
     from io import BytesIO
     from zipfile import ZipFile
-    import services.legacy_import as module
+    import maeumnarae.services.legacy_import as module
     Cell = namedtuple('Cell', 'r c v')
 
     class Sheet:
@@ -190,8 +190,8 @@ def consultation_source():
 
 
 def test_consultation_import_links_teacher_and_preserves_fields(db):
-    from models import TeacherInput, ConsultationInput
-    from repositories.consultation_repo import ConsultationRepository
+    from maeumnarae.core.models import TeacherInput, ConsultationInput
+    from maeumnarae.repositories.consultation_repo import ConsultationRepository
     rows = consultation_source()
     second = dict(rows['상담대장'][0][1], 상담제목='두 번째 자문', 중분류='원본 영역', 상담구분='기타')
     rows['상담대장'].append((7, second))
@@ -225,7 +225,7 @@ def test_mixed_consultation_and_counseling_case_is_blocked():
 
 
 def test_consultation_failure_rolls_back_teacher_and_other_records(db):
-    from database import DatabaseError
+    from maeumnarae.core.database import DatabaseError
     with db.session(write=True) as c:
         c.execute("CREATE TRIGGER fail_consultation BEFORE INSERT ON consultations BEGIN SELECT RAISE(ABORT, 'test'); END")
     with pytest.raises(DatabaseError):
@@ -236,8 +236,8 @@ def test_consultation_failure_rolls_back_teacher_and_other_records(db):
 
 
 def test_existing_teacher_name_blocks_automatic_merge(db):
-    from models import TeacherInput
-    from repositories.teacher_repo import TeacherRepository
+    from maeumnarae.core.models import TeacherInput
+    from maeumnarae.repositories.teacher_repo import TeacherRepository
     TeacherRepository(db).create_many([TeacherInput(name='교사A', contact='010-9999-9999')])
     with pytest.raises(ValueError, match='식별 정보가 충돌'):
         LegacyImportRepository(db).save(parse_rows(consultation_source(), 2025, PERIODS))
@@ -245,8 +245,8 @@ def test_existing_teacher_name_blocks_automatic_merge(db):
 
 @pytest.mark.parametrize('target,expected', [('학생', '학생'), ('보호자(가족)', '보호자(학부모)')])
 def test_psychological_test_migration(db, target, expected):
-    from models import PsychologicalTestInput
-    from repositories.psychological_test_repo import PsychologicalTestRepository
+    from maeumnarae.core.models import PsychologicalTestInput
+    from maeumnarae.repositories.psychological_test_repo import PsychologicalTestRepository
     rows = source()
     rows['상담대장'][0][1].update({'상담구분': ' 개인심리검사 ', '대상': target, '대분류': '자문'})
     batch = parse_rows(rows, 2025, PERIODS)
@@ -285,7 +285,7 @@ def test_guardian_migration_uses_category_for_area(db, category, expected):
 
 
 def test_individual_test_rejects_group_and_rolls_back_on_failure(db):
-    from database import DatabaseError
+    from maeumnarae.core.database import DatabaseError
     rows = source()
     rows['상담대장'][1][1]['상담구분'] = '개인심리검사'
     assert any('학생 인적사항' in error for error in parse_rows(rows, 2025, PERIODS).errors)
@@ -303,7 +303,7 @@ def test_individual_test_rejects_group_and_rolls_back_on_failure(db):
 @pytest.mark.parametrize('major', ['교육', '연구', '의뢰'])
 @pytest.mark.parametrize('route', ['개인 상담', '교사 자문', '심리검사', '교육/행사'])
 def test_manual_destination_and_original_fingerprint(major, route):
-    from models import CounselingInput, ConsultationInput, PsychologicalTestInput, EducationEventInput
+    from maeumnarae.core.models import CounselingInput, ConsultationInput, PsychologicalTestInput, EducationEventInput
     rows = source()
     rows['상담대장'][0][1]['대분류'] = major
     initial = parse_rows(rows, 2025, PERIODS)
@@ -316,7 +316,7 @@ def test_manual_destination_and_original_fingerprint(major, route):
 
 
 def test_group_test_event_without_people_and_atomic_save(db):
-    from models import EducationEventInput
+    from maeumnarae.core.models import EducationEventInput
     rows = source()
     rows['인적사항등록'] = []
     rows['상담대장'] = [rows['상담대장'][1]]
@@ -402,7 +402,7 @@ def test_special_education_requires_student_and_law():
 
 
 def test_special_education_import_failure_rolls_back(db):
-    from database import DatabaseError
+    from maeumnarae.core.database import DatabaseError
     batch = parse_rows(source(), 2025, PERIODS, destinations={5: '특별교육'}, special_laws={5: '교원지위법'})
     with db.session(write=True) as c:
         c.execute("CREATE TRIGGER fail_special BEFORE INSERT ON special_education_logs BEGIN SELECT RAISE(ABORT, 'test'); END")

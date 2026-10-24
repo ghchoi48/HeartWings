@@ -8,14 +8,14 @@ import pytest
 from nicegui import Client, ui
 from nicegui.page import page
 
-from database import Database, DatabaseError
-from models import TeacherInput
-from repositories.home_repo import DEFAULT_LAYOUT, HomeRepository
-from repositories.teacher_repo import TeacherRepository
-from views.home_view import HomeView
-from views.display_settings import DisplaySettings
-from settings_store import SettingsStore
-from home_layout import arrange, overlaps
+from maeumnarae.core.database import Database, DatabaseError
+from maeumnarae.core.models import TeacherInput
+from maeumnarae.repositories.home_repo import DEFAULT_LAYOUT, HomeRepository
+from maeumnarae.repositories.teacher_repo import TeacherRepository
+from maeumnarae.views.home_view import HomeView
+from maeumnarae.views.display_settings import DisplaySettings
+from maeumnarae.core.settings_store import SettingsStore
+from maeumnarae.views.home_layout import arrange, overlaps
 
 
 def test_migration_and_home_persistence(tmp_path):
@@ -77,7 +77,7 @@ def test_legacy_data_moves_to_shared_json_only_once(tmp_path):
     assert repo.todos() == [{'id': 7, 'title': '기존 할 일', 'done': 1}]
     repo.add_todo('새 할 일')
     second_display.change('mode', 'light')
-    with patch('views.display_settings.ui.run_javascript'):
+    with patch('maeumnarae.views.display_settings.ui.run_javascript'):
         first_display.change('size', 20)
     data = json.loads(path.read_text())
     assert data['mode'] == 'light'
@@ -103,7 +103,7 @@ def test_failed_json_save_preserves_previous_data(tmp_path):
     repo.add_todo('유지할 할 일')
     path = tmp_path / 'display-settings.json'
     before = path.read_bytes()
-    with patch('settings_store.Path.replace', side_effect=OSError('read-only')):
+    with patch('maeumnarae.core.settings_store.Path.replace', side_effect=OSError('read-only')):
         with pytest.raises(DatabaseError):
             repo.add_todo('실패할 할 일')
     assert path.read_bytes() == before
@@ -144,7 +144,7 @@ class HomeViewTests(unittest.IsolatedAsyncioTestCase):
             async def invoke(fn, *args, **kwargs):
                 return fn(*args, **kwargs)
 
-            with host, patch('views.home_view.ui.timer'), patch('views.home_view.run.io_bound', side_effect=invoke):
+            with host, patch('maeumnarae.views.home_view.ui.timer'), patch('maeumnarae.views.home_view.run.io_bound', side_effect=invoke):
                 view.build()
                 await view.load()
                 view.toggle_edit()
@@ -161,7 +161,7 @@ class HomeViewTests(unittest.IsolatedAsyncioTestCase):
                 assert [item['kind'] for item in view.layout] == ['clock', 'teacher_search']
                 saved = [dict(item) for item in view.layout]
                 repo.save_layout.side_effect = DatabaseError('저장 실패')
-                with patch('views.home_view.ui.notify') as notify:
+                with patch('maeumnarae.views.home_view.ui.notify') as notify:
                     await view.change_geometry('clock', {'width': 24, 'height': 500})
                 assert view.layout == saved
                 notify.assert_called_once()
@@ -286,13 +286,13 @@ def test_square_grid_conversion_is_stable():
 
 
 def test_widget_addition_only_while_editing():
-    with Client(page('/home-edit-controls')), patch('views.home_view.ui.timer'):
+    with Client(page('/home-edit-controls')), patch('maeumnarae.views.home_view.ui.timer'):
         view = HomeView(Mock(), Mock(), Mock())
         view.build()
         view.loaded = True
         view.render()
         assert not view.add_button.visible
-        with patch('views.home_view.ui.dialog') as dialog:
+        with patch('maeumnarae.views.home_view.ui.dialog') as dialog:
             view.open_picker()
             dialog.assert_not_called()
         view.toggle_edit()

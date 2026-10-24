@@ -8,10 +8,10 @@ import pytest
 from nicegui import Client, ui
 from nicegui.page import page
 
-from database import ConflictError, Database, NotFoundError
-from models import GroupCounseling, GroupCounselingInput, GroupLogInput
-from repositories.group_counseling_repo import GroupCounselingRepository
-from views.group_counseling_view import GroupCounselingView
+from maeumnarae.core.database import ConflictError, Database, NotFoundError
+from maeumnarae.core.models import GroupCounseling, GroupCounselingInput, GroupLogInput
+from maeumnarae.repositories.group_counseling_repo import GroupCounselingRepository
+from maeumnarae.views.group_counseling_view import GroupCounselingView
 
 
 def test_group_and_log_persistence(tmp_path):
@@ -51,7 +51,7 @@ async def invoke(function, *args, **kwargs):
 def test_group_status_migration_and_calendar_filter(tmp_path):
     from datetime import timedelta
     from pydantic import ValidationError
-    from repositories.calendar_repo import CalendarRepository
+    from maeumnarae.repositories.calendar_repo import CalendarRepository
     db = Database('test-groups', tmp_path / 'status.db')
     db.initialize()
     repo = GroupCounselingRepository(db)
@@ -82,7 +82,7 @@ def test_group_status_migration_and_calendar_filter(tmp_path):
 
 def test_group_editor_saves_selected_status():
     import inspect
-    from models import GroupLog
+    from maeumnarae.core.models import GroupLog
 
     async def check():
         now = datetime.now(timezone.utc)
@@ -91,7 +91,7 @@ def test_group_editor_saves_selected_status():
                        status='completed', created_at=now, updated_at=now)
         repo = Mock()
         repo.get_log.return_value = log
-        with Client(page('/group-status-editor')), patch('views.group_counseling_view.run.io_bound', side_effect=invoke):
+        with Client(page('/group-status-editor')), patch('maeumnarae.views.group_counseling_view.run.io_bound', side_effect=invoke):
             view = GroupCounselingView(repo)
             view.selected = group
 
@@ -120,19 +120,20 @@ async def test_group_selection_and_stale_response():
         second = first.model_copy(update={'id': 2, 'name': '다음 집단'})
         repo.get.side_effect = lambda group_id: {1: first, 2: second}[group_id]
         repo.list_logs.return_value = []
+        repo.count_logs.return_value = 0
         host = ui.column()
         view = GroupCounselingView(repo)
         view.students = Mock()
         view.students.list.return_value = []
-        with host, patch('views.group_counseling_view.ui.timer'):
+        with host, patch('maeumnarae.views.group_counseling_view.ui.timer'):
             view.build()
         try:
-            with patch('views.group_counseling_view.run.io_bound', side_effect=invoke):
+            with patch('maeumnarae.views.group_counseling_view.run.io_bound', side_effect=invoke):
                 await view.select_group(1)
             assert view.selected == first
             assert view.add_log.enabled
             assert '등록된 집단 상담 일지가 없습니다' in view.log_message.text
-            repo.list_logs.assert_called_once_with(1, limit=21, offset=0)
+            repo.list_logs.assert_called_once_with(1, limit=10, offset=0)
             started, release = asyncio.Event(), asyncio.Event()
 
             async def delayed(function, *args, **kwargs):
@@ -141,7 +142,7 @@ async def test_group_selection_and_stale_response():
                     await release.wait()
                 return function(*args, **kwargs)
 
-            with patch('views.group_counseling_view.run.io_bound', side_effect=delayed):
+            with patch('maeumnarae.views.group_counseling_view.run.io_bound', side_effect=delayed):
                 task = asyncio.create_task(view.select_group(1))
                 await started.wait()
                 await view.select_group(2)
@@ -167,11 +168,12 @@ async def test_group_and_log_editors_restore_fields():
         group = GroupCounseling(id=1, name='집단', participants='참여자 목록', created_at=now, updated_at=now)
         repo = Mock()
         repo.list_logs.return_value = []
+        repo.count_logs.return_value = 0
         host = ui.column()
         view = GroupCounselingView(repo)
         view.students = Mock()
         view.students.list.return_value = []
-        with host, patch('views.group_counseling_view.ui.timer'):
+        with host, patch('maeumnarae.views.group_counseling_view.ui.timer'):
             view.build()
         view.selected = group
         seen = []
@@ -184,7 +186,7 @@ async def test_group_and_log_editors_restore_fields():
             return inspect_dialog(dialog).__await__()
 
         try:
-            with patch.object(ui.dialog, '__await__', await_dialog), patch('views.group_counseling_view.run.io_bound', side_effect=invoke):
+            with patch.object(ui.dialog, '__await__', await_dialog), patch('maeumnarae.views.group_counseling_view.run.io_bound', side_effect=invoke):
                 await view.open_editor(edit_group=True)
                 await view.open_editor(log=True)
             inputs = [element for element in seen[0] if isinstance(element, ui.input)]
@@ -197,14 +199,14 @@ async def test_group_and_log_editors_restore_fields():
 
 
 def test_sidebar_group_page_order_and_reuse():
-    from views.app_layout import AppLayout
+    from maeumnarae.views.app_layout import AppLayout
 
     with Client(page('/group-layout-test')):
         header = ui.header()
         drawer = ui.left_drawer()
         content = ui.column()
         layout = AppLayout(Mock(), Mock(), Mock())
-        with patch('views.group_counseling_view.ui.timer'):
+        with patch('maeumnarae.views.group_counseling_view.ui.timer'):
             layout.build(content, drawer, header)
             assert list(layout.buttons) == [
                 'home', 'students', 'counseling', 'groups', 'psychological_tests',
@@ -228,9 +230,9 @@ def test_sidebar_group_page_order_and_reuse():
 
 def test_membership_and_combined_timeline(tmp_path):
     from datetime import timedelta
-    from models import CounselingInput, StudentInput
-    from repositories.counseling_repo import CounselingRepository
-    from repositories.student_repo import StudentRepository
+    from maeumnarae.core.models import CounselingInput, StudentInput
+    from maeumnarae.repositories.counseling_repo import CounselingRepository
+    from maeumnarae.repositories.student_repo import StudentRepository
 
     db = Database('test-members', tmp_path / 'members.db')
     db.initialize()
@@ -354,6 +356,10 @@ async def test_group_editor_saves_period_and_area():
             save_button = next(element for element in elements if isinstance(element, ui.button) and element.text == '저장')
             handler = next(listener.handler for listener in save_button._event_listeners.values() if listener.type == 'click')
             save = inspect.getclosurevars(handler).nonlocals['callback']
+            period.value = ''
+            await save()
+            repo.save.assert_not_called()
+            assert not dialog.submitted.is_set()
             period.value = '2026-11-30 - 2026-10-19'
             await save()
             repo.save.assert_not_called()
@@ -365,11 +371,34 @@ async def test_group_editor_saves_period_and_area():
             return dialog._result
 
         with patch.object(ui.dialog, '__await__', lambda dialog: interact(dialog).__await__()), \
-                patch('views.group_counseling_view.run.io_bound', side_effect=invoke), \
-                patch('views.group_counseling_view.ui.notify'):
+                patch('maeumnarae.views.group_counseling_view.run.io_bound', side_effect=invoke), \
+                patch('maeumnarae.views.group_counseling_view.ui.notify'):
             await view.open_editor(edit_group=True)
         value, group_id = repo.save.call_args.args
         assert value.period == '2026-10-20 - 2026-11-20'
         assert value.counseling_area == '학업'
         assert group_id == group.id
         assert not view.editor_open
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize('period,school_year', [
+    ('2026-03-01 - 2027-02-28', 2026),
+    ('2027-02-28', 2026),
+    ('2027-03-01', 2027),
+    ('2026-12-01 - 2027-04-30', 2026),
+    ('', None),
+])
+async def test_group_list_school_year_from_start_date(period, school_year):
+    now = datetime.now(timezone.utc)
+    group = GroupCounseling(id=1, name='집단', period=period, created_at=now, updated_at=now)
+    assert group.school_year == school_year
+    repo = Mock()
+    repo.list.return_value = [group]
+    with Client(page('/group-school-year-test')), patch('maeumnarae.views.group_counseling_view.ui.timer'), \
+            patch('maeumnarae.views.group_counseling_view.run.io_bound', side_effect=invoke):
+        view = GroupCounselingView(repo)
+        view.build()
+        await view.load_groups()
+        assert view.table.rows[0]['school_year'] == (school_year if school_year is not None else '미입력')
+        assert view.table.columns[0]['label'] == '학년도'

@@ -10,11 +10,11 @@ import pytest
 from nicegui import Client, ui
 from nicegui.page import page
 
-from database import Database, DatabaseError, NotFoundError
-from models import Consultation, ConsultationInput, TeacherInput, Teacher
-from repositories.consultation_repo import ConsultationRepository
-from repositories.teacher_repo import TeacherRepository
-from views.consultation_view import ConsultationView
+from maeumnarae.core.database import Database, DatabaseError, NotFoundError
+from maeumnarae.core.models import Consultation, ConsultationInput, TeacherInput, Teacher
+from maeumnarae.repositories.consultation_repo import ConsultationRepository
+from maeumnarae.repositories.teacher_repo import TeacherRepository
+from maeumnarae.views.consultation_view import ConsultationView
 
 
 def test_migration_and_teacher_isolation(tmp_path):
@@ -61,7 +61,7 @@ class ConsultationEditorTests(unittest.IsolatedAsyncioTestCase):
         self.view = ConsultationView(Mock())
         now = datetime.now(timezone.utc)
         self.teacher = Teacher(id=1, name='교사', created_at=now, updated_at=now)
-        with self.host, patch('views.consultation_view.ui.timer'):
+        with self.host, patch('maeumnarae.views.consultation_view.ui.timer'):
             self.view.build()
         self.view.selected = self.teacher
         self.view.show_logs()
@@ -112,7 +112,7 @@ class ConsultationEditorTests(unittest.IsolatedAsyncioTestCase):
 
         with self.host, patch.object(self.view, 'build_log_editor', side_effect=capture), \
                 patch.object(ui.dialog, '__await__', lambda dialog: interact(dialog).__await__()), \
-                patch('views.consultation_view.run.io_bound', side_effect=invoke):
+                patch('maeumnarae.views.consultation_view.run.io_bound', side_effect=invoke):
             await self.view.open_log_editor()
         self.assertFalse(self.view.editor_open)
         self.view.load_logs.assert_awaited_once()
@@ -122,11 +122,12 @@ class ConsultationEditorTests(unittest.IsolatedAsyncioTestCase):
         entry = Consultation(id=1, teacher_id=1, title='이전 제목', starts_at=now,
                              consultation_area='학교학습', created_at=now, updated_at=now)
         self.view.consultations.list.return_value = [entry]
+        self.view.consultations.count.return_value = 1
 
         async def invoke(function, *args, **kwargs):
             return function(*args, **kwargs)
 
-        with patch('views.consultation_view.run.io_bound', side_effect=invoke):
+        with patch('maeumnarae.views.consultation_view.run.io_bound', side_effect=invoke):
             await self.view.load_logs()
             labels = [e.text for e in self.view.logs.descendants() if isinstance(e, ui.label)]
             self.assertIn('학교학습', labels)
@@ -142,9 +143,9 @@ class ConsultationEditorTests(unittest.IsolatedAsyncioTestCase):
         async def delayed(*args, **kwargs):
             started.set()
             await release.wait()
-            return []
+            return [], 0, 1
 
-        with patch('views.consultation_view.run.io_bound', side_effect=delayed):
+        with patch('maeumnarae.views.consultation_view.run.io_bound', side_effect=delayed):
             task = asyncio.create_task(self.view.load_logs())
             await started.wait()
             self.view.log_request += 1

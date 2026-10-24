@@ -6,19 +6,19 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from database import Database, DatabaseError, DatabaseOpenError, default_database_path
+from maeumnarae.core.database import Database, DatabaseError, DatabaseOpenError, default_database_path
 
 
 class ConnectionGuardTests(unittest.TestCase):
     def test_plain_sqlite_is_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
-            with patch('database.import_module', return_value=sqlite3):
+            with patch('maeumnarae.core.database.import_module', return_value=sqlite3):
                 database = Database('test-only', Path(directory) / 'test.db')
             with self.assertRaises(DatabaseOpenError):
                 database.initialize()
 
     def test_missing_driver_has_no_fallback(self):
-        with patch('database.import_module', side_effect=ImportError):
+        with patch('maeumnarae.core.database.import_module', side_effect=ImportError):
             with self.assertRaises(DatabaseError):
                 Database('test-only')
 

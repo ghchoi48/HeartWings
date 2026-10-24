@@ -6,11 +6,11 @@ import pytest
 from nicegui import Client, ui
 from nicegui.page import page
 
-from database import Database
-from repositories.home_repo import HomeRepository
-from services.weather import WeatherError, fetch_weather, search_regions, weather_status
-from widgets.weather import Weather
-from widgets import WIDGETS
+from maeumnarae.core.database import Database
+from maeumnarae.repositories.home_repo import HomeRepository
+from maeumnarae.services.weather import WeatherError, fetch_weather, search_regions, weather_status
+from maeumnarae.widgets.weather import Weather
+from maeumnarae.widgets import WIDGETS
 
 
 def forecast():
@@ -43,16 +43,16 @@ def test_weather_storage_is_per_widget(tmp_path):
 def test_weather_response_and_search():
     payload = {'current': {'temperature_2m': 21, 'weather_code': 0, 'is_day': 0, 'time': '2026-10-22T20:00'},
                'daily': {'time': ['2026-10-22'], 'weather_code': [3], 'temperature_2m_min': [11], 'temperature_2m_max': [22]}}
-    with patch('services.weather.request', return_value=payload) as request:
+    with patch('maeumnarae.services.weather.request', return_value=payload) as request:
         result = fetch_weather(37, 127)
         assert result['temperature'] == 21
         assert result['days'][0]['low'] == 11
         assert not result['is_day']
         assert request.call_args.args[1]['timezone'] == 'auto'
     payload['daily']['temperature_2m_min'] = []
-    with patch('services.weather.request', return_value=payload), pytest.raises(WeatherError):
+    with patch('maeumnarae.services.weather.request', return_value=payload), pytest.raises(WeatherError):
         fetch_weather(37, 127)
-    with patch('services.weather.request', return_value={'results': [{'name': '서울', 'country': '대한민국', 'latitude': 37, 'longitude': 127}]}):
+    with patch('maeumnarae.services.weather.request', return_value={'results': [{'name': '서울', 'country': '대한민국', 'latitude': 37, 'longitude': 127}]}):
         assert search_regions('서울')[0]['name'] == '서울 · 대한민국'
     with pytest.raises(WeatherError):
         search_regions('')
@@ -62,18 +62,18 @@ def test_weather_response_and_search():
 
 def test_location_failure_manual_region_and_modes():
     async def check():
-        with Client(page('/weather-test')), patch('widgets.weather.ui.timer'), patch('widgets.weather.run.io_bound', side_effect=inline):
+        with Client(page('/weather-test')), patch('maeumnarae.widgets.weather.ui.timer'), patch('maeumnarae.widgets.weather.run.io_bound', side_effect=inline):
             home = Mock()
             home.weather_preferences.return_value = {'mode': 'daily', 'location': None}
             view = Weather(home, Mock(), 'a')
             view.build()
-            with patch('widgets.weather.ui.run_javascript', new=AsyncMock(return_value=None)), patch('widgets.weather.fetch_weather') as fetch:
+            with patch('maeumnarae.widgets.weather.ui.run_javascript', new=AsyncMock(return_value=None)), patch('maeumnarae.widgets.weather.fetch_weather') as fetch:
                 await view.load()
                 fetch.assert_not_called()
                 assert any('위젯 설정 화면' in e.text for e in view.body.descendants() if isinstance(e, ui.label))
             location = {'name': '부산', 'latitude': 35.18, 'longitude': 129.07}
             await view.save_preferences({'mode': 'daily', 'location': location})
-            with patch('widgets.weather.fetch_weather', return_value=forecast()) as fetch:
+            with patch('maeumnarae.widgets.weather.fetch_weather', return_value=forecast()) as fetch:
                 await view.reload()
                 fetch.assert_called_once_with(35.18, 129.07)
             assert view.location_label.text == '부산'
@@ -86,7 +86,7 @@ def test_location_failure_manual_region_and_modes():
 
 def test_device_location_and_stale_forecast():
     async def check():
-        with Client(page('/weather-stale')), patch('widgets.weather.ui.timer'):
+        with Client(page('/weather-stale')), patch('maeumnarae.widgets.weather.ui.timer'):
             view = Weather(Mock(), Mock())
             view.build()
             view.loaded = True
@@ -98,7 +98,7 @@ def test_device_location_and_stale_forecast():
                 result = forecast()
                 result['temperature'] = args[0]
                 return result
-            with patch('widgets.weather.ui.run_javascript', new=AsyncMock(return_value={'latitude': 37, 'longitude': 127})), patch('widgets.weather.run.io_bound', side_effect=delayed):
+            with patch('maeumnarae.widgets.weather.ui.run_javascript', new=AsyncMock(return_value={'latitude': 37, 'longitude': 127})), patch('maeumnarae.widgets.weather.run.io_bound', side_effect=delayed):
                 old = asyncio.create_task(view.reload())
                 await started.wait()
                 view.preferences['location'] = {'name': '다른 지역', 'latitude': 35, 'longitude': 129}
@@ -119,9 +119,9 @@ def test_inline_settings_search_and_save_without_forecast():
         await callback()
 
     async def check():
-        with Client(page('/weather-inline-settings')), patch('widgets.weather.ui.timer') as timer, \
-                patch('widgets.weather.run.io_bound', side_effect=inline), \
-                patch('widgets.weather.fetch_weather') as fetch, patch('widgets.weather.ui.notify'):
+        with Client(page('/weather-inline-settings')), patch('maeumnarae.widgets.weather.ui.timer') as timer, \
+                patch('maeumnarae.widgets.weather.run.io_bound', side_effect=inline), \
+                patch('maeumnarae.widgets.weather.fetch_weather') as fetch, patch('maeumnarae.widgets.weather.ui.notify'):
             home = Mock()
             home.weather_preferences.return_value = {'mode': 'weekly', 'location': None}
             view = Weather(home, Mock(), 'weather-a')
@@ -133,7 +133,7 @@ def test_inline_settings_search_and_save_without_forecast():
             query = next(e for e in elements if isinstance(e, ui.input))
             query.value = '서울'
             location = {'name': '서울특별시', 'latitude': 37.57, 'longitude': 126.98}
-            with patch('widgets.weather.search_regions', return_value=[location]):
+            with patch('maeumnarae.widgets.weather.search_regions', return_value=[location]):
                 await click(next(e for e in elements if isinstance(e, ui.button) and e.text == '지역 검색'))
             await click(next(e for e in host.descendants() if isinstance(e, ui.button) and e.text == '서울특별시'))
             home.save_weather_preferences.assert_called_with('weather-a', {'mode': 'weekly', 'location': location})

@@ -8,7 +8,7 @@ from nicegui import Client, ui
 from nicegui.page import page
 
 from tests.test_student_view import inline_io, make_student
-from views.student_list import StudentList
+from maeumnarae.views.student_list import StudentList
 
 
 class StudentListTests(unittest.IsolatedAsyncioTestCase):
@@ -32,7 +32,7 @@ class StudentListTests(unittest.IsolatedAsyncioTestCase):
             with host:
                 first.build(autoload=False)
                 second.build(autoload=False)
-            with patch('views.student_list.run.io_bound', side_effect=inline_io):
+            with patch('maeumnarae.views.student_list.run.io_bound', side_effect=inline_io):
                 await first.reload()
                 await second.reload()
             first.table.filter = '첫 학생'

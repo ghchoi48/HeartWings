@@ -9,9 +9,9 @@ from unittest.mock import AsyncMock, Mock, call, patch
 from nicegui import Client, ui
 from nicegui.page import page
 
-from database import DatabaseError
-from models import Counseling, Student, CounselingCase
-from views.counseling_view import CounselingView, counseling_form_input
+from maeumnarae.core.database import DatabaseError
+from maeumnarae.core.models import Counseling, Student, CounselingCase
+from maeumnarae.views.counseling_view import CounselingView, counseling_form_input
 
 
 def form(**changes):
@@ -51,10 +51,10 @@ class CounselingFormTests(unittest.TestCase):
 
 class CounselingViewTests(unittest.IsolatedAsyncioTestCase):
     async def test_guardian_areas_change_with_target_and_reload(self):
-        from models import GUARDIAN_COUNSELING_AREAS
-        from views.counseling_view import COUNSELING_AREAS
+        from maeumnarae.core.models import GUARDIAN_COUNSELING_AREAS
+        from maeumnarae.views.counseling_view import COUNSELING_AREAS
         with self.host:
-            _, fields, _, _, _ = self.view.build_editor(self.student, None)
+            _, fields, _, _ = self.view.build_editor(self.student, None)
         fields['counseling_area'].value = '진로'
         fields['counseling_target'].value = '보호자(가족)'
         self.assertEqual(fields['counseling_area'].options, GUARDIAN_COUNSELING_AREAS)
@@ -66,7 +66,7 @@ class CounselingViewTests(unittest.IsolatedAsyncioTestCase):
         now = datetime.now(timezone.utc)
         entry = Counseling(id=1, created_at=now, updated_at=now, **value.model_dump())
         with self.host:
-            _, restored, _, _, _ = self.view.build_editor(self.student, entry)
+            _, restored, _, _ = self.view.build_editor(self.student, entry)
         self.assertEqual(restored['counseling_area'].options, GUARDIAN_COUNSELING_AREAS)
         self.assertEqual(restored['counseling_area'].value, '학생관련상담')
         fields['counseling_target'].value = '학생본인'
@@ -81,9 +81,10 @@ class CounselingViewTests(unittest.IsolatedAsyncioTestCase):
         self.client.__enter__()
         self.students, self.repo = Mock(), Mock()
         self.repo.list.return_value = []
+        self.repo.count.return_value = 0
         self.host = ui.column()
         self.view = CounselingView(self.students, self.repo)
-        with self.host, patch('views.counseling_view.ui.timer'):
+        with self.host, patch('maeumnarae.views.counseling_view.ui.timer'):
             self.view.build()
         now = datetime.now(timezone.utc)
         self.student = Student(id=1, name='가상 학생', grade=1, classroom='2', created_at=now, updated_at=now)
@@ -91,6 +92,47 @@ class CounselingViewTests(unittest.IsolatedAsyncioTestCase):
         self.view.cases = Mock()
         self.view.cases.list.return_value = [self.case]
         self.view.selected_case = self.case
+
+    async def test_ten_logs_per_page_and_total_label(self):
+        now = datetime.now(timezone.utc)
+        records = [Counseling(id=i, created_at=now, updated_at=now,
+                              **counseling_form_input(1, form()).model_dump()) for i in range(1, 22)]
+        self.repo.count.side_effect = lambda **kwargs: len(records)
+        self.repo.list.side_effect = lambda limit, offset, **kwargs: records[offset:offset + limit]
+        self.view.selected = self.student
+
+        async def invoke(function, *args, **kwargs):
+            return function(*args, **kwargs)
+
+        with patch('maeumnarae.views.counseling_view.run.io_bound', side_effect=invoke):
+            await self.view.load_logs()
+            self.assertEqual(len(list(self.view.logs)), 10)
+            self.assertEqual(self.view.log_page_label.text, '1페이지/3페이지')
+            await self.view.log_page(1)
+            self.assertEqual(len(list(self.view.logs)), 10)
+            self.assertEqual(self.view.log_page_label.text, '2페이지/3페이지')
+            await self.view.log_page(1)
+            self.assertEqual(len(list(self.view.logs)), 1)
+            self.assertEqual(self.view.log_page_label.text, '3페이지/3페이지')
+            self.assertFalse(self.view.log_next.enabled)
+            records.clear()
+            await self.view.load_logs()
+            self.assertEqual(self.view.log_page_label.text, '1페이지/1페이지')
+            self.assertFalse(self.view.log_previous.enabled)
+        self.assertFalse(any(isinstance(e, ui.button) and e.text == '일지 새로고침'
+                             for e in self.host.descendants()))
+
+    async def test_target_automatically_sets_hidden_category(self):
+        with self.host:
+            panel, fields, _, _ = self.view.build_editor(self.student, None)
+        self.assertEqual(fields['counseling_target'].options, ['학생본인', '보호자(가족)'])
+        self.assertFalse(fields['category'].visible)
+        for target, category in [('학생본인', '개인상담'), ('보호자(가족)', '학부모상담'), ('학생본인', '개인상담')]:
+            fields['counseling_target'].value = target
+            self.assertEqual(fields['category'].value, category)
+            value = counseling_form_input(1, {key: field.value for key, field in fields.items()})
+            self.assertEqual(value.category, category)
+        panel.delete()
 
     def tearDown(self):
         self.host.delete()
@@ -115,7 +157,7 @@ class CounselingViewTests(unittest.IsolatedAsyncioTestCase):
         async def invoke(function, *args, **kwargs):
             return function(*args, **kwargs)
 
-        with self.host, patch('views.counseling_view.run.io_bound', side_effect=invoke):
+        with self.host, patch('maeumnarae.views.counseling_view.run.io_bound', side_effect=invoke):
             await self.view.select_student(self.student.id)
             self.assertEqual(self.view.editor_fields, {})
             self.assertTrue(any(isinstance(e, ui.label) and e.text ==
@@ -141,7 +183,7 @@ class CounselingViewTests(unittest.IsolatedAsyncioTestCase):
         async def invoke(function, *args, **kwargs):
             return function(*args, **kwargs)
 
-        with self.host, patch('views.counseling_view.run.io_bound', side_effect=invoke):
+        with self.host, patch('maeumnarae.views.counseling_view.run.io_bound', side_effect=invoke):
             await save()
             self.assertIs(self.view.editor_fields, fields)
             self.assertEqual(fields['content_markdown'].value, '<p>상담 내용</p>')
@@ -190,7 +232,7 @@ class CounselingViewTests(unittest.IsolatedAsyncioTestCase):
             await release.wait()
             return entry
 
-        with patch('views.counseling_view.run.io_bound', side_effect=delayed):
+        with patch('maeumnarae.views.counseling_view.run.io_bound', side_effect=delayed):
             task = asyncio.create_task(self.view.open_editor(entry.id))
             await started.wait()
             await self.view.select_student(None)
@@ -201,8 +243,11 @@ class CounselingViewTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_wysiwyg_editor_preserves_html(self):
         with self.host:
-            dialog, fields, _, _, _ = self.view.build_editor(self.student, None)
+            dialog, fields, _, _ = self.view.build_editor(self.student, None)
         try:
+            self.assertEqual(fields['status'].value, 'scheduled')
+            self.assertFalse(any(isinstance(e, ui.button) and e.text in ('작성 닫기', '취소')
+                                 for e in dialog.descendants()))
             self.assertIsInstance(fields['starts_on'], ui.date_input)
             self.assertIsInstance(fields['starts_time'], ui.time_input)
             self.assertIsInstance(fields['content_markdown'], ui.editor)
@@ -219,22 +264,28 @@ class CounselingViewTests(unittest.IsolatedAsyncioTestCase):
                            **counseling_form_input(1, form(
                                counseling_method='전화', counseling_target='보호자')).model_dump())
         with self.host:
-            dialog, fields, _, _, _ = self.view.build_editor(self.student, entry)
+            dialog, fields, _, _ = self.view.build_editor(self.student, entry)
         try:
+            self.assertEqual(fields['status'].value, 'completed')
+            attachment = next(e for e in dialog.descendants()
+                              if isinstance(e, ui.button) and e.text == '파일 첨부')
+            save = next(e for e in dialog.descendants()
+                        if isinstance(e, ui.button) and e.text == '일지 저장')
+            self.assertIs(attachment.parent_slot, save.parent_slot)
             self.assertEqual(fields['counseling_method'].value, '전화')
-            self.assertEqual(fields['counseling_target'].value, '보호자')
+            self.assertEqual(fields['counseling_target'].value, '보호자(가족)')
             self.assertNotIn('counseling_method_other', fields)
             fields['counseling_method'].value = '사이버상담'
-            fields['counseling_area'].value = '진로'
+            fields['counseling_area'].value = '학생관련상담'
             self.assertNotIn('title', fields)
             value = counseling_form_input(1, {key: field.value for key, field in fields.items()})
             self.assertEqual(value.counseling_method, '사이버상담')
-            self.assertEqual(value.counseling_area, '진로')
-            self.assertEqual(value.title, '진로')
+            self.assertEqual(value.counseling_area, '학생관련상담')
+            self.assertEqual(value.title, '학생관련상담')
             fields['counseling_method'].value = '면담'
             value = counseling_form_input(1, {key: field.value for key, field in fields.items()})
             self.assertEqual(value.counseling_method, '면담')
-            self.assertEqual(value.counseling_target, '보호자')
+            self.assertEqual(value.counseling_target, '보호자(가족)')
         finally:
             dialog.delete()
 
@@ -244,7 +295,7 @@ class CounselingViewTests(unittest.IsolatedAsyncioTestCase):
         async def invoke(function, *args, **kwargs):
             return function(*args, **kwargs)
 
-        with patch('views.counseling_view.run.io_bound', side_effect=invoke):
+        with patch('maeumnarae.views.counseling_view.run.io_bound', side_effect=invoke):
             await self.view.load_logs()
             self.assertIn('등록된 상담 일지가 없습니다', self.view.log_message.text)
             self.repo.list.side_effect = DatabaseError('조회 실패')
@@ -257,11 +308,11 @@ class CounselingViewTests(unittest.IsolatedAsyncioTestCase):
         async def invoke(function, *args, **kwargs):
             return function(*args, **kwargs)
 
-        with patch('views.counseling_view.run.io_bound', side_effect=invoke):
+        with patch('maeumnarae.views.counseling_view.run.io_bound', side_effect=invoke):
             await self.view.select_student(self.student.id)
         self.assertEqual(self.view.selected, self.student)
         self.assertTrue(self.view.add.enabled)
-        self.repo.list.assert_called_once_with(student_id=1, case_id=1, limit=21, offset=0)
+        self.repo.list.assert_called_once_with(student_id=1, case_id=1, limit=10, offset=0)
 
     async def test_calendar_open_updates_shared_student_context(self):
         now = datetime.now(timezone.utc)
@@ -274,7 +325,7 @@ class CounselingViewTests(unittest.IsolatedAsyncioTestCase):
         async def invoke(function, *args, **kwargs):
             return function(*args, **kwargs)
 
-        with patch('views.counseling_view.run.io_bound', side_effect=invoke), \
+        with patch('maeumnarae.views.counseling_view.run.io_bound', side_effect=invoke), \
                 patch.object(self.view, 'open_editor', new_callable=AsyncMock) as editor:
             await self.view.open_record(entry.id)
         self.assertEqual(editor.await_args_list, [call(entry.id)])
@@ -285,11 +336,12 @@ class CounselingViewTests(unittest.IsolatedAsyncioTestCase):
     async def test_no_case_disables_new_log(self):
         self.students.get.return_value = self.student
         self.view.cases.list.return_value = []
+        self.view.cases.count.return_value = 0
 
         async def invoke(function, *args, **kwargs):
             return function(*args, **kwargs)
 
-        with patch('views.counseling_view.run.io_bound', side_effect=invoke):
+        with patch('maeumnarae.views.counseling_view.run.io_bound', side_effect=invoke):
             await self.view.select_student(self.student.id)
         self.assertIsNone(self.view.selected_case)
         self.assertFalse(self.view.add.enabled)
@@ -303,10 +355,10 @@ class CounselingViewTests(unittest.IsolatedAsyncioTestCase):
         async def invoke(function, *args, **kwargs):
             return function(*args, **kwargs)
 
-        with patch('views.counseling_view.run.io_bound', side_effect=invoke):
+        with patch('maeumnarae.views.counseling_view.run.io_bound', side_effect=invoke):
             await self.view.select_case(second)
         self.assertEqual(self.view.selected_case, second)
-        self.repo.list.assert_called_once_with(student_id=1, case_id=2, limit=21, offset=0)
+        self.repo.list.assert_called_once_with(student_id=1, case_id=2, limit=10, offset=0)
         self.assertEqual('상담 일지 목록', self.view.log_heading.text)
 
     async def test_previous_student_response_is_discarded(self):
@@ -318,10 +370,10 @@ class CounselingViewTests(unittest.IsolatedAsyncioTestCase):
         async def delayed(*args, **kwargs):
             started.set()
             await release.wait()
-            return [entry]
+            return [entry], 0, 1
 
         self.view.selected = self.student
-        with patch('views.counseling_view.run.io_bound', side_effect=delayed):
+        with patch('maeumnarae.views.counseling_view.run.io_bound', side_effect=delayed):
             task = asyncio.create_task(self.view.load_logs())
             await started.wait()
             await self.view.select_student(None)

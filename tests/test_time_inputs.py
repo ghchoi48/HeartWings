@@ -4,8 +4,8 @@ import pytest
 from nicegui import Client
 from nicegui.page import page
 
-from views.time_inputs import parse_time, storage_time, time_input
-from views.counseling_view import counseling_form_input
+from maeumnarae.views.time_inputs import parse_time, storage_time, time_input
+from maeumnarae.views.counseling_view import counseling_form_input
 
 
 @pytest.mark.parametrize(('stored', 'displayed'), [

@@ -9,10 +9,10 @@ from nicegui import Client, ui
 from nicegui.page import page
 from pydantic import ValidationError
 
-from database import Database, NotFoundError
-from models import Teacher, TeacherInput
-from repositories.teacher_repo import TeacherRepository
-from views.consultation_view import ConsultationView
+from maeumnarae.core.database import Database, NotFoundError
+from maeumnarae.core.models import Teacher, TeacherInput
+from maeumnarae.repositories.teacher_repo import TeacherRepository
+from maeumnarae.views.consultation_view import ConsultationView
 
 
 def test_teacher_storage_and_migration(tmp_path):
@@ -74,9 +74,9 @@ class ConsultationViewTests(unittest.IsolatedAsyncioTestCase):
                 return function(*args, **kwargs)
 
             try:
-                with host, patch('views.consultation_view.ui.timer'):
+                with host, patch('maeumnarae.views.consultation_view.ui.timer'):
                     view.build()
-                with patch('views.consultation_view.run.io_bound', side_effect=invoke):
+                with patch('maeumnarae.views.consultation_view.run.io_bound', side_effect=invoke):
                     await view.reload()
                     self.assertEqual(view.table.rows[0]['name'], '교사')
                     view.table.filter = '상담'
@@ -124,7 +124,7 @@ def test_teacher_search_by_extension_preserves_zeros_and_ranks_exact_match(tmp_p
 
 class TeacherSearchWidgetTests(unittest.IsolatedAsyncioTestCase):
     async def test_initial_empty_blank_and_single_search_result(self):
-        from widgets.teacher_search import TeacherSearch
+        from maeumnarae.widgets.teacher_search import TeacherSearch
         with Client(page('/teacher-widget-test')):
             repo = Mock()
             repo.search.return_value = []
@@ -137,7 +137,7 @@ class TeacherSearchWidgetTests(unittest.IsolatedAsyncioTestCase):
             async def invoke(function, *args, **kwargs):
                 return function(*args, **kwargs)
 
-            with patch('widgets.teacher_search.run.io_bound', side_effect=invoke):
+            with patch('maeumnarae.widgets.teacher_search.run.io_bound', side_effect=invoke):
                 widget.query.value = '   '
                 await widget.search()
                 repo.search.assert_not_called()

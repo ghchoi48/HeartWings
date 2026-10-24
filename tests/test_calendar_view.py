@@ -8,14 +8,14 @@ import pytest
 from nicegui import Client, ui
 from nicegui.page import page
 
-from database import Database, NotFoundError, SCHEMA_VERSION
-from models import CalendarInput, CalendarEventInput, CounselingInput, StudentInput
-from reporting import KST
-from repositories.calendar_repo import CalendarRepository
-from repositories.counseling_repo import CounselingRepository
-from repositories.reporting_repo import ReportingRepository
-from repositories.student_repo import StudentRepository
-from views.calendar_view import CalendarView
+from maeumnarae.core.database import Database, NotFoundError, SCHEMA_VERSION
+from maeumnarae.core.models import CalendarInput, CalendarEventInput, CounselingInput, StudentInput
+from maeumnarae.services.reporting import KST
+from maeumnarae.repositories.calendar_repo import CalendarRepository
+from maeumnarae.repositories.counseling_repo import CounselingRepository
+from maeumnarae.repositories.reporting_repo import ReportingRepository
+from maeumnarae.repositories.student_repo import StudentRepository
+from maeumnarae.views.calendar_view import CalendarView
 
 
 @pytest.fixture
@@ -88,10 +88,10 @@ def test_event_status_column_removed_preserving_records(data):
 
 
 def test_special_education_calendar_sync_and_open(data):
-    from models import SpecialEducationInput
-    from repositories.special_education_repo import SpecialEducationRepository, SpecialEducationLogRepository
-    from repositories.deletion_repo import DeletionRepository
-    from views.app_layout import AppLayout
+    from maeumnarae.core.models import SpecialEducationInput
+    from maeumnarae.repositories.special_education_repo import SpecialEducationRepository, SpecialEducationLogRepository
+    from maeumnarae.repositories.deletion_repo import DeletionRepository
+    from maeumnarae.views.app_layout import AppLayout
 
     db, repo, _, counseling = data
     case = SpecialEducationRepository(db).save(SpecialEducationInput(
@@ -137,9 +137,9 @@ def test_calendar_selection_navigation_and_open(data):
             on_open = AsyncMock()
             view = CalendarView(ReportingRepository(db), on_open)
             view.anchor = view.selected = date(2026, 10, 20)
-            with patch('views.calendar_view.ui.timer'):
+            with patch('maeumnarae.views.calendar_view.ui.timer'):
                 view.build()
-            with patch('views.calendar_view.run.io_bound', side_effect=invoke):
+            with patch('maeumnarae.views.calendar_view.run.io_bound', side_effect=invoke):
                 await view.reload()
                 assert len(view.calendars) == 3
                 assert len(view.events_by_day[view.selected]) == 2
@@ -175,7 +175,7 @@ def test_slow_response_cannot_replace_new_calendar_selection():
     async def check():
         with Client(page('/calendar-stale-test')):
             view = CalendarView(Mock(), AsyncMock())
-            with patch('views.calendar_view.ui.timer'):
+            with patch('maeumnarae.views.calendar_view.ui.timer'):
                 view.build()
             repo = Mock()
             repo.list.return_value = []
@@ -193,7 +193,7 @@ def test_slow_response_cannot_replace_new_calendar_selection():
                         await release.wait()
                 return function(*args, **kwargs)
 
-            with patch('views.calendar_view.run.io_bound', side_effect=invoke):
+            with patch('maeumnarae.views.calendar_view.run.io_bound', side_effect=invoke):
                 first = asyncio.create_task(view.reload())
                 await started.wait()
                 view.anchor = view.selected = date(2027, 1, 1)
@@ -206,8 +206,8 @@ def test_slow_response_cannot_replace_new_calendar_selection():
 
 
 def test_sunday_start_and_korean_holidays():
-    from calendar_holidays import korean_holidays, is_day_off
-    from views.calendar_view import visible_days
+    from maeumnarae.services.calendar_holidays import korean_holidays, is_day_off
+    from maeumnarae.views.calendar_view import visible_days
 
     assert visible_days(date(2026, 1, 1), 'week') == [date(2025, 12, 28), date(2025, 12, 29),
         date(2025, 12, 30), date(2025, 12, 31), date(2026, 1, 1), date(2026, 1, 2), date(2026, 1, 3)]
@@ -223,7 +223,7 @@ def test_sunday_start_and_korean_holidays():
 
 
 def test_holiday_calendar_visibility_and_date_colors(data):
-    from calendar_holidays import HOLIDAY_CALENDAR_ID, HOLIDAY_COLOR
+    from maeumnarae.services.calendar_holidays import HOLIDAY_CALENDAR_ID, HOLIDAY_COLOR
     db, repo, _, _ = data
     holiday = next(item for item in repo.list() if item.source == 'holidays')
     assert holiday.visible and holiday.color == HOLIDAY_COLOR
@@ -232,13 +232,13 @@ def test_holiday_calendar_visibility_and_date_colors(data):
         with Client(page('/holiday-calendar-test')):
             view = CalendarView(ReportingRepository(db), AsyncMock())
             view.anchor = view.selected = date(2026, 3, 2)
-            with patch('views.calendar_view.ui.timer'):
+            with patch('maeumnarae.views.calendar_view.ui.timer'):
                 view.build()
 
             async def invoke(function, *args, **kwargs):
                 return function(*args, **kwargs)
 
-            with patch('views.calendar_view.run.io_bound', side_effect=invoke):
+            with patch('maeumnarae.views.calendar_view.run.io_bound', side_effect=invoke):
                 await view.reload()
                 labels = [item.text for item in view.grid.descendants() if isinstance(item, ui.label)]
                 assert labels[:7] == ['일', '월', '화', '수', '목', '금', '토']
@@ -265,8 +265,8 @@ def test_calendar_automatically_reflects_committed_event_changes(data):
         return function(*args, **kwargs)
 
     async def check():
-        with Client(page('/calendar-auto-refresh-test')), patch('views.calendar_view.ui.timer'), \
-                patch('views.calendar_view.run.io_bound', side_effect=invoke):
+        with Client(page('/calendar-auto-refresh-test')), patch('maeumnarae.views.calendar_view.ui.timer'), \
+                patch('maeumnarae.views.calendar_view.run.io_bound', side_effect=invoke):
             view = CalendarView(ReportingRepository(db), AsyncMock())
             view.anchor = view.selected = date(2026, 10, 20)
             view.build()
@@ -305,10 +305,10 @@ def test_calendar_automatically_reflects_committed_event_changes(data):
 
 
 def test_unified_counseling_calendar_names_filtering_and_open(data):
-    from models import GroupCounselingInput, GroupLogInput, TeacherInput, ConsultationInput
-    from repositories.group_counseling_repo import GroupCounselingRepository
-    from repositories.teacher_repo import TeacherRepository
-    from repositories.consultation_repo import ConsultationRepository
+    from maeumnarae.core.models import GroupCounselingInput, GroupLogInput, TeacherInput, ConsultationInput
+    from maeumnarae.repositories.group_counseling_repo import GroupCounselingRepository
+    from maeumnarae.repositories.teacher_repo import TeacherRepository
+    from maeumnarae.repositories.consultation_repo import ConsultationRepository
 
     db, repo, _, _ = data
     groups = GroupCounselingRepository(db)
@@ -331,8 +331,8 @@ def test_unified_counseling_calendar_names_filtering_and_open(data):
         return function(*args, **kwargs)
 
     async def check():
-        with Client(page('/unified-calendar-test')), patch('views.calendar_view.ui.timer'), \
-                patch('views.calendar_view.run.io_bound', side_effect=invoke):
+        with Client(page('/unified-calendar-test')), patch('maeumnarae.views.calendar_view.ui.timer'), \
+                patch('maeumnarae.views.calendar_view.run.io_bound', side_effect=invoke):
             linked = AsyncMock()
             view = CalendarView(ReportingRepository(db), AsyncMock(), linked)
             view.anchor = view.selected = day
@@ -391,8 +391,8 @@ def test_event_editor_saves_and_restores_location_content(data, all_day, start_t
         return function(*args, **kwargs)
 
     async def check():
-        with Client(page('/event-details-editor-test')), patch('views.calendar_view.ui.timer'), \
-                patch('views.calendar_view.run.io_bound', side_effect=invoke):
+        with Client(page('/event-details-editor-test')), patch('maeumnarae.views.calendar_view.ui.timer'), \
+                patch('maeumnarae.views.calendar_view.run.io_bound', side_effect=invoke):
             view = CalendarView(ReportingRepository(db), AsyncMock())
             view.anchor = view.selected = day
             view.build()
@@ -456,7 +456,7 @@ def test_event_editor_saves_and_restores_location_content(data, all_day, start_t
                 toggle = next(e for e in dialog.descendants() if isinstance(e, ui.checkbox))
                 assert toggle.value == all_day
                 if not all_day:
-                    from views.time_inputs import parse_time
+                    from maeumnarae.views.time_inputs import parse_time
                     controls = {e.props.get('label'): e for e in dialog.descendants() if e.props.get('label')}
                     assert parse_time(controls['시작 시간'].value).strftime('%H:%M') == start_time
                     assert parse_time(controls['종료 시간'].value).strftime('%H:%M') == end_time
@@ -500,8 +500,8 @@ def test_multiday_calendar_overlap_and_midnight_boundary(data):
         return function(*args, **kwargs)
 
     async def check():
-        with Client(page('/multiday-calendar-test')), patch('views.calendar_view.ui.timer'), \
-                patch('views.calendar_view.run.io_bound', side_effect=invoke):
+        with Client(page('/multiday-calendar-test')), patch('maeumnarae.views.calendar_view.ui.timer'), \
+                patch('maeumnarae.views.calendar_view.run.io_bound', side_effect=invoke):
             view = CalendarView(ReportingRepository(db), AsyncMock())
             view.anchor = view.selected = first
             view.build()
@@ -518,7 +518,7 @@ def test_multiday_calendar_overlap_and_midnight_boundary(data):
 
 
 def test_multiday_bars_span_columns_and_show_title_once(data):
-    from views.calendar_view import week_event_segments, visible_days
+    from maeumnarae.views.calendar_view import week_event_segments, visible_days
     db, repo, custom, _ = data
     repo.save_event(CalendarEventInput(calendar_id=custom.id, title='연결 일정', all_day=True,
         starts_at=datetime(2026, 10, 22, tzinfo=KST), duration_minutes=6 * 1440))
@@ -529,8 +529,8 @@ def test_multiday_bars_span_columns_and_show_title_once(data):
         return function(*args, **kwargs)
 
     async def check():
-        with Client(page('/connected-bars-test')), patch('views.calendar_view.ui.timer'), \
-                patch('views.calendar_view.run.io_bound', side_effect=invoke):
+        with Client(page('/connected-bars-test')), patch('maeumnarae.views.calendar_view.ui.timer'), \
+                patch('maeumnarae.views.calendar_view.run.io_bound', side_effect=invoke):
             view = CalendarView(ReportingRepository(db), AsyncMock())
             view.anchor = view.selected = date(2026, 10, 22)
             view.build()
@@ -558,7 +558,7 @@ def test_multiday_bars_span_columns_and_show_title_once(data):
 
 @pytest.mark.parametrize('hide_sat,hide_sun', [(False, False), (True, False), (False, True), (True, True)])
 def test_hide_weekend_days_independently(data, hide_sat, hide_sun):
-    from views.calendar_view import visible_days, week_event_segments
+    from maeumnarae.views.calendar_view import visible_days, week_event_segments
     db, repo, custom, _ = data
     repo.save_event(CalendarEventInput(calendar_id=custom.id, title='주말 연결', all_day=True,
         starts_at=datetime(2026, 10, 18, tzinfo=KST), duration_minutes=7 * 1440))
@@ -567,8 +567,8 @@ def test_hide_weekend_days_independently(data, hide_sat, hide_sun):
         return function(*args, **kwargs)
 
     async def check():
-        with Client(page('/weekend-visibility-test')), patch('views.calendar_view.ui.timer'), \
-                patch('views.calendar_view.run.io_bound', side_effect=invoke):
+        with Client(page('/weekend-visibility-test')), patch('maeumnarae.views.calendar_view.ui.timer'), \
+                patch('maeumnarae.views.calendar_view.run.io_bound', side_effect=invoke):
             view = CalendarView(ReportingRepository(db), AsyncMock())
             view.anchor = view.selected = date(2026, 10, 20)
             view.build()
@@ -581,7 +581,7 @@ def test_hide_weekend_days_independently(data, hide_sat, hide_sun):
                 labels = [e.text for e in view.grid.descendants() if isinstance(e, ui.label)]
                 assert ('토' not in labels) == hide_sat
                 assert ('일' not in labels) == hide_sun
-                buttons = [e.text for e in view.grid.descendants() if isinstance(e, ui.button)]
+                buttons = [e.text.removesuffix(' · 오늘') for e in view.grid.descendants() if isinstance(e, ui.button)]
                 assert ('10/24' not in buttons) == hide_sat
                 assert ('10/18' not in buttons) == hide_sun
                 assert '10/20' in buttons
@@ -606,8 +606,8 @@ def test_event_editor_rejects_end_before_start_and_allows_correction(data):
         return function(*args, **kwargs)
 
     async def check():
-        with Client(page('/event-invalid-time-test')), patch('views.calendar_view.ui.timer'), \
-                patch('views.calendar_view.run.io_bound', side_effect=invoke):
+        with Client(page('/event-invalid-time-test')), patch('maeumnarae.views.calendar_view.ui.timer'), \
+                patch('maeumnarae.views.calendar_view.run.io_bound', side_effect=invoke):
             view = CalendarView(ReportingRepository(db), AsyncMock())
             view.anchor = view.selected = date(2026, 10, 20)
             view.build()
@@ -676,8 +676,8 @@ def test_calendar_edit_and_delete_dialogs(data):
         return dialog._result
 
     async def check():
-        with Client(page('/calendar-management-test')), patch('views.calendar_view.ui.timer'), patch(
-                'views.calendar_view.run.io_bound', side_effect=invoke):
+        with Client(page('/calendar-management-test')), patch('maeumnarae.views.calendar_view.ui.timer'), patch(
+                'maeumnarae.views.calendar_view.run.io_bound', side_effect=invoke):
             view = CalendarView(ReportingRepository(db), AsyncMock())
             view.build()
             await view.reload()
@@ -707,4 +707,57 @@ def test_calendar_edit_and_delete_dialogs(data):
             assert all(c.id != custom.id for c in view.calendars)
             assert not view.add_event.enabled
             assert not view.editor_open
+    asyncio.run(check())
+
+
+@pytest.mark.parametrize('editing', [False, True])
+def test_calendar_color_picker_saves_custom_color(data, editing):
+    import inspect
+    from nicegui.events import ColorPickEventArguments
+
+    db, repo, custom, _ = data
+    picked_color = '#12ab34'
+
+    async def invoke(function, *args, **kwargs):
+        return function(*args, **kwargs)
+
+    async def check():
+        with Client(page('/calendar-color-picker-test')), patch('maeumnarae.views.calendar_view.ui.timer'), patch(
+                'maeumnarae.views.calendar_view.run.io_bound', side_effect=invoke):
+            view = CalendarView(ReportingRepository(db), AsyncMock())
+            view.build()
+
+            async def interact(dialog):
+                color = next(e for e in dialog.descendants() if isinstance(e, ui.color_input))
+                assert color.preview
+                assert color.picker.q_color.props['format-model'] == 'hex'
+                assert color.value == (custom.color if editing else '#2563eb')
+                color.open_picker()
+                assert color.picker.q_color.props['model-value'] == color.value
+                name = next(e for e in dialog.descendants()
+                            if isinstance(e, ui.input) and e.props.get('label') == '캘린더 이름')
+                name.value = '자유 색상 캘린더'
+                button = next(e for e in dialog.descendants()
+                              if isinstance(e, ui.button) and e.text == ('저장' if editing else '추가'))
+                handler = next(e.handler for e in button._event_listeners.values() if e.type == 'click')
+                save = inspect.getclosurevars(handler).nonlocals['callback']
+                color.value = 'invalid'
+                await save()
+                assert not dialog.submitted.is_set()
+                assert button.enabled
+                event = ColorPickEventArguments(sender=color.picker, client=ui.context.client, color=picked_color)
+                for callback in color.picker._pick_handlers:
+                    callback(event)
+                assert color.value == picked_color
+                color.picker.close()
+                await save()
+                assert dialog.submitted.is_set()
+                return dialog._result
+
+            with patch.object(ui.dialog, '__await__', lambda dialog: interact(dialog).__await__()):
+                await view.open_calendar_editor(custom if editing else None)
+            saved = next(c for c in repo.list() if c.name == '자유 색상 캘린더')
+            assert saved.color == picked_color
+            assert (saved.id == custom.id) == editing
+            assert next(c for c in view.calendars if c.id == saved.id).color == picked_color
     asyncio.run(check())

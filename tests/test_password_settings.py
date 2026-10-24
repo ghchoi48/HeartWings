@@ -9,10 +9,10 @@ import pytest
 from nicegui import Client, ui
 from nicegui.page import page
 
-from database import Database, DatabaseError, DatabaseOpenError
-from models import StudentInput
-from repositories.student_repo import StudentRepository
-from views.password_settings_view import build_password_settings
+from maeumnarae.core.database import Database, DatabaseError, DatabaseOpenError
+from maeumnarae.core.models import StudentInput
+from maeumnarae.repositories.student_repo import StudentRepository
+from maeumnarae.views.password_settings_view import build_password_settings
 
 
 @pytest.fixture
@@ -118,8 +118,8 @@ class PasswordFormTests(unittest.IsolatedAsyncioTestCase):
             async def slow_change(*args):
                 await release.wait()
 
-            with host, patch('views.password_settings_view.ui.notify'), \
-                    patch('views.password_settings_view.run.io_bound', new=AsyncMock(side_effect=slow_change)) as io:
+            with host, patch('maeumnarae.views.password_settings_view.ui.notify'), \
+                    patch('maeumnarae.views.password_settings_view.run.io_bound', new=AsyncMock(side_effect=slow_change)) as io:
                 dialog.open()
                 self.assertTrue(dialog.value)
                 await change()

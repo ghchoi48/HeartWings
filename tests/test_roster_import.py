@@ -6,13 +6,13 @@ from io import BytesIO
 from openpyxl import Workbook, load_workbook
 import pytest
 
-from database import ConflictError, Database
-from models import SchoolSettings, StudentInput, TeacherInput
-from repositories.roster_import_repo import RosterImportRepository
-from repositories.school_settings_repo import SchoolSettingsRepository
-from repositories.student_repo import StudentRepository
-from repositories.teacher_repo import TeacherRepository
-from services.roster_import import COLUMNS, TITLES, import_template, parse_import
+from maeumnarae.core.database import ConflictError, Database
+from maeumnarae.core.models import SchoolSettings, StudentInput, TeacherInput
+from maeumnarae.repositories.roster_import_repo import RosterImportRepository
+from maeumnarae.repositories.school_settings_repo import SchoolSettingsRepository
+from maeumnarae.repositories.student_repo import StudentRepository
+from maeumnarae.repositories.teacher_repo import TeacherRepository
+from maeumnarae.services.roster_import import COLUMNS, TITLES, import_template, parse_import
 
 
 @pytest.fixture

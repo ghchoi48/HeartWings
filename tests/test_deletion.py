@@ -3,22 +3,22 @@ from datetime import date, datetime, timezone
 
 import pytest
 
-from database import ConflictError, Database, NotFoundError
-from models import (StudentInput, TeacherInput, CounselingCaseInput, CounselingInput,
+from maeumnarae.core.database import ConflictError, Database, NotFoundError
+from maeumnarae.core.models import (StudentInput, TeacherInput, CounselingCaseInput, CounselingInput,
                     SpecialEducationInput, GroupCounselingInput, GroupLogInput,
                     ConsultationInput, PsychologicalTestInput, EducationEventInput,
                     CalendarInput, CalendarEventInput)
-from repositories.student_repo import StudentRepository
-from repositories.teacher_repo import TeacherRepository
-from repositories.case_repo import CaseRepository
-from repositories.counseling_repo import CounselingRepository
-from repositories.special_education_repo import SpecialEducationRepository, SpecialEducationLogRepository
-from repositories.group_counseling_repo import GroupCounselingRepository
-from repositories.consultation_repo import ConsultationRepository
-from repositories.psychological_test_repo import PsychologicalTestRepository
-from repositories.education_event_repo import EducationEventRepository
-from repositories.calendar_repo import CalendarRepository
-from repositories.deletion_repo import DeletionRepository, TARGETS
+from maeumnarae.repositories.student_repo import StudentRepository
+from maeumnarae.repositories.teacher_repo import TeacherRepository
+from maeumnarae.repositories.case_repo import CaseRepository
+from maeumnarae.repositories.counseling_repo import CounselingRepository
+from maeumnarae.repositories.special_education_repo import SpecialEducationRepository, SpecialEducationLogRepository
+from maeumnarae.repositories.group_counseling_repo import GroupCounselingRepository
+from maeumnarae.repositories.consultation_repo import ConsultationRepository
+from maeumnarae.repositories.psychological_test_repo import PsychologicalTestRepository
+from maeumnarae.repositories.education_event_repo import EducationEventRepository
+from maeumnarae.repositories.calendar_repo import CalendarRepository
+from maeumnarae.repositories.deletion_repo import DeletionRepository, TARGETS
 
 
 @pytest.fixture

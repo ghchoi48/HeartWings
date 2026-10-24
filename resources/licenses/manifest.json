@@ -1,0 +1,104 @@
+{
+  "libraries": [
+    {
+      "name": "NiceGUI",
+      "license": "MIT",
+      "source": "https://github.com/zauberzeug/nicegui",
+      "version": "3.18.0",
+      "text_file": "libraries/nicegui.txt"
+    },
+    {
+      "name": "sqlcipher3",
+      "license": "Zlib",
+      "source": "https://github.com/coleifer/sqlcipher3",
+      "version": "0.6.4",
+      "text_file": "libraries/sqlcipher3.txt"
+    },
+    {
+      "name": "Pydantic",
+      "license": "MIT",
+      "source": "https://github.com/pydantic/pydantic",
+      "version": "2.14.1",
+      "text_file": "libraries/pydantic.txt"
+    },
+    {
+      "name": "nh3",
+      "license": "MIT",
+      "source": "https://github.com/messense/nh3",
+      "version": "0.3.7",
+      "text_file": "libraries/nh3.txt"
+    },
+    {
+      "name": "markdown2",
+      "license": "MIT",
+      "source": "https://github.com/trentm/python-markdown2",
+      "version": "2.5.5",
+      "text_file": "libraries/markdown2.txt"
+    },
+    {
+      "name": "holidays",
+      "license": "MIT",
+      "source": "https://github.com/vacanza/holidays",
+      "version": "0.107",
+      "text_file": "libraries/holidays.txt"
+    },
+    {
+      "name": "certifi",
+      "license": "MPL-2.0",
+      "source": "https://github.com/certifi/python-certifi",
+      "version": "2026.7.22",
+      "text_file": "libraries/certifi.txt"
+    },
+    {
+      "name": "pywebview",
+      "license": "BSD-3-Clause",
+      "source": "https://github.com/r0x0r/pywebview",
+      "version": "6.2.1",
+      "text_file": "libraries/pywebview.txt"
+    },
+    {
+      "name": "openpyxl",
+      "license": "MIT",
+      "source": "https://foss.heptapod.net/openpyxl/openpyxl",
+      "version": "3.1.5",
+      "text_file": "libraries/openpyxl.txt"
+    },
+    {
+      "name": "et_xmlfile",
+      "license": "MIT",
+      "source": "https://foss.heptapod.net/openpyxl/et_xmlfile",
+      "version": "2.0.0",
+      "text_file": "libraries/et_xmlfile.txt"
+    },
+    {
+      "name": "defusedxml",
+      "license": "PSF-2.0",
+      "source": "https://github.com/tiran/defusedxml",
+      "version": "0.7.1",
+      "text_file": "libraries/defusedxml.txt"
+    },
+    {
+      "name": "pyxlsb",
+      "license": "LGPL-3.0-or-later",
+      "source": "https://github.com/willtrnr/pyxlsb",
+      "text_file": "libraries/pyxlsb.txt",
+      "version": "1.0.10"
+    }
+  ],
+  "fonts": [
+    {
+      "name": "Pretendard",
+      "license": "OFL-1.1",
+      "source": "https://github.com/orioncactus/pretendard",
+      "license_source": "https://raw.githubusercontent.com/orioncactus/pretendard/main/LICENSE",
+      "text_file": "fonts/pretendard.txt"
+    },
+    {
+      "name": "Noto Sans KR",
+      "license": "OFL-1.1",
+      "source": "https://github.com/notofonts/noto-cjk",
+      "license_source": "https://raw.githubusercontent.com/google/fonts/main/ofl/notosanskr/OFL.txt",
+      "text_file": "fonts/noto.txt"
+    }
+  ]
+}

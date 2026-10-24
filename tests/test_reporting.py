@@ -6,13 +6,13 @@ from datetime import date, datetime
 
 import pytest
 
-from database import Database
-from models import CounselingInput, StudentInput
-from reporting import KST, date_bounds, report_csv, report_html
-from repositories.counseling_repo import CounselingRepository
-from repositories.student_repo import StudentRepository
-from repositories.reporting_repo import ReportingRepository
-from views.calendar_view import visible_days
+from maeumnarae.core.database import Database
+from maeumnarae.core.models import CounselingInput, StudentInput
+from maeumnarae.services.reporting import KST, date_bounds, report_csv, report_html
+from maeumnarae.repositories.counseling_repo import CounselingRepository
+from maeumnarae.repositories.student_repo import StudentRepository
+from maeumnarae.repositories.reporting_repo import ReportingRepository
+from maeumnarae.views.calendar_view import visible_days
 
 
 @pytest.fixture

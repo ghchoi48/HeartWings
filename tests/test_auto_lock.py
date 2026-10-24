@@ -7,8 +7,8 @@ from unittest.mock import AsyncMock, Mock, patch
 from nicegui import Client, ui
 from nicegui.page import page
 
-from settings_store import SettingsStore
-from views.auto_lock import AutoLock, AUTO_LOCK_MINUTES
+from maeumnarae.core.settings_store import SettingsStore
+from maeumnarae.views.auto_lock import AutoLock, AUTO_LOCK_MINUTES
 
 
 def test_defaults_restore_and_preserve_other_settings(tmp_path):
@@ -68,15 +68,15 @@ def test_resume_after_deadline_does_not_reset_or_change_timeout():
 
 def test_save_failure_keeps_active_timeout(tmp_path):
     lock = AutoLock(SettingsStore(tmp_path / 'settings.json'), AsyncMock())
-    with patch.object(lock.store, 'update', side_effect=OSError), patch('views.auto_lock.ui.notify') as notify:
+    with patch.object(lock.store, 'update', side_effect=OSError), patch('maeumnarae.views.auto_lock.ui.notify') as notify:
         asyncio.run(lock.change_minutes(5))
     assert lock.minutes == 5
     notify.assert_called_once()
 
 
 def test_header_timer_and_settings_options():
-    with Client(page('/auto-lock-test')), patch('views.auto_lock.ui.run_javascript') as javascript, \
-            patch('views.auto_lock.ui.timer') as timer:
+    with Client(page('/auto-lock-test')), patch('maeumnarae.views.auto_lock.ui.run_javascript') as javascript, \
+            patch('maeumnarae.views.auto_lock.ui.timer') as timer:
         lock = AutoLock(SettingsStore(None), AsyncMock())
         lock.install()
         lock.build_controls()

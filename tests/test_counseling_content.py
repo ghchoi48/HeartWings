@@ -1,6 +1,6 @@
 import unittest
 
-from views.counseling_content import clean_html, editor_html
+from maeumnarae.views.counseling_content import clean_html, editor_html
 
 
 class CounselingContentTests(unittest.TestCase):

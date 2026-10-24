@@ -6,10 +6,10 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from pydantic import ValidationError
 
-from database import ConflictError, Database, DatabaseOpenError, NotFoundError
-from models import CounselingInput, FamilyInput, StudentInput
-from repositories.counseling_repo import CounselingRepository
-from repositories.student_repo import StudentRepository
+from maeumnarae.core.database import ConflictError, Database, DatabaseOpenError, NotFoundError
+from maeumnarae.core.models import CounselingInput, FamilyInput, StudentInput
+from maeumnarae.repositories.counseling_repo import CounselingRepository
+from maeumnarae.repositories.student_repo import StudentRepository
 
 
 @pytest.fixture
@@ -153,7 +153,7 @@ def test_invalid_inputs_and_pagination(db):
 
 
 def test_future_schema_rejected_without_changes(db):
-    from database import DatabaseError
+    from maeumnarae.core.database import DatabaseError
     with db.session(write=True) as connection:
         connection.execute('PRAGMA user_version=99')
     with pytest.raises(DatabaseError):
@@ -202,7 +202,7 @@ def test_family_members_round_trip_and_student_edit(db):
 
 
 def test_version_one_family_migration(tmp_path):
-    from database import SCHEMA
+    from maeumnarae.core.database import SCHEMA
 
     database = Database('migration-test', tmp_path / 'old.db')
     student = student_input()
@@ -255,8 +255,8 @@ def test_counseling_method_and_target_persist(db):
 
 
 def test_case_reports_and_log_ownership(db):
-    from models import CounselingCaseInput
-    from repositories.case_repo import CaseRepository
+    from maeumnarae.core.models import CounselingCaseInput
+    from maeumnarae.repositories.case_repo import CaseRepository
 
     students, logs, cases = StudentRepository(db), CounselingRepository(db), CaseRepository(db)
     student = students.create(student_input())
@@ -279,8 +279,8 @@ def test_case_reports_and_log_ownership(db):
 
 
 def test_version_five_cases_migration(tmp_path):
-    from database import SCHEMA
-    from repositories.case_repo import CaseRepository
+    from maeumnarae.core.database import SCHEMA
+    from maeumnarae.repositories.case_repo import CaseRepository
 
     database = Database('migration-test', tmp_path / 'v5.db')
     with database.session(write=True) as connection:
@@ -309,8 +309,8 @@ def test_version_five_cases_migration(tmp_path):
 
 
 def test_case_documents_save_independently(db):
-    from models import CounselingCaseInput
-    from repositories.case_repo import CaseRepository
+    from maeumnarae.core.models import CounselingCaseInput
+    from maeumnarae.repositories.case_repo import CaseRepository
 
     student = StudentRepository(db).create(student_input())
     repo = CaseRepository(db)
@@ -333,7 +333,7 @@ def test_case_documents_save_independently(db):
 
 
 def test_version_six_report_migration(tmp_path):
-    from repositories.case_repo import CaseRepository
+    from maeumnarae.repositories.case_repo import CaseRepository
 
     db = Database('migration-test', tmp_path / 'v6.db')
     with db.session(write=True) as connection:

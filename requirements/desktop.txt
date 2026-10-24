@@ -1,0 +1,2 @@
+-r base.txt
+pywebview>=5,<7

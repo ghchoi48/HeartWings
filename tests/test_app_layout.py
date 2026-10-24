@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, Mock, patch
 from nicegui import Client, ui
 from nicegui.page import page
 
-from views.app_layout import AppLayout
+from maeumnarae.views.app_layout import AppLayout
 
 
 class StudentRefreshTests(unittest.IsolatedAsyncioTestCase):
@@ -26,7 +26,7 @@ class StudentRefreshTests(unittest.IsolatedAsyncioTestCase):
         self.layout.calendar_view = SimpleNamespace(reload=AsyncMock())
         self.layout.statistics_view = SimpleNamespace(load=AsyncMock())
 
-    @patch('views.auto_lock.ui.run_javascript')
+    @patch('maeumnarae.views.auto_lock.ui.run_javascript')
     async def test_build_after_login_container_is_deleted(self, _javascript):
         client = Client(page('/layout-test'))
         client.__enter__()
@@ -54,7 +54,7 @@ class StudentRefreshTests(unittest.IsolatedAsyncioTestCase):
     async def test_refreshes_hidden_lists_and_selected_student(self):
         student = SimpleNamespace(id=1, name='수정 이름', grade=2, classroom='3')
         self.students.database.student_revision += 1
-        with patch('views.app_layout.run.io_bound', new=AsyncMock(return_value=student)):
+        with patch('maeumnarae.views.app_layout.run.io_bound', new=AsyncMock(return_value=student)):
             await self.layout.refresh_students()
         for view in (self.layout.student_view, self.layout.counseling_view):
             view.student_list.reload.assert_awaited_once()
@@ -69,7 +69,7 @@ class StudentRefreshTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_deleted_student_clears_counseling_selection(self):
         self.students.database.student_revision += 1
-        with patch('views.app_layout.run.io_bound', new=AsyncMock(return_value=None)):
+        with patch('maeumnarae.views.app_layout.run.io_bound', new=AsyncMock(return_value=None)):
             await self.layout.refresh_students()
         self.layout.counseling_view.select_student.assert_awaited_once_with(None)
 
@@ -88,7 +88,7 @@ class StudentRefreshTests(unittest.IsolatedAsyncioTestCase):
 class IntegratedCounselingTests(unittest.IsolatedAsyncioTestCase):
     async def test_student_button_tabs_and_student_switch(self):
         from datetime import datetime, timezone
-        from models import Student
+        from maeumnarae.core.models import Student
         now = datetime.now(timezone.utc)
         students = Mock(database=SimpleNamespace(student_revision=0))
         students.enrollments.return_value = []
@@ -101,9 +101,9 @@ class IntegratedCounselingTests(unittest.IsolatedAsyncioTestCase):
         async def invoke(function, *args, **kwargs):
             return function(*args, **kwargs)
 
-        with Client(page('/integrated-counseling-test')), patch('views.app_layout.ui.timer'), \
-                patch('views.auto_lock.ui.run_javascript'), \
-                patch('views.app_layout.run.io_bound', side_effect=invoke):
+        with Client(page('/integrated-counseling-test')), patch('maeumnarae.views.app_layout.ui.timer'), \
+                patch('maeumnarae.views.auto_lock.ui.run_javascript'), \
+                patch('maeumnarae.views.app_layout.run.io_bound', side_effect=invoke):
             layout = AppLayout(students, counseling, Mock())
             layout.build(ui.column(), ui.left_drawer(), ui.header())
             layout.navigate('students')

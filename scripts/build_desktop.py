@@ -12,7 +12,7 @@ def main() -> None:
     environment = dict(os.environ)
     environment['PYINSTALLER_CONFIG_DIR'] = str(root / 'build' / 'pyinstaller-cache')
     subprocess.run([sys.executable, '-m', 'PyInstaller', '--clean', '--noconfirm',
-                    str(root / 'maeumnarae.spec')], cwd=root, env=environment, check=True)
+                    str(root / 'packaging' / 'maeumnarae.spec')], cwd=root, env=environment, check=True)
     if sys.platform == 'darwin':
         subprocess.run(['ditto', '-c', '-k', '--sequesterRsrc', '--keepParent',
                         str(root / 'dist' / '마음나래.app'), str(root / 'dist' / 'maeumnarae-macos.zip')], check=True)

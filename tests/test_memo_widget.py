@@ -7,10 +7,10 @@ import pytest
 from nicegui import Client, ui
 from nicegui.page import page
 
-from database import Database, DatabaseError
-from repositories.home_repo import HomeRepository
-from settings_store import SettingsStore
-from widgets.memo import Memo
+from maeumnarae.core.database import Database, DatabaseError
+from maeumnarae.repositories.home_repo import HomeRepository
+from maeumnarae.core.settings_store import SettingsStore
+from maeumnarae.widgets.memo import Memo
 
 
 def test_note_persistence_isolation_and_safe_html(tmp_path):
@@ -39,7 +39,7 @@ class MemoWidgetTests(unittest.IsolatedAsyncioTestCase):
         repo = HomeRepository(None, store)
         with Client(page('/memo-test')):
             host = ui.column()
-            with host, patch('widgets.memo.ui.timer'):
+            with host, patch('maeumnarae.widgets.memo.ui.timer'):
                 memo = Memo(repo, None, 'memo-a')
                 memo.build()
                 memo.load()

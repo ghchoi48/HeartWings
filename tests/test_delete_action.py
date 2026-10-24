@@ -8,8 +8,8 @@ import pytest
 from nicegui import Client, ui
 from nicegui.page import page
 
-from database import DatabaseError
-from views.delete_action import delete_button
+from maeumnarae.core.database import DatabaseError
+from maeumnarae.views.delete_action import delete_button
 
 
 @pytest.mark.parametrize('confirmed', [False, True])
@@ -30,8 +30,8 @@ def test_confirmation_captures_target_and_refreshes_only_after_success(confirmed
                 return confirmed
 
             with patch.object(ui.dialog, '__await__', lambda dialog: confirm(dialog).__await__()), \
-                    patch('views.delete_action.run.io_bound', new_callable=AsyncMock) as io, \
-                    patch('views.delete_action.ui.notify'):
+                    patch('maeumnarae.views.delete_action.run.io_bound', new_callable=AsyncMock) as io, \
+                    patch('maeumnarae.views.delete_action.ui.notify'):
                 await inspect.getclosurevars(handler).nonlocals['callback']()
                 if confirmed:
                     assert io.await_args.args[1:] == ('student', 7)
@@ -56,8 +56,8 @@ def test_failure_keeps_view_and_allows_retry():
                 return True
 
             with patch.object(ui.dialog, '__await__', lambda dialog: confirm(dialog).__await__()), \
-                    patch('views.delete_action.run.io_bound', new_callable=AsyncMock, side_effect=[DatabaseError('잠금'), None]), \
-                    patch('views.delete_action.ui.notify'):
+                    patch('maeumnarae.views.delete_action.run.io_bound', new_callable=AsyncMock, side_effect=[DatabaseError('잠금'), None]), \
+                    patch('maeumnarae.views.delete_action.ui.notify'):
                 await inspect.getclosurevars(handler).nonlocals['callback']()
                 refresh.assert_not_awaited()
                 assert button.enabled
@@ -84,7 +84,7 @@ def test_icon_only_delete_stops_card_click_and_keeps_confirmation():
                 return True
 
             with patch.object(ui.dialog, '__await__', lambda dialog: confirm(dialog).__await__()), \
-                    patch('views.delete_action.run.io_bound', new_callable=AsyncMock) as io:
+                    patch('maeumnarae.views.delete_action.run.io_bound', new_callable=AsyncMock) as io:
                 await listener.handler()
                 assert io.await_args.args[1:] == ('test', 7)
                 refresh.assert_awaited_once()

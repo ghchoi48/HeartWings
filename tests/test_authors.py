@@ -4,23 +4,23 @@ from datetime import datetime, timezone
 
 import pytest
 
-from database import Database, SCHEMA_VERSION
-from models import (
+from maeumnarae.core.database import Database, SCHEMA_VERSION
+from maeumnarae.core.models import (
     CalendarInput, CalendarEventInput, CounselingInput, CounselingCaseInput,
     ConsultationInput, EducationEventInput, GroupCounselingInput, GroupLogInput,
     PsychologicalTestInput, SchoolSettings, SpecialEducationInput, StudentInput, TeacherInput,
 )
-from repositories.calendar_repo import CalendarRepository
-from repositories.case_repo import CaseRepository
-from repositories.consultation_repo import ConsultationRepository
-from repositories.counseling_repo import CounselingRepository
-from repositories.education_event_repo import EducationEventRepository
-from repositories.group_counseling_repo import GroupCounselingRepository
-from repositories.psychological_test_repo import PsychologicalTestRepository
-from repositories.school_settings_repo import SchoolSettingsRepository
-from repositories.special_education_repo import SpecialEducationRepository, SpecialEducationLogRepository
-from repositories.student_repo import StudentRepository
-from repositories.teacher_repo import TeacherRepository
+from maeumnarae.repositories.calendar_repo import CalendarRepository
+from maeumnarae.repositories.case_repo import CaseRepository
+from maeumnarae.repositories.consultation_repo import ConsultationRepository
+from maeumnarae.repositories.counseling_repo import CounselingRepository
+from maeumnarae.repositories.education_event_repo import EducationEventRepository
+from maeumnarae.repositories.group_counseling_repo import GroupCounselingRepository
+from maeumnarae.repositories.psychological_test_repo import PsychologicalTestRepository
+from maeumnarae.repositories.school_settings_repo import SchoolSettingsRepository
+from maeumnarae.repositories.special_education_repo import SpecialEducationRepository, SpecialEducationLogRepository
+from maeumnarae.repositories.student_repo import StudentRepository
+from maeumnarae.repositories.teacher_repo import TeacherRepository
 
 
 @pytest.fixture

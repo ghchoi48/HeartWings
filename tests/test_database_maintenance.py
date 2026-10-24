@@ -5,10 +5,10 @@ from unittest.mock import patch
 
 import pytest
 
-from database import Database, DatabaseError, DatabaseOpenError
-from models import SchoolSettings, StudentInput
-from repositories.student_repo import StudentRepository
-from services.database_maintenance import create_backup, database_info, restore_backup
+from maeumnarae.core.database import Database, DatabaseError, DatabaseOpenError
+from maeumnarae.core.models import SchoolSettings, StudentInput
+from maeumnarae.repositories.student_repo import StudentRepository
+from maeumnarae.services.database_maintenance import create_backup, database_info, restore_backup
 
 
 def make_database(path, password='original-key', name='Original'):
@@ -105,7 +105,7 @@ def test_invalid_restore_preserves_current_data(tmp_path, kind):
 def test_replace_failure_preserves_current_and_recovery(tmp_path):
     current = make_database(tmp_path / 'current.db')
     source = make_database(tmp_path / 'source.db', 'backup-key', 'Restored')
-    with patch('services.database_maintenance.os.replace', side_effect=OSError('busy')):
+    with patch('maeumnarae.services.database_maintenance.os.replace', side_effect=OSError('busy')):
         with pytest.raises(DatabaseError):
             restore_backup(current, create_backup(source), 'backup-key')
     assert student_names(current) == ['Original']

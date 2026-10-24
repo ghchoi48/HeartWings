@@ -8,10 +8,10 @@ from nicegui import Client, ui
 from nicegui.page import page
 from pydantic import ValidationError
 
-from database import Database, NotFoundError
-from models import EducationEvent, EducationEventInput
-from repositories.education_event_repo import EducationEventRepository
-from views.education_event_view import EducationEventView
+from maeumnarae.core.database import Database, NotFoundError
+from maeumnarae.core.models import EducationEvent, EducationEventInput
+from maeumnarae.repositories.education_event_repo import EducationEventRepository
+from maeumnarae.views.education_event_view import EducationEventView
 
 
 def test_storage_and_migration(tmp_path):
@@ -84,9 +84,9 @@ class EducationEventViewTests(unittest.IsolatedAsyncioTestCase):
                 return function(*args, **kwargs)
 
             try:
-                with host, patch('views.education_event_view.ui.timer'):
+                with host, patch('maeumnarae.views.education_event_view.ui.timer'):
                     view.build()
-                with patch('views.education_event_view.run.io_bound', side_effect=invoke):
+                with patch('maeumnarae.views.education_event_view.run.io_bound', side_effect=invoke):
                     await view.reload()
                     view.table.filter = '교육'
                     await view.select_event(1)
@@ -138,7 +138,7 @@ def test_editor_restores_time_and_duration():
                                event_time='15:30', duration_minutes=75, participant_count=120,
                                created_at=now, updated_at=now)
         view = EducationEventView(Mock())
-        with patch('views.education_event_view.ui.timer'):
+        with patch('maeumnarae.views.education_event_view.ui.timer'):
             view.build()
         view.build_editor(entry)
         elements = list(ui.context.client.elements.values())
@@ -183,7 +183,7 @@ def test_group_test_category_migration_and_storage(tmp_path):
 def test_inline_save_retry_switch_and_close(tmp_path):
     import asyncio
     from inspect import getclosurevars
-    from database import DatabaseError
+    from maeumnarae.core.database import DatabaseError
 
     async def check():
         db = Database('test-only', tmp_path / 'inline.db')
@@ -191,13 +191,13 @@ def test_inline_save_retry_switch_and_close(tmp_path):
         repo = EducationEventRepository(db)
         with Client(page('/education-inline')) as client:
             view = EducationEventView(repo)
-            with patch('views.education_event_view.ui.timer'):
+            with patch('maeumnarae.views.education_event_view.ui.timer'):
                 view.build()
 
             async def invoke(function, *args, **kwargs):
                 return function(*args, **kwargs)
 
-            with patch('views.education_event_view.run.io_bound', side_effect=invoke):
+            with patch('maeumnarae.views.education_event_view.run.io_bound', side_effect=invoke):
                 await view.open_editor()
                 assert not any(isinstance(e, ui.dialog) for e in client.elements.values())
                 title = view.editor_fields['title']
@@ -231,4 +231,51 @@ def test_inline_save_retry_switch_and_close(tmp_path):
                 await view.select_event(repo.list()[0].id)
                 assert view.editor_fields['title'].value == '수정 교육'
                 assert not view.editor_open
+    asyncio.run(check())
+
+
+def test_row_delete_targets_clicked_record_and_keeps_other_editor(tmp_path):
+    import asyncio
+    from types import SimpleNamespace
+
+    async def check():
+        db = Database('test-only', tmp_path / 'row-delete.db')
+        db.initialize()
+        repo = EducationEventRepository(db)
+        first = repo.save(EducationEventInput(title='첫 교육', event_date='2026-10-20'))
+        second = repo.save(EducationEventInput(title='둘째 교육', event_date='2026-10-21'))
+        with Client(page('/education-row-delete')), patch('maeumnarae.views.education_event_view.ui.timer'):
+            view = EducationEventView(repo)
+            view.build()
+            assert view.table.props.get('selection') in (None, 'none')
+            assert view.table.columns[-1]['name'] == 'actions'
+
+            async def invoke(function, *args, **kwargs):
+                return function(*args, **kwargs)
+
+            async def confirm(dialog):
+                return True
+
+            async def cancel(dialog):
+                return False
+
+            with patch('maeumnarae.views.education_event_view.run.io_bound', side_effect=invoke):
+                await view.reload()
+                await view.select_event(first.id)
+                with patch.object(ui.dialog, '__await__', lambda dialog: cancel(dialog).__await__()):
+                    await view.delete_event(SimpleNamespace(args=second.id))
+                assert repo.get(second.id) is not None
+                view.editor_fields['title'].value = '저장 전'
+                await view.delete_event(SimpleNamespace(args=second.id))
+                assert repo.get(second.id) is not None
+                view.editor_fields['title'].value = first.title
+                with patch.object(ui.dialog, '__await__', lambda dialog: confirm(dialog).__await__()):
+                    await view.delete_event(SimpleNamespace(args=second.id))
+                    assert repo.get(second.id) is None
+                    assert view.selected.id == first.id
+                    assert view.editor_fields['title'].value == first.title
+                    await view.delete_event(SimpleNamespace(args=first.id))
+                assert repo.list() == []
+                assert view.selected is None and not view.editor_fields
+                assert not view.deleting
     asyncio.run(check())

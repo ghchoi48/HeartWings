@@ -13,9 +13,9 @@ from nicegui import Client, ui
 from nicegui.page import page
 from pydantic import ValidationError
 
-from database import DatabaseError
-from models import SchoolSettings, StudentTimelineEntry, Student, StudentEnrollment
-from views.student_view import PAGE_SIZE, StudentView, student_form_input
+from maeumnarae.core.database import DatabaseError
+from maeumnarae.core.models import SchoolSettings, StudentTimelineEntry, Student, StudentEnrollment
+from maeumnarae.views.student_view import PAGE_SIZE, StudentView, student_form_input
 
 
 def make_student(student_id=1, name='가상 학생'):
@@ -53,9 +53,9 @@ class StudentViewTests(unittest.IsolatedAsyncioTestCase):
         self.counseling.list_timeline.return_value = []
         self.host = ui.column()
         self.view = StudentView(self.students, self.counseling)
-        with self.host, patch('views.student_view.ui.timer'):
+        with self.host, patch('maeumnarae.views.student_view.ui.timer'):
             self.view.build()
-        self.io_patch = patch('views.student_view.run.io_bound', side_effect=inline_io)
+        self.io_patch = patch('maeumnarae.views.student_view.run.io_bound', side_effect=inline_io)
         self.io_patch.start()
 
     def tearDown(self):
@@ -157,7 +157,7 @@ class StudentViewTests(unittest.IsolatedAsyncioTestCase):
         student = make_student()
         self.students.get.return_value = student
         self.students.delete_enrollment.side_effect = DatabaseError('삭제 실패')
-        with self.host, patch('views.student_view.ui.notify') as notify:
+        with self.host, patch('maeumnarae.views.student_view.ui.notify') as notify:
             await self.view.load_profile(student.id)
             await self.view.delete_enrollment(student.id, 2025)
         self.assertEqual(self.view.selected, student)
@@ -188,7 +188,7 @@ class StudentViewTests(unittest.IsolatedAsyncioTestCase):
             return dialog._result
 
         with self.host, patch.object(ui.dialog, '__await__', lambda dialog: interact(dialog).__await__()), \
-                patch('views.student_view.ui.notify'):
+                patch('maeumnarae.views.student_view.ui.notify'):
             await self.view.open_family_editor(student)
         student_id, family = self.students.update_family.call_args.args
         self.assertEqual(student_id, student.id)
@@ -239,7 +239,7 @@ class StudentViewTests(unittest.IsolatedAsyncioTestCase):
         self.students.list.return_value = [make_student()]
         await self.view.load_students()
         self.students.list.side_effect = DatabaseError('조회 실패')
-        with patch('views.student_list.ui.notify') as notify:
+        with patch('maeumnarae.views.student_list.ui.notify') as notify:
             await self.view.load_students()
         self.assertEqual(self.view.student_list.table.rows, [])
         notify.assert_called_once_with('조회 실패', type='negative')
@@ -258,7 +258,7 @@ class StudentViewTests(unittest.IsolatedAsyncioTestCase):
                 return [make_student(1, '이전 결과')]
             return [make_student(2, '현재 결과')]
 
-        with patch('views.student_view.run.io_bound', side_effect=delayed):
+        with patch('maeumnarae.views.student_view.run.io_bound', side_effect=delayed):
             old = asyncio.create_task(self.view.load_students())
             await started.wait()
             await self.view.load_students()

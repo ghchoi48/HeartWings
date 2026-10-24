@@ -10,11 +10,11 @@ from nicegui import Client, ui
 from nicegui.page import page
 from openpyxl import load_workbook
 
-from database import Database
-from models import SchoolSettings
-from repositories.student_repo import StudentRepository
-from repositories.teacher_repo import TeacherRepository
-from views.database_settings_view import build_database_settings
+from maeumnarae.core.database import Database
+from maeumnarae.core.models import SchoolSettings
+from maeumnarae.repositories.student_repo import StudentRepository
+from maeumnarae.repositories.teacher_repo import TeacherRepository
+from maeumnarae.views.database_settings_view import build_database_settings
 
 
 def callback(button):
@@ -41,14 +41,14 @@ def test_database_tab_template_preview_and_register(tmp_path):
             db = Database('import-key', tmp_path / 'view.db')
             db.initialize(SchoolSettings(counselor_name='작성교사'))
             imported = AsyncMock()
-            with patch('views.database_settings_view.ui.timer'):
+            with patch('maeumnarae.views.database_settings_view.ui.timer'):
                 build_database_settings(db, imported)
             elements = list(client.elements.values())
             buttons = {element.text: element for element in elements if isinstance(element, ui.button)}
             uploads = {element.props['label']: element for element in elements if isinstance(element, ui.upload)}
-            with patch('views.roster_import_view.run.io_bound', side_effect=inline), \
-                    patch('views.roster_import_view.ui.download.content') as download, \
-                    patch('views.roster_import_view.ui.notify'):
+            with patch('maeumnarae.views.roster_import_view.run.io_bound', side_effect=inline), \
+                    patch('maeumnarae.views.roster_import_view.ui.download.content') as download, \
+                    patch('maeumnarae.views.roster_import_view.ui.notify'):
                 for title, kind, values in [
                     ('학생', 'students', ['학생', 1, '03', '0001', '별명', '2012-02-03', '010-1234-5678']),
                     ('교사', 'teachers', ['교사', '010-1234-5678', '0012', '담임']),

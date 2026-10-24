@@ -5,8 +5,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import Mock, patch
 
-from desktop import update_native_icon
-from views.display_settings import (DisplaySettings, DEFAULT_PRIMARY, PRIMARY_PRESETS,
+from maeumnarae.core.desktop import update_native_icon
+from maeumnarae.views.display_settings import (DisplaySettings, DEFAULT_PRIMARY, PRIMARY_PRESETS,
                                     luminance, primary_text_color, readable_accent)
 
 
@@ -15,7 +15,7 @@ def test_defaults_and_saved_preferences():
         path = Path(directory) / 'display-settings.json'
         settings = DisplaySettings(path)
         assert settings.values == {'mode': 'auto', 'size': 16, 'font': 'system', 'primary': DEFAULT_PRIMARY}
-        with patch('views.display_settings.ui.run_javascript'):
+        with patch('maeumnarae.views.display_settings.ui.run_javascript'):
             settings.change('mode', 'dark')
             settings.change('size', 19)
             settings.change('font', 'PretendardVariable.ttf')
@@ -47,8 +47,8 @@ def test_primary_persistence_and_invalid_colors(tmp_path):
     path = tmp_path / 'display-settings.json'
     path.write_text(json.dumps({'widget_setting': 'preserved'}))
     settings = DisplaySettings(path)
-    with patch('views.display_settings.ui.colors') as colors, \
-            patch('views.display_settings.ui.run_javascript') as javascript:
+    with patch('maeumnarae.views.display_settings.ui.colors') as colors, \
+            patch('maeumnarae.views.display_settings.ui.run_javascript') as javascript:
         settings.change('primary', '#Fa0')
         colors.assert_called_once_with(primary='#ffaa00')
         assert '--app-primary-text' in javascript.call_args.args[0]
@@ -79,8 +79,8 @@ def test_color_picker_and_preset_controls():
     from nicegui.page import page
     from types import SimpleNamespace
     with Client(page('/primary-settings-test')), \
-            patch('views.display_settings.ui.run_javascript'), \
-            patch('views.display_settings.ui.colors'):
+            patch('maeumnarae.views.display_settings.ui.run_javascript'), \
+            patch('maeumnarae.views.display_settings.ui.colors'):
         settings = DisplaySettings()
         settings.build_controls()
         elements = list(ui.context.client.elements.values())

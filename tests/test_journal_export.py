@@ -13,23 +13,23 @@ from nicegui import Client, ui
 from nicegui.page import page
 from openpyxl import load_workbook
 
-from database import Database, DatabaseError
-from models import (StudentInput, StudentEnrollmentInput, TeacherInput, CounselingInput,
+from maeumnarae.core.database import Database, DatabaseError
+from maeumnarae.core.models import (StudentInput, StudentEnrollmentInput, TeacherInput, CounselingInput,
                     GroupCounselingInput, GroupLogInput, SpecialEducationInput, ConsultationInput,
                     PsychologicalTestInput, EducationEventInput)
-from reporting import KST
-from repositories.student_repo import StudentRepository
-from repositories.teacher_repo import TeacherRepository
-from repositories.counseling_repo import CounselingRepository
-from repositories.group_counseling_repo import GroupCounselingRepository
-from repositories.special_education_repo import SpecialEducationRepository, SpecialEducationLogRepository
-from repositories.consultation_repo import ConsultationRepository
-from repositories.psychological_test_repo import PsychologicalTestRepository
-from repositories.education_event_repo import EducationEventRepository
-from repositories.journal_export_repo import JournalExportRepository, JournalSnapshot
-from services.journal_export import (ExportOptions, ExportResult, TEMPLATE, export_journals,
+from maeumnarae.services.reporting import KST
+from maeumnarae.repositories.student_repo import StudentRepository
+from maeumnarae.repositories.teacher_repo import TeacherRepository
+from maeumnarae.repositories.counseling_repo import CounselingRepository
+from maeumnarae.repositories.group_counseling_repo import GroupCounselingRepository
+from maeumnarae.repositories.special_education_repo import SpecialEducationRepository, SpecialEducationLogRepository
+from maeumnarae.repositories.consultation_repo import ConsultationRepository
+from maeumnarae.repositories.psychological_test_repo import PsychologicalTestRepository
+from maeumnarae.repositories.education_event_repo import EducationEventRepository
+from maeumnarae.repositories.journal_export_repo import JournalExportRepository, JournalSnapshot
+from maeumnarae.services.journal_export import (ExportOptions, ExportResult, TEMPLATE, export_journals,
                                      export_rows, school_year, workbook_bytes)
-from views.journal_export_view import JournalExportView
+from maeumnarae.views.journal_export_view import JournalExportView
 
 
 def read_workbook(content):
@@ -158,18 +158,18 @@ def test_export_view_download_and_invalidate():
             view = JournalExportView(Mock())
             view.build()
             result = ExportResult(b'xlsx-test', 1, {'개인상담': 1}, ('엑셀 2행 확인 필요',))
-            with patch('views.journal_export_view.run.io_bound', new_callable=AsyncMock, return_value=result) as io:
+            with patch('maeumnarae.views.journal_export_view.run.io_bound', new_callable=AsyncMock, return_value=result) as io:
                 await view.generate()
                 assert view.download_button.enabled
                 assert io.await_args.args[2] == ExportOptions()
-                with patch('views.journal_export_view.ui.download.content') as download:
+                with patch('maeumnarae.views.journal_export_view.ui.download.content') as download:
                     view.download()
                     assert download.call_args.args[0] == b'xlsx-test'
                     view.invalidate()
                     view.download()
                     download.assert_called_once()
                 assert not view.download_button.enabled
-            with patch('views.journal_export_view.run.io_bound', new_callable=AsyncMock, side_effect=DatabaseError('DB 오류')):
+            with patch('maeumnarae.views.journal_export_view.run.io_bound', new_callable=AsyncMock, side_effect=DatabaseError('DB 오류')):
                 await view.generate()
                 assert view.result is None and not view.busy
                 assert view.prepare.enabled and not view.download_button.enabled
@@ -207,3 +207,16 @@ def test_saved_area_is_exported_to_counseling_category(kind, target, area, middl
     assert sheet['K2'].value == sheet['L2'].value == sheet['E2'].value
     if area in ('기존 상담분야', '학업', ''):
         assert any('저장된 값 유지' in issue for issue in issues)
+
+
+def test_statistics_no_longer_contains_journal_excel_export():
+    from unittest.mock import Mock
+    from maeumnarae.views.statistics_view import StatisticsView
+
+    with Client(page('/statistics-without-excel')) as client, patch('maeumnarae.views.statistics_view.ui.timer'):
+        StatisticsView(Mock()).build()
+        buttons = {e.text for e in client.elements.values() if isinstance(e, ui.button)}
+        assert '일지 XLSX 만들기' not in buttons
+        assert 'XLSX 다운로드' not in buttons
+        assert 'CSV 내보내기' in buttons
+        assert '인쇄용 보고서' in buttons

@@ -4,11 +4,11 @@ from datetime import datetime, timezone
 
 import pytest
 
-from database import ConflictError, Database, NotFoundError
-from models import CounselingInput, SchoolSettings, StudentInput, StudentEnrollmentInput, current_school_year
-from repositories.counseling_repo import CounselingRepository
-from repositories.school_settings_repo import SchoolSettingsRepository
-from repositories.student_repo import StudentRepository
+from maeumnarae.core.database import ConflictError, Database, NotFoundError
+from maeumnarae.core.models import CounselingInput, SchoolSettings, StudentInput, StudentEnrollmentInput, current_school_year
+from maeumnarae.repositories.counseling_repo import CounselingRepository
+from maeumnarae.repositories.school_settings_repo import SchoolSettingsRepository
+from maeumnarae.repositories.student_repo import StudentRepository
 
 
 @pytest.fixture

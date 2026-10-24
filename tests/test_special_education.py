@@ -8,13 +8,13 @@ import pytest
 from nicegui import Client, ui
 from nicegui.page import page
 
-from database import Database, ConflictError
-from models import StudentInput, SpecialEducationInput, SpecialEducation, CounselingInput, Student
-from repositories.student_repo import StudentRepository
-from repositories.case_repo import CaseRepository
-from repositories.counseling_repo import CounselingRepository
-from repositories.special_education_repo import SpecialEducationRepository, SpecialEducationLogRepository
-from views.special_education_view import SpecialEducationView
+from maeumnarae.core.database import Database, ConflictError
+from maeumnarae.core.models import StudentInput, SpecialEducationInput, SpecialEducation, CounselingInput, Student
+from maeumnarae.repositories.student_repo import StudentRepository
+from maeumnarae.repositories.case_repo import CaseRepository
+from maeumnarae.repositories.counseling_repo import CounselingRepository
+from maeumnarae.repositories.special_education_repo import SpecialEducationRepository, SpecialEducationLogRepository
+from maeumnarae.views.special_education_view import SpecialEducationView
 
 
 def test_special_education_storage_and_migration(tmp_path):
@@ -73,7 +73,7 @@ async def test_special_editor_fields_and_save():
         now = datetime.now(timezone.utc)
         students = Mock()
         view = SpecialEducationView(students)
-        with patch('views.special_education_view.ui.timer'):
+        with patch('maeumnarae.views.special_education_view.ui.timer'):
             view.build()
         view.selected = Student(id=1, name='학생', grade=1, classroom='1', created_at=now, updated_at=now)
         view.cases = Mock()
@@ -105,7 +105,7 @@ async def test_special_editor_fields_and_save():
             return function(*args, **kwargs)
 
         with patch.object(ui.dialog, '__await__', lambda dialog: interact(dialog).__await__()), \
-                patch('views.special_education_view.run.io_bound', side_effect=invoke):
+                patch('maeumnarae.views.special_education_view.run.io_bound', side_effect=invoke):
             await view.open_case_editor()
         assert not view.editor_open
 
@@ -118,23 +118,24 @@ async def test_student_selection_and_log_editor():
         student = Student(id=1, name='학생', grade=1, classroom='1', created_at=now, updated_at=now)
         students.get.return_value = student
         view = SpecialEducationView(students)
-        with patch('views.special_education_view.ui.timer'):
+        with patch('maeumnarae.views.special_education_view.ui.timer'):
             view.build()
         view.cases = Mock()
         view.cases.list.return_value = [SpecialEducation(id=1, student_id=1, title='교육', law='학교폭력예방법',
                                                         created_at=now, updated_at=now)]
         view.counseling = Mock()
         view.counseling.list.return_value = []
+        view.counseling.count.return_value = 0
 
         async def invoke(function, *args, **kwargs):
             return function(*args, **kwargs)
 
-        with patch('views.counseling_view.run.io_bound', side_effect=invoke):
+        with patch('maeumnarae.views.counseling_view.run.io_bound', side_effect=invoke):
             await view.select_student(1)
         assert view.add.enabled
         assert view.edit_case.enabled
         assert '등록된 특별 교육 일지가 없습니다' in view.log_message.text
-        view.counseling.list.assert_called_once_with(student_id=1, case_id=1, limit=21, offset=0)
+        view.counseling.list.assert_called_once_with(student_id=1, case_id=1, limit=10, offset=0)
         dialog, fields, _, _, _ = view.build_editor(student, None)
         assert fields['category'].value == '특별교육'
         assert fields['starts_on'].label == '교육 날짜'
@@ -178,7 +179,7 @@ def test_law_migration_preserves_cases_and_logs(tmp_path):
 @pytest.mark.anyio
 async def test_student_row_click_loads_and_saves_special_log(tmp_path):
     from types import SimpleNamespace
-    from database import DatabaseError
+    from maeumnarae.core.database import DatabaseError
 
     db = Database('test-only', tmp_path / 'special-selection.db')
     db.initialize()
@@ -191,8 +192,8 @@ async def test_student_row_click_loads_and_saves_special_log(tmp_path):
     async def invoke(function, *args, **kwargs):
         return function(*args, **kwargs)
 
-    with Client(page('/special-row-click-test')), patch('views.special_education_view.ui.timer'), \
-            patch('views.special_education_view.run.io_bound', side_effect=invoke):
+    with Client(page('/special-row-click-test')), patch('maeumnarae.views.special_education_view.ui.timer'), \
+            patch('maeumnarae.views.special_education_view.run.io_bound', side_effect=invoke):
         view = SpecialEducationView(students)
         view.build()
         await view.student_list.reload()

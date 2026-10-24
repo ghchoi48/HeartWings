@@ -12,8 +12,8 @@ from playwright.sync_api import expect, sync_playwright
 
 def main() -> None:
     """실제 UI에서 학생 저장/수정과 DB 재열기를 확인한다."""
-    output = Path(__file__).resolve().parents[1] / 'artifacts'
-    output.mkdir(exist_ok=True)
+    output = Path(__file__).resolve().parents[1] / 'artifacts' / 'screenshots'
+    output.mkdir(parents=True, exist_ok=True)
     password = 'runtime-test-only-20261015'
     name = '실행검증학생-' + uuid4().hex[:8]
     with sync_playwright() as playwright:

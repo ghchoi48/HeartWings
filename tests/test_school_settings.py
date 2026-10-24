@@ -7,12 +7,12 @@ from unittest.mock import Mock, patch
 from nicegui import ui
 from pydantic import ValidationError
 
-from database import Database
-from models import SchoolSettings, StudentInput
-from repositories.school_settings_repo import SchoolSettingsRepository
-from repositories.student_repo import StudentRepository
-from views.school_settings_view import build_school_settings
-from database import DatabaseError
+from maeumnarae.core.database import Database
+from maeumnarae.core.models import SchoolSettings, StudentInput
+from maeumnarae.repositories.school_settings_repo import SchoolSettingsRepository
+from maeumnarae.repositories.student_repo import StudentRepository
+from maeumnarae.views.school_settings_view import build_school_settings
+from maeumnarae.core.database import DatabaseError
 
 
 def test_school_settings_persist_and_migrate(tmp_path):
@@ -70,12 +70,12 @@ class SchoolSettingsFormTests(unittest.IsolatedAsyncioTestCase):
         repository.get.return_value = SchoolSettings(school_name='기존학교')
         host = ui.column()
         try:
-            with host, patch('views.school_settings_view.ui.timer') as timer:
+            with host, patch('maeumnarae.views.school_settings_view.ui.timer') as timer:
                 build_school_settings(repository)
             fields = {e.props['label']: e for e in host.descendants() if isinstance(e, (ui.input, ui.select))}
             button = next(e for e in host.descendants() if isinstance(e, ui.button) and e.text == '학교 정보 저장')
-            with host, patch('views.school_settings_view.run.io_bound', side_effect=inline_io), \
-                    patch('views.school_settings_view.ui.notify'):
+            with host, patch('maeumnarae.views.school_settings_view.run.io_bound', side_effect=inline_io), \
+                    patch('maeumnarae.views.school_settings_view.ui.notify'):
                 await timer.call_args.args[1]()
                 self.assertEqual(fields['학교명'].value, '기존학교')
                 fields['학교명'].value = '새학교'

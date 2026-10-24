@@ -8,22 +8,22 @@ import pytest
 from nicegui import Client, ui
 from nicegui.page import page
 
-from database import ConflictError, Database, NotFoundError, SCHEMA_VERSION
-from models import (StudentInput, TeacherInput, CounselingInput, SpecialEducationInput,
+from maeumnarae.core.database import ConflictError, Database, NotFoundError, SCHEMA_VERSION
+from maeumnarae.core.models import (StudentInput, TeacherInput, CounselingInput, SpecialEducationInput,
                     GroupCounselingInput, GroupLogInput, ConsultationInput,
                     PsychologicalTestInput, EducationEventInput)
-from repositories.student_repo import StudentRepository
-from repositories.teacher_repo import TeacherRepository
-from repositories.counseling_repo import CounselingRepository
-from repositories.special_education_repo import SpecialEducationRepository, SpecialEducationLogRepository
-from repositories.group_counseling_repo import GroupCounselingRepository
-from repositories.consultation_repo import ConsultationRepository
-from repositories.psychological_test_repo import PsychologicalTestRepository
-from repositories.education_event_repo import EducationEventRepository
-from repositories.attachment_repo import AttachmentRepository, Attachment, MAX_ATTACHMENT_BYTES
-from repositories.deletion_repo import DeletionRepository
-from services.database_maintenance import create_backup
-from views.attachment_view import AttachmentView
+from maeumnarae.repositories.student_repo import StudentRepository
+from maeumnarae.repositories.teacher_repo import TeacherRepository
+from maeumnarae.repositories.counseling_repo import CounselingRepository
+from maeumnarae.repositories.special_education_repo import SpecialEducationRepository, SpecialEducationLogRepository
+from maeumnarae.repositories.group_counseling_repo import GroupCounselingRepository
+from maeumnarae.repositories.consultation_repo import ConsultationRepository
+from maeumnarae.repositories.psychological_test_repo import PsychologicalTestRepository
+from maeumnarae.repositories.education_event_repo import EducationEventRepository
+from maeumnarae.repositories.attachment_repo import AttachmentRepository, Attachment, MAX_ATTACHMENT_BYTES
+from maeumnarae.repositories.deletion_repo import DeletionRepository
+from maeumnarae.services.database_maintenance import create_backup
+from maeumnarae.views.attachment_view import AttachmentView
 
 
 @pytest.fixture
@@ -147,11 +147,11 @@ def test_upload_download_and_confirmed_delete_ui():
             view = AttachmentView(repo)
             view.build()
             file = SimpleNamespace(name='첨부.txt', size=lambda: 4, read=AsyncMock(return_value=b'data'))
-            with patch('views.attachment_view.run.io_bound', side_effect=invoke), patch('views.attachment_view.ui.notify'):
+            with patch('maeumnarae.views.attachment_view.run.io_bound', side_effect=invoke), patch('maeumnarae.views.attachment_view.ui.notify'):
                 await view.receive(SimpleNamespace(file=file))
                 repo.add.assert_called_once_with('첨부.txt', b'data')
                 assert view.close.enabled
-                with patch('views.attachment_view.ui.download.content') as download:
+                with patch('maeumnarae.views.attachment_view.ui.download.content') as download:
                     await view.download(entry)
                     download.assert_called_once_with(b'data', '첨부.txt', media_type='application/octet-stream')
                 for confirmed in (False, True):
@@ -186,7 +186,7 @@ def test_concurrent_uploads_are_queued_without_losing_files():
             def event(name):
                 return SimpleNamespace(file=SimpleNamespace(name=name, size=lambda: 1, read=AsyncMock(return_value=b'x')))
 
-            with patch('views.attachment_view.run.io_bound', side_effect=invoke), patch('views.attachment_view.ui.notify'):
+            with patch('maeumnarae.views.attachment_view.run.io_bound', side_effect=invoke), patch('maeumnarae.views.attachment_view.ui.notify'):
                 first = asyncio.create_task(view.receive(event('first')))
                 await started.wait()
                 second = asyncio.create_task(view.receive(event('second')))

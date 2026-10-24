@@ -5,9 +5,9 @@ from unittest.mock import AsyncMock, patch
 from nicegui import Client, ui
 from nicegui.page import page
 
-from database import Database
-from services.legacy_import import parse_rows, PERSON_HEADERS
-from views.legacy_import_view import LegacyImportView
+from maeumnarae.core.database import Database
+from maeumnarae.services.legacy_import import parse_rows, PERSON_HEADERS
+from maeumnarae.views.legacy_import_view import LegacyImportView
 
 
 def test_preview_save_and_option_invalidation(tmp_path):
@@ -33,10 +33,10 @@ def test_preview_save_and_option_invalidation(tmp_path):
             batch = parse_rows(rows, 2026)
             rows['상담대장'].append((5, {'교시': '8교시'}))
             event = SimpleNamespace(file=SimpleNamespace(name='source.xlsb', read=AsyncMock(return_value=b'file')))
-            with patch('views.legacy_import_view.run.io_bound', side_effect=inline), \
-                    patch('views.legacy_import_view.read_rows', return_value=rows), \
+            with patch('maeumnarae.views.legacy_import_view.run.io_bound', side_effect=inline), \
+                    patch('maeumnarae.views.legacy_import_view.read_rows', return_value=rows), \
                     patch.object(view.repository, 'preview', return_value=batch) as preview, \
-                    patch('views.legacy_import_view.ui.notify'):
+                    patch('maeumnarae.views.legacy_import_view.ui.notify'):
                 assert not view.save_button.enabled
                 await view.receive(event)
                 assert view.save_button.enabled
@@ -69,8 +69,8 @@ def test_preview_save_and_option_invalidation(tmp_path):
 
 def test_result_tables_include_all_rows_errors_and_consultation_kind():
     from datetime import datetime, timezone
-    from models import TeacherInput, ConsultationInput
-    from services.legacy_import import LegacyBatch, LegacyPerson, LegacyLog
+    from maeumnarae.core.models import TeacherInput, ConsultationInput
+    from maeumnarae.services.legacy_import import LegacyBatch, LegacyPerson, LegacyLog
     with Client(page('/legacy-tables')):
         view = LegacyImportView(None, lambda: False, lambda _: None, AsyncMock())
         view.build()
@@ -91,8 +91,8 @@ def test_result_tables_include_all_rows_errors_and_consultation_kind():
 
 def test_psychological_test_preview_uses_test_date_and_time():
     from datetime import date
-    from models import StudentInput, PsychologicalTestInput
-    from services.legacy_import import LegacyBatch, LegacyPerson, LegacyLog
+    from maeumnarae.core.models import StudentInput, PsychologicalTestInput
+    from maeumnarae.services.legacy_import import LegacyBatch, LegacyPerson, LegacyLog
     with Client(page('/legacy-test-preview')):
         view = LegacyImportView(None, lambda: False, lambda _: None, AsyncMock())
         view.build()
@@ -108,7 +108,7 @@ def test_psychological_test_preview_uses_test_date_and_time():
 
 def test_edit_dialog_applies_fields_route_exclusion_and_cancel(tmp_path):
     import inspect
-    from services.legacy_import import LOG_HEADERS
+    from maeumnarae.services.legacy_import import LOG_HEADERS
 
     async def check():
         with Client(page('/legacy-edit')) as client:
@@ -149,7 +149,7 @@ def test_edit_dialog_applies_fields_route_exclusion_and_cancel(tmp_path):
 
 def test_corrections_only_errors_and_continuous_save():
     import inspect
-    from services.legacy_import import LOG_HEADERS
+    from maeumnarae.services.legacy_import import LOG_HEADERS
 
     async def check():
         with Client(page('/legacy-continuous')) as client:
@@ -194,7 +194,7 @@ def test_corrections_only_errors_and_continuous_save():
 
 def test_special_education_option_law_and_preview():
     import inspect
-    from services.legacy_import import LOG_HEADERS
+    from maeumnarae.services.legacy_import import LOG_HEADERS
 
     async def check():
         with Client(page('/legacy-special')) as client:

@@ -4,13 +4,13 @@ from nicegui import Client, ui
 from nicegui.page import page
 from unittest.mock import Mock
 
-from database import Database
-from models import EducationEventInput, PsychologicalTestInput, StudentInput
-from repositories.education_event_repo import EducationEventRepository
-from repositories.psychological_test_repo import PsychologicalTestRepository
-from repositories.student_repo import StudentRepository
-from views.counseling_content import editor_html
-from views.education_event_view import EducationEventView
+from maeumnarae.core.database import Database
+from maeumnarae.core.models import EducationEventInput, PsychologicalTestInput, StudentInput
+from maeumnarae.repositories.education_event_repo import EducationEventRepository
+from maeumnarae.repositories.psychological_test_repo import PsychologicalTestRepository
+from maeumnarae.repositories.student_repo import StudentRepository
+from maeumnarae.views.counseling_content import editor_html
+from maeumnarae.views.education_event_view import EducationEventView
 
 
 def test_plain_text_keeps_literal_markup_and_line_breaks():

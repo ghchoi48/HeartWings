@@ -13,11 +13,11 @@ import pytest
 from nicegui import Client, ui
 from nicegui.page import page
 
-from database import Database
-from models import SchoolSettings
-from repositories.school_settings_repo import SchoolSettingsRepository
-from services.neis import NeisError, fetch_meals, find_schools, text_lines
-from widgets.meal import Meal
+from maeumnarae.core.database import Database
+from maeumnarae.core.models import SchoolSettings
+from maeumnarae.repositories.school_settings_repo import SchoolSettingsRepository
+from maeumnarae.services.neis import NeisError, fetch_meals, find_schools, text_lines
+from maeumnarae.widgets.meal import Meal
 
 
 def response(payload):
@@ -33,7 +33,7 @@ def test_meal_request_filters_date_school_and_meal_and_preserves_allergens():
            'MLSV_YMD': '20261021', 'MMEAL_SC_CODE': '2', 'DDISH_NM': '밥<br/>국 (1.2.5)'}
     payload = {'mealServiceDietInfo': [{'head': [{'RESULT': {'CODE': 'INFO-000'}}]},
                                       {'row': [row, dict(row, MMEAL_SC_CODE='1')]}]}
-    with patch('services.neis.urlopen', return_value=response(payload)) as request:
+    with patch('maeumnarae.services.neis.urlopen', return_value=response(payload)) as request:
         assert fetch_meals('B10', '7010057', date(2026, 10, 21), '2', 'test-key') == [row]
     params = parse_qs(urlsplit(request.call_args.args[0]).query)
     assert params['KEY'] == ['test-key']
@@ -44,15 +44,15 @@ def test_meal_request_filters_date_school_and_meal_and_preserves_allergens():
 
 
 def test_no_meal_api_error_and_network_failure_are_distinct():
-    with patch('services.neis.urlopen', return_value=response({'RESULT': {'CODE': 'INFO-200'}})):
+    with patch('maeumnarae.services.neis.urlopen', return_value=response({'RESULT': {'CODE': 'INFO-200'}})):
         assert fetch_meals('B10', '7010057', date(2026, 10, 21), '2') == []
-    with patch('services.neis.urlopen', return_value=response({'RESULT': {'CODE': 'ERROR-290'}})):
+    with patch('maeumnarae.services.neis.urlopen', return_value=response({'RESULT': {'CODE': 'ERROR-290'}})):
         with pytest.raises(NeisError, match='인증키'):
             fetch_meals('B10', '7010057', date(2026, 10, 21), '2')
-    with patch('services.neis.urlopen', side_effect=URLError('offline')):
+    with patch('maeumnarae.services.neis.urlopen', side_effect=URLError('offline')):
         with pytest.raises(NeisError, match='연결'):
             find_schools('B10', '가락고등학교')
-    with patch('services.neis.urlopen') as request:
+    with patch('maeumnarae.services.neis.urlopen') as request:
         with pytest.raises(NeisError, match='학교 정보'):
             fetch_meals('', '', date(2026, 10, 21), '2')
         request.assert_not_called()
@@ -87,8 +87,8 @@ class MealWidgetTests(unittest.IsolatedAsyncioTestCase):
             host = ui.column()
             async def invoke(fn, *args, **kwargs):
                 return fn(*args, **kwargs)
-            with host, patch('widgets.meal.ui.timer'), patch('widgets.meal.run.io_bound', side_effect=invoke), \
-                    patch('widgets.meal.fetch_meals', return_value=[]) as fetch:
+            with host, patch('maeumnarae.widgets.meal.ui.timer'), patch('maeumnarae.widgets.meal.run.io_bound', side_effect=invoke), \
+                    patch('maeumnarae.widgets.meal.fetch_meals', return_value=[]) as fetch:
                 widget.build()
                 original = widget.day
                 assert widget.meal == '2'
@@ -123,7 +123,7 @@ class MealWidgetTests(unittest.IsolatedAsyncioTestCase):
                     return [{'DDISH_NM': '이전 날짜 메뉴'}]
                 return [{'DDISH_NM': '새 날짜 메뉴'}]
 
-            with host, patch('widgets.meal.ui.timer'), patch('widgets.meal.run.io_bound', side_effect=invoke):
+            with host, patch('maeumnarae.widgets.meal.ui.timer'), patch('maeumnarae.widgets.meal.run.io_bound', side_effect=invoke):
                 widget.build()
                 old = asyncio.create_task(widget.reload())
                 await started.wait()

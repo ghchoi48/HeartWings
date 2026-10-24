@@ -6,11 +6,11 @@ import pytest
 from nicegui import Client, ui
 from nicegui.page import page
 
-from database import Database, NotFoundError
-from models import StudentInput, PsychologicalTestInput
-from repositories.student_repo import StudentRepository
-from repositories.psychological_test_repo import PsychologicalTestRepository
-from views.psychological_test_view import PsychologicalTestView
+from maeumnarae.core.database import Database, NotFoundError
+from maeumnarae.core.models import StudentInput, PsychologicalTestInput
+from maeumnarae.repositories.student_repo import StudentRepository
+from maeumnarae.repositories.psychological_test_repo import PsychologicalTestRepository
+from maeumnarae.views.psychological_test_view import PsychologicalTestView
 
 
 def test_storage_and_migration(tmp_path):
@@ -46,10 +46,11 @@ def test_student_selection_and_stale_response():
             students = Mock()
             students.get.side_effect = lambda student_id: Mock(id=student_id, name=f'학생 {student_id}', grade=1, classroom='1')
             view = PsychologicalTestView(students)
-            with patch('views.psychological_test_view.ui.timer'):
+            with patch('maeumnarae.views.psychological_test_view.ui.timer'):
                 view.build()
             view.repository = Mock()
             view.repository.list.return_value = []
+            view.repository.count.return_value = 0
             started, release = asyncio.Event(), asyncio.Event()
 
             async def invoke(function, *args, **kwargs):
@@ -58,7 +59,7 @@ def test_student_selection_and_stale_response():
                     await release.wait()
                 return function(*args, **kwargs)
 
-            with patch('views.psychological_test_view.run.io_bound', side_effect=invoke):
+            with patch('maeumnarae.views.psychological_test_view.run.io_bound', side_effect=invoke):
                 assert not view.add.enabled
                 pending = asyncio.create_task(view.select_student(1))
                 await started.wait()
@@ -66,7 +67,7 @@ def test_student_selection_and_stale_response():
                 release.set()
                 await pending
                 assert view.selected.id == 2
-                view.repository.list.assert_called_once_with(2, limit=21, offset=0)
+                view.repository.list.assert_called_once_with(2, limit=10, offset=0)
                 assert view.add.enabled
                 assert view.message.text == '등록된 심리검사 일지가 없습니다.'
                 await view.select_student(None)
@@ -105,7 +106,7 @@ def test_editor_fields_storage_and_legacy_migration(tmp_path):
     async def check():
         with Client(page('/psychological-test-editor-fields')):
             view = PsychologicalTestView(StudentRepository(db))
-            with patch('views.psychological_test_view.ui.timer'):
+            with patch('maeumnarae.views.psychological_test_view.ui.timer'):
                 view.build(embedded=True)
             view.selected = student
 
@@ -147,7 +148,7 @@ def test_invalid_editor_values(changes):
 
 
 def test_inline_editor_save_retry_and_student_switch(tmp_path):
-    from database import DatabaseError
+    from maeumnarae.core.database import DatabaseError
 
     async def check():
         db = Database('test-only', tmp_path / 'inline.db')
@@ -156,13 +157,13 @@ def test_inline_editor_save_retry_and_student_switch(tmp_path):
         student = students.create(StudentInput(name='학생', grade=1, classroom='1'))
         with Client(page('/psychological-inline-save')) as client:
             view = PsychologicalTestView(students)
-            with patch('views.psychological_test_view.ui.timer'):
+            with patch('maeumnarae.views.psychological_test_view.ui.timer'):
                 view.build(embedded=True)
 
             async def invoke(function, *args, **kwargs):
                 return function(*args, **kwargs)
 
-            with patch('views.psychological_test_view.run.io_bound', side_effect=invoke):
+            with patch('maeumnarae.views.psychological_test_view.run.io_bound', side_effect=invoke):
                 await view.select_student(student.id)
                 await view.open_editor()
                 elements = list(client.elements.values())
