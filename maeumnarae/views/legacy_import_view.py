@@ -47,13 +47,16 @@ class LegacyImportView:
             self.save_button = ui.button('검사한 자료를 DB에 추가', on_click=self.save)
             self.save_button.disable()
             self.year.on_value_change(self.clear)
-            self.add_periods(list(dict.fromkeys([str(n) for n in range(1, 8)] + list(self.saved_periods))))
+            self.add_periods(list(dict.fromkeys(
+                [str(n) for n in range(1, 8)] + ['점심시간', '쉬는시간', '방과후'] + list(self.saved_periods)
+            )))
 
     def add_periods(self, periods):
         with self.period_fields:
             for key in periods:
                 if key and key not in self.period_inputs:
-                    control = ui.input(f'{key} 교시 시작 시간', value=self.saved_periods.get(key, ''), placeholder='HH:MM').props('type=time').classes('w-full')
+                    label = f'{key} 교시' if key.isdigit() else key
+                    control = ui.input(f'{label} 시작 시간', value=self.saved_periods.get(key, ''), placeholder='HH:MM').props('type=time').classes('w-full')
                     control.on_value_change(self.period_changed)
                     self.period_inputs[key] = control
 

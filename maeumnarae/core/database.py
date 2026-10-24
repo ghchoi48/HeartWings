@@ -584,7 +584,7 @@ class Database:
         finally:
             connection.close()
 
-    def initialize(self, school: SchoolSettings | None = None) -> None:
+    def initialize(self, school: SchoolSettings | None = None, *, onboarding: bool = False) -> None:
         """현재 구조를 버전 1로 생성한다. 기존 DB는 변경하거나 초기화하지 않는다."""
         with self._session_lock, self._transaction(write=True) as connection:
             version = connection.execute('PRAGMA user_version').fetchone()[0]
@@ -597,6 +597,9 @@ class Database:
             school = SchoolSettings.model_validate(school.model_dump()) if school is not None else SchoolSettings()
             for statement in SCHEMA:
                 connection.execute(statement)
+            if onboarding:
+                connection.execute('CREATE TABLE onboarding_state (id INTEGER PRIMARY KEY CHECK(id=1), step TEXT NOT NULL)')
+                connection.execute("INSERT INTO onboarding_state VALUES (1, 'school')")
             # 학교 설정을 먼저 저장하여 기본 레코드에도 작성자 이름을 반영한다.
             connection.execute('''INSERT INTO school_settings
                 (id, school_name, school_level, counselor_name, office_number,

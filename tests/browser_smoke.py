@@ -30,8 +30,13 @@ def main() -> None:
             confirmation = page.get_by_label('새 DB 비밀번호 확인', exact=True)
             if confirmation.is_visible():
                 confirmation.fill(password)
+                page.get_by_role('button', name='다음', exact=True).click()
+                page.get_by_label('교육청', exact=True).click()
+                page.get_by_role('option', name='울산광역시교육청', exact=True).click()
                 page.get_by_label('학교명', exact=True).fill('테스트학교')
                 page.get_by_label('상담교사 이름', exact=True).fill('테스트교사')
+                page.get_by_role('button', name='저장하고 다음', exact=True).click()
+                page.get_by_role('button', name='건너뛰기', exact=True).click()
                 page.get_by_role('button', name='시작하기', exact=True).click()
             else:
                 page.get_by_role('button', name='DB 열기', exact=True).click()
