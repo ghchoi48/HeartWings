@@ -174,14 +174,8 @@ def test_invalid_files_and_headers(content, kind):
         parse_import(content, kind)
 
 
-def test_student_optional_fields_migrate_and_survive_edits(db):
+def test_student_optional_fields_reinitialize_and_survive_edits(db):
     student = StudentRepository(db).create(StudentInput(name='학생', grade=1, classroom='1'))
-    with db.session(write=True) as connection:
-        connection.execute('DROP TABLE student_enrollments')
-        connection.execute('ALTER TABLE students DROP COLUMN school_year')
-        connection.execute('ALTER TABLE students DROP COLUMN nickname')
-        connection.execute('ALTER TABLE students DROP COLUMN student_contact')
-        connection.execute('PRAGMA user_version=27')
     db.initialize()
     assert StudentRepository(db).get(student.id).nickname == ''
     updated = StudentRepository(db).update(student.id, StudentInput(

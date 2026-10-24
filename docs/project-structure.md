@@ -122,12 +122,14 @@
 
 ## 테스트
 
+`tests/test_schema.py`는 버전 1 신규 생성, 기본값, 재초기화, 실패 시 롤백 및 지원하지 않는 DB 보존을 검증합니다.
+
 | 파일 | 목적·용도 |
 | --- | --- |
 | [`tests/browser_smoke.py`](../tests/browser_smoke.py) | 실행 중인 로컬 앱을 Chrome 임시 프로필로 검사한다. 테스트 DB에만 사용한다. |
 | [`tests/test_app_layout.py`](../tests/test_app_layout.py) | 학생 변경을 이미 생성된 모든 화면에 반영한다. |
 | [`tests/test_attachments.py`](../tests/test_attachments.py) | 첨부파일 격리·암호화·연쇄 삭제 및 실제 UI 업로드 흐름 검증. |
-| [`tests/test_authors.py`](../tests/test_authors.py) | 실제 SQLCipher에서 작성자 스냅샷, 수정 및 구버전 마이그레이션 검증. |
+| [`tests/test_authors.py`](../tests/test_authors.py) | 실제 SQLCipher에서 작성자 스냅샷, 수정 및 재초기화 검증. |
 | [`tests/test_auto_lock.py`](../tests/test_auto_lock.py) | 자동 잠금의 만료 경계, 입력 갱신, 저장 및 화면 연결 검사. |
 | [`tests/test_calendar_view.py`](../tests/test_calendar_view.py) | 캘린더 저장, 선택 필터 및 월간/주간 탐색 검증. |
 | [`tests/test_connection_guards.py`](../tests/test_connection_guards.py) | 외부 패키지 없이 평문 드라이버 거부와 경로 처리 계약을 검사한다. |
@@ -146,7 +148,7 @@
 | [`tests/test_journal_pagination.py`](../tests/test_journal_pagination.py) | 일지 페이지 경계와 저장소별 전체 건수 조회 검증. |
 | [`tests/test_legacy_import.py`](../tests/test_legacy_import.py) | 익명 데이터와 임시 암호화 DB로 이관/재등록/롤백을 검증한다. |
 | [`tests/test_legacy_import_view.py`](../tests/test_legacy_import_view.py) | 테스트: legacy import view |
-| [`tests/test_meal_widget.py`](../tests/test_meal_widget.py) | 나이스 요청·오류·구버전 학교 설정·급식 위젯 날짜 전환 검증. |
+| [`tests/test_meal_widget.py`](../tests/test_meal_widget.py) | 나이스 요청·오류·학교 설정 저장·급식 위젯 날짜 전환 검증. |
 | [`tests/test_memo_widget.py`](../tests/test_memo_widget.py) | 메모의 서식·인스턴스 분리·저장 실패 복구 검증. |
 | [`tests/test_password_settings.py`](../tests/test_password_settings.py) | 실제 SQLCipher 키 변경과 변경 폼의 검증·중복 실행 방지. |
 | [`tests/test_program_info.py`](../tests/test_program_info.py) | 프로그램 라이선스 전문과 추가 라이선스 자료의 로딩을 검증한다. |
@@ -158,10 +160,10 @@
 | [`tests/test_roster_import_view.py`](../tests/test_roster_import_view.py) | DB 탭에서 서식 다운로드, 오류 차단, 명부 등록 및 새로고침 흐름 검증. |
 | [`tests/test_school_settings.py`](../tests/test_school_settings.py) | 암호화 DB의 학교 정보 저장, 복원 및 이전 버전 업그레이드. |
 | [`tests/test_special_education.py`](../tests/test_special_education.py) | 특별교육 등록 항목과 학생/교육별 저장 격리 검증. |
-| [`tests/test_student_enrollments.py`](../tests/test_student_enrollments.py) | 학년도 누적, 최신 학적 선택, 충돌 롤백 및 구버전 DB 이관. |
+| [`tests/test_student_enrollments.py`](../tests/test_student_enrollments.py) | 학년도 누적, 최신 학적 선택, 충돌 롤백 및 DB 재초기화. |
 | [`tests/test_student_list.py`](../tests/test_student_list.py) | 독립 목록 인스턴스와 동기/비동기 선택 콜백을 검사한다. |
 | [`tests/test_student_view.py`](../tests/test_student_view.py) | 실제 NiceGUI 요소와 가짜 저장소로 화면 상태 및 비동기 경쟁을 검사한다. |
-| [`tests/test_teachers.py`](../tests/test_teachers.py) | 교사 저장, 기존 DB 마이그레이션 및 자문 목록 검증. |
+| [`tests/test_teachers.py`](../tests/test_teachers.py) | 교사 저장, DB 재초기화 및 자문 목록 검증. |
 | [`tests/test_time_inputs.py`](../tests/test_time_inputs.py) | 12시간제 입력의 자정·정오 변환 및 저장 형식 검증. |
 | [`tests/test_updates.py`](../tests/test_updates.py) | 업데이트 버전 비교, 네트워크 실패, 시작 시 중복 확인 및 알림 UI 검증. |
 | [`tests/test_weather_widget.py`](../tests/test_weather_widget.py) | 테스트: weather widget |

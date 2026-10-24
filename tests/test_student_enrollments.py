@@ -1,4 +1,4 @@
-"""학년도 누적, 최신 학적 선택, 충돌 롤백 및 구버전 DB 이관."""
+"""학년도 누적, 최신 학적 선택, 충돌 롤백 및 DB 재초기화."""
 
 from datetime import datetime, timezone
 
@@ -86,31 +86,16 @@ def test_delete_enrollment_updates_latest_and_preserves_student_records(db):
     assert db.student_revision == revision + 2
 
 
-def test_v28_migration_preserves_counseling_and_student_author(db):
+def test_reinitialize_preserves_counseling_and_student_author(db):
     repo = StudentRepository(db)
     student = repo.create(StudentInput(name='학생', **enrollment(2026).model_dump()))
     counseling = CounselingRepository(db).create(CounselingInput(
         student_id=student.id, title='기존 상담', starts_at=datetime.now(timezone.utc)))
-    # Recreate the real v28 layout, including the old globally unique number.
-    with db._session_lock, db._transaction(write=True, migration=True) as connection:
-        connection.execute('DROP TABLE student_enrollments')
-        connection.execute('ALTER TABLE students DROP COLUMN school_year')
-        schema = connection.execute("SELECT sql FROM sqlite_master WHERE name='students'").fetchone()[0]
-        objects = [row[0] for row in connection.execute(
-            "SELECT sql FROM sqlite_master WHERE tbl_name='students' AND type IN ('index','trigger') AND sql IS NOT NULL")]
-        schema = schema.replace('"students"', 'old_students', 1).replace('student_number TEXT', 'student_number TEXT UNIQUE', 1)
-        connection.execute(schema)
-        connection.execute('INSERT INTO old_students SELECT * FROM students')
-        connection.execute('DROP TABLE students')
-        connection.execute('ALTER TABLE old_students RENAME TO students')
-        for statement in objects:
-            connection.execute(statement)
-        connection.execute('PRAGMA user_version=28')
     SchoolSettingsRepository(db).save(SchoolSettings(counselor_name='새 교사'))
     db.initialize()
-    migrated = repo.get(student.id)
-    assert migrated.author == student.author
-    assert migrated.school_year == current_school_year()
+    restored = repo.get(student.id)
+    assert restored.author == student.author
+    assert restored.school_year == student.school_year
     assert repo.enrollments(student.id)[0].author == student.author
     assert CounselingRepository(db).get(counseling.id) == counseling
     repo.create(StudentInput(name='다른 반', **enrollment(current_school_year(), classroom='2').model_dump()))

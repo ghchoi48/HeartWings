@@ -1,4 +1,4 @@
-"""교사 저장, 기존 DB 마이그레이션 및 자문 목록 검증."""
+"""교사 저장, DB 재초기화 및 자문 목록 검증."""
 
 import unittest
 from datetime import datetime, timezone
@@ -15,20 +15,10 @@ from maeumnarae.repositories.teacher_repo import TeacherRepository
 from maeumnarae.views.consultation_view import ConsultationView
 
 
-def test_teacher_storage_and_migration(tmp_path):
+def test_teacher_storage_and_reinitialize(tmp_path):
     db = Database('test-only-password', tmp_path / 'teachers.db')
     db.initialize()
     with db.session(write=True) as connection:
-        connection.execute('DROP TABLE student_enrollments')
-        connection.execute('ALTER TABLE students DROP COLUMN school_year')
-        # 이전 버전에는 첨부 테이블이 없으므로 부모 테이블보다 먼저 제거한다.
-        connection.execute('DROP TABLE IF EXISTS journal_attachments')
-        connection.execute('DROP TABLE special_education_logs')
-        connection.execute('DROP TABLE special_educations')
-        connection.execute('DROP TABLE consultations')
-        connection.execute('DROP TABLE teachers')
-        connection.execute('DROP TABLE IF EXISTS education_events')
-        connection.execute('PRAGMA user_version=10')
         connection.execute("""INSERT INTO students
             (name, grade, classroom, guardian_contact, notes, created_at, updated_at)
             VALUES ('기존 학생', 1, '1', '', '', '2026-01-01', '2026-01-01')""")
@@ -53,7 +43,7 @@ def test_teacher_storage_and_migration(tmp_path):
     assert len(repo.list()) == 2
     with db.session() as connection:
         assert connection.execute('SELECT name FROM students').fetchone()[0] == '기존 학생'
-        assert connection.execute('PRAGMA user_version').fetchone()[0] == 29
+        assert connection.execute('PRAGMA user_version').fetchone()[0] == 1
 
 
 class ConsultationViewTests(unittest.IsolatedAsyncioTestCase):
@@ -69,6 +59,7 @@ class ConsultationViewTests(unittest.IsolatedAsyncioTestCase):
             view = ConsultationView(repo)
             view.consultations = Mock()
             view.consultations.list.return_value = []
+            view.consultations.count.return_value = 0
 
             async def invoke(function, *args, **kwargs):
                 return function(*args, **kwargs)

@@ -26,8 +26,9 @@ class StudentRefreshTests(unittest.IsolatedAsyncioTestCase):
         self.layout.calendar_view = SimpleNamespace(reload=AsyncMock())
         self.layout.statistics_view = SimpleNamespace(load=AsyncMock())
 
+    @patch('maeumnarae.repositories.legacy_import_repo.LegacyImportRepository.load_period_times', return_value={})
     @patch('maeumnarae.views.auto_lock.ui.run_javascript')
-    async def test_build_after_login_container_is_deleted(self, _javascript):
+    async def test_build_after_login_container_is_deleted(self, _javascript, _period_times):
         client = Client(page('/layout-test'))
         client.__enter__()
         content = ui.column()
@@ -97,12 +98,15 @@ class IntegratedCounselingTests(unittest.IsolatedAsyncioTestCase):
             created_at=now, updated_at=now)
         counseling = Mock()
         counseling.list_timeline.return_value = []
+        counseling.list.return_value = []
+        counseling.count.return_value = 0
 
         async def invoke(function, *args, **kwargs):
             return function(*args, **kwargs)
 
         with Client(page('/integrated-counseling-test')), patch('maeumnarae.views.app_layout.ui.timer'), \
                 patch('maeumnarae.views.auto_lock.ui.run_javascript'), \
+                patch('maeumnarae.repositories.legacy_import_repo.LegacyImportRepository.load_period_times', return_value={}), \
                 patch('maeumnarae.views.app_layout.run.io_bound', side_effect=invoke):
             layout = AppLayout(students, counseling, Mock())
             layout.build(ui.column(), ui.left_drawer(), ui.header())
@@ -115,6 +119,7 @@ class IntegratedCounselingTests(unittest.IsolatedAsyncioTestCase):
             layout.counseling_view.cases.list.return_value = []
             layout.psychological_test_view.repository = Mock()
             layout.psychological_test_view.repository.list.return_value = []
+            layout.psychological_test_view.repository.count.return_value = 0
             for student_id in (1, 2):
                 await layout.student_view.on_counseling(student_id)
                 self.assertEqual(layout.active_page, 'counseling')

@@ -25,7 +25,7 @@ def _verify(database: Database) -> None:
     with database.session() as connection:
         version = connection.execute('PRAGMA user_version').fetchone()[0]
         tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-        if not 1 <= version <= SCHEMA_VERSION or not {'students', 'counseling'} <= tables:
+        if version != SCHEMA_VERSION or not {'students', 'counseling'} <= tables:
             raise DatabaseError('지원하는 마음나래 DB 파일이 아닙니다.')
         if [row[0] for row in connection.execute('PRAGMA integrity_check')] != ['ok']:
             raise DatabaseError('DB 파일의 무결성 검사에 실패했습니다.')
@@ -74,7 +74,7 @@ def create_backup(database: Database) -> bytes:
 
 
 def restore_backup(database: Database, content: bytes, password: str) -> Path:
-    """복원 후보만 마이그레이션하고 자동 백업 후 원자적으로 교체한다."""
+    """복원 후보를 검증하고 자동 백업 후 원자적으로 교체한다."""
     if not content:
         raise DatabaseError('복원할 DB 파일이 비어 있습니다.')
     with database._session_lock:

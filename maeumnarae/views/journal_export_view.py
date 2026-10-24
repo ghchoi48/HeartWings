@@ -17,7 +17,7 @@ class JournalExportView:
     def build(self):
         today = datetime.now(KST).date()
         with ui.card().classes('w-full rounded-2xl shadow-sm p-5 gap-3'):
-            ui.label('일지 엑셀 내보내기').classes('text-xl font-bold')
+            ui.label('NEIS 업로드용 파일 내보내기').classes('text-xl font-bold')
             ui.label('개인상담·집단상담·특별교육·자문·심리검사·교육/행사를 상담관리 업로드 서식으로 내보냅니다.').classes('text-slate-600')
             with ui.row().classes('w-full items-end'):
                 self.all_dates = ui.checkbox('전체 기간', value=True)

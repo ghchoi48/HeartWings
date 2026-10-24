@@ -3,7 +3,6 @@
 import os
 import hmac
 import sys
-import re
 from contextlib import contextmanager
 from importlib import import_module
 from pathlib import Path
@@ -11,7 +10,7 @@ from threading import Lock, RLock
 from weakref import WeakValueDictionary
 from maeumnarae.core.models import SchoolSettings, current_school_year
 
-SCHEMA_VERSION = 38
+SCHEMA_VERSION = 1
 
 
 class DatabaseError(RuntimeError):
@@ -41,19 +40,8 @@ def default_database_path() -> Path:
     return base / 'maeumnarae' / 'data' / 'maeumnarae.db'
 
 
+# 신규 DB는 현재 구조를 버전 1로 직접 생성한다.
 SCHEMA = (
-    """CREATE TABLE students (
-        id INTEGER PRIMARY KEY,
-        name TEXT NOT NULL CHECK(length(trim(name)) > 0),
-        student_number TEXT UNIQUE,
-        grade INTEGER NOT NULL CHECK(grade BETWEEN 1 AND 12),
-        classroom TEXT NOT NULL,
-        birth_date TEXT,
-        guardian_contact TEXT NOT NULL,
-        notes TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-    )""",
     """CREATE TABLE counseling (
         id INTEGER PRIMARY KEY,
         student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE RESTRICT,
@@ -65,11 +53,401 @@ SCHEMA = (
         content_markdown TEXT NOT NULL,
         follow_up TEXT NOT NULL,
         created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
+        updated_at TEXT NOT NULL,
+        content_format TEXT NOT NULL DEFAULT 'markdown',
+        counseling_method TEXT NOT NULL DEFAULT '',
+        counseling_target TEXT NOT NULL DEFAULT '',
+        counseling_area TEXT NOT NULL DEFAULT '',
+        case_id INTEGER REFERENCES counseling_cases(id) ON DELETE RESTRICT,
+        author TEXT NOT NULL DEFAULT '',
+        private_note_html TEXT NOT NULL DEFAULT ''
     )""",
-    'CREATE INDEX counseling_student_time ON counseling(student_id, starts_at)',
-    'CREATE INDEX counseling_time ON counseling(starts_at)',
-    'CREATE INDEX students_name ON students(name)',
+    """CREATE TABLE counseling_cases (
+        id INTEGER PRIMARY KEY,
+        student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+        title TEXT NOT NULL CHECK(length(trim(title)) > 0),
+        report_html TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        intake_html TEXT NOT NULL DEFAULT '',
+        closing_html TEXT NOT NULL DEFAULT '',
+        author TEXT NOT NULL DEFAULT ''
+    )""",
+    """CREATE TABLE counseling_groups (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL CHECK(length(trim(name)) > 0),
+        facilitator TEXT NOT NULL,
+        participants TEXT NOT NULL,
+        purpose TEXT NOT NULL,
+        notes TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        period TEXT NOT NULL DEFAULT '',
+        counseling_area TEXT NOT NULL DEFAULT '',
+        author TEXT NOT NULL DEFAULT ''
+    )""",
+    """CREATE TABLE group_counseling_logs (
+        id INTEGER PRIMARY KEY,
+        group_id INTEGER NOT NULL REFERENCES counseling_groups(id) ON DELETE RESTRICT,
+        title TEXT NOT NULL CHECK(length(trim(title)) > 0),
+        starts_at TEXT NOT NULL,
+        duration_minutes INTEGER NOT NULL CHECK(duration_minutes BETWEEN 1 AND 1440),
+        content_html TEXT NOT NULL,
+        follow_up TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        author TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL DEFAULT 'completed' CHECK(status IN ('scheduled', 'completed', 'cancelled'))
+    )""",
+    """CREATE TABLE group_counseling_members (
+        group_id INTEGER NOT NULL REFERENCES counseling_groups(id) ON DELETE CASCADE,
+        student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE RESTRICT,
+        author TEXT NOT NULL DEFAULT '',
+        PRIMARY KEY (group_id, student_id)
+    )""",
+    """CREATE TABLE teachers (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL CHECK(length(trim(name)) > 0),
+        contact TEXT NOT NULL DEFAULT '',
+        extension TEXT NOT NULL DEFAULT '',
+        responsibilities TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        author TEXT NOT NULL DEFAULT ''
+    )""",
+    """CREATE TABLE consultations (
+        id INTEGER PRIMARY KEY,
+        teacher_id INTEGER NOT NULL REFERENCES teachers(id) ON DELETE RESTRICT,
+        starts_at TEXT NOT NULL,
+        duration_minutes INTEGER NOT NULL CHECK(duration_minutes BETWEEN 1 AND 1440),
+        status TEXT NOT NULL CHECK(status IN ('scheduled', 'completed', 'cancelled')),
+        title TEXT NOT NULL CHECK(length(trim(title)) > 0),
+        content_html TEXT NOT NULL DEFAULT '',
+        follow_up TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        consultation_area TEXT NOT NULL DEFAULT '',
+        author TEXT NOT NULL DEFAULT ''
+    )""",
+    """CREATE TABLE "special_educations" (
+        id INTEGER PRIMARY KEY,
+        student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE RESTRICT,
+        title TEXT NOT NULL CHECK(length(trim(title)) > 0),
+        law TEXT NOT NULL CHECK(law IN ('학교폭력예방법', '교원지위법')),
+        case_number TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        author TEXT NOT NULL DEFAULT '',
+        UNIQUE(id, student_id)
+    )""",
+    """CREATE TABLE special_education_logs (
+        id INTEGER PRIMARY KEY,
+        student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE RESTRICT,
+        case_id INTEGER NOT NULL,
+        starts_at TEXT NOT NULL,
+        duration_minutes INTEGER NOT NULL CHECK(duration_minutes BETWEEN 1 AND 1440),
+        category TEXT NOT NULL,
+        status TEXT NOT NULL,
+        title TEXT NOT NULL,
+        content_markdown TEXT NOT NULL,
+        content_format TEXT NOT NULL,
+        counseling_method TEXT NOT NULL,
+        counseling_target TEXT NOT NULL,
+        counseling_area TEXT NOT NULL,
+        follow_up TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        author TEXT NOT NULL DEFAULT '',
+        FOREIGN KEY(case_id, student_id) REFERENCES special_educations(id, student_id) ON DELETE RESTRICT
+    )""",
+    """CREATE TABLE psychological_tests (
+        id INTEGER PRIMARY KEY,
+        student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE RESTRICT,
+        title TEXT NOT NULL,
+        test_date TEXT NOT NULL,
+        content TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        target TEXT NOT NULL DEFAULT '학생' CHECK(target IN ('학생', '보호자(학부모)')),
+        test_time TEXT NOT NULL DEFAULT '',
+        duration_minutes INTEGER CHECK(duration_minutes BETWEEN 1 AND 1440),
+        content_format TEXT NOT NULL DEFAULT 'text' CHECK(content_format IN ('text', 'html')),
+        author TEXT NOT NULL DEFAULT ''
+    )""",
+    """CREATE TABLE "education_events" (
+        id INTEGER PRIMARY KEY,
+        title TEXT NOT NULL CHECK(length(trim(title)) > 0),
+        category TEXT NOT NULL CHECK(category IN ('교육', '행사', '단체심리검사')),
+        event_date TEXT NOT NULL,
+        location TEXT NOT NULL DEFAULT '',
+        audience TEXT NOT NULL DEFAULT '',
+        facilitator TEXT NOT NULL DEFAULT '',
+        content TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        event_time TEXT NOT NULL DEFAULT '',
+        duration_minutes INTEGER CHECK(duration_minutes BETWEEN 1 AND 1440),
+        content_format TEXT NOT NULL DEFAULT 'text' CHECK(content_format IN ('text', 'html')),
+        author TEXT NOT NULL DEFAULT '',
+        participant_count INTEGER CHECK(participant_count >= 0 AND participant_count <= 2147483647)
+    )""",
+    """CREATE TABLE calendars (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL CHECK(length(trim(name)) > 0),
+        color TEXT NOT NULL,
+        source TEXT NOT NULL CHECK(source IN ('counseling', 'custom')),
+        visible INTEGER NOT NULL DEFAULT 1 CHECK(visible IN (0, 1)),
+        author TEXT NOT NULL DEFAULT ''
+    )""",
+    """CREATE TABLE calendar_preferences (
+        name TEXT PRIMARY KEY,
+        visible INTEGER NOT NULL CHECK(visible IN (0, 1)),
+        author TEXT NOT NULL DEFAULT ''
+    )""",
+    """CREATE TABLE school_settings (
+        id INTEGER PRIMARY KEY CHECK(id = 1),
+        school_name TEXT NOT NULL DEFAULT '',
+        school_level TEXT NOT NULL DEFAULT '중학교' CHECK(school_level IN ('초등학교', '중학교', '고등학교')),
+        counselor_name TEXT NOT NULL DEFAULT '',
+        office_number TEXT NOT NULL DEFAULT '',
+        neis_office_code TEXT NOT NULL DEFAULT '',
+        neis_school_code TEXT NOT NULL DEFAULT '',
+        neis_api_key TEXT NOT NULL DEFAULT '',
+        author TEXT NOT NULL DEFAULT ''
+    )""",
+    """CREATE TABLE home_preferences (
+        id INTEGER PRIMARY KEY CHECK(id = 1),
+        layout TEXT NOT NULL,
+        author TEXT NOT NULL DEFAULT ''
+    )""",
+    """CREATE TABLE home_todos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL CHECK(length(trim(title)) BETWEEN 1 AND 300),
+        done INTEGER NOT NULL DEFAULT 0 CHECK(done IN (0, 1)),
+        author TEXT NOT NULL DEFAULT ''
+    )""",
+    f"""CREATE TABLE "students" (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL CHECK(length(trim(name)) > 0),
+        student_number TEXT,
+        grade INTEGER NOT NULL CHECK(grade BETWEEN 1 AND 12),
+        classroom TEXT NOT NULL,
+        birth_date TEXT,
+        guardian_contact TEXT NOT NULL,
+        notes TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        family_type TEXT NOT NULL DEFAULT '',
+        family_welfare_type TEXT NOT NULL DEFAULT '',
+        family_members TEXT NOT NULL DEFAULT '[]',
+        author TEXT NOT NULL DEFAULT '',
+        nickname TEXT NOT NULL DEFAULT '',
+        student_contact TEXT NOT NULL DEFAULT '',
+        school_year INTEGER NOT NULL DEFAULT {current_school_year()},
+        gender TEXT CHECK(gender IN ('남', '여', '기타'))
+    )""",
+    """CREATE TABLE student_enrollments (
+        student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+        school_year INTEGER NOT NULL CHECK(school_year BETWEEN 1900 AND 9999),
+        grade INTEGER NOT NULL CHECK(grade BETWEEN 1 AND 12),
+        classroom TEXT NOT NULL CHECK(length(trim(classroom)) > 0),
+        student_number TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        author TEXT NOT NULL DEFAULT '',
+        PRIMARY KEY(student_id, school_year),
+        UNIQUE(school_year, grade, classroom, student_number)
+    )""",
+    """CREATE TABLE "calendar_events" (
+        id INTEGER PRIMARY KEY,
+        calendar_id INTEGER NOT NULL REFERENCES calendars(id) ON DELETE RESTRICT,
+        title TEXT NOT NULL CHECK(length(trim(title)) > 0),
+        starts_at TEXT NOT NULL,
+        duration_minutes INTEGER NOT NULL CHECK(duration_minutes >= 1),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        author TEXT NOT NULL DEFAULT '',
+        location TEXT NOT NULL DEFAULT '',
+        content TEXT NOT NULL DEFAULT '',
+        all_day INTEGER NOT NULL DEFAULT 0 CHECK(all_day IN (0, 1))
+    )""",
+    """CREATE TABLE journal_attachments (
+        id INTEGER PRIMARY KEY,
+        counseling_id INTEGER REFERENCES counseling(id) ON DELETE CASCADE,
+        group_log_id INTEGER REFERENCES group_counseling_logs(id) ON DELETE CASCADE,
+        special_log_id INTEGER REFERENCES special_education_logs(id) ON DELETE CASCADE,
+        consultation_id INTEGER REFERENCES consultations(id) ON DELETE CASCADE,
+        test_id INTEGER REFERENCES psychological_tests(id) ON DELETE CASCADE,
+        education_id INTEGER REFERENCES education_events(id) ON DELETE CASCADE,
+        filename TEXT NOT NULL CHECK(length(filename) BETWEEN 1 AND 255),
+        content BLOB NOT NULL CHECK(length(content) <= 20971520),
+        created_at TEXT NOT NULL,
+        CHECK((counseling_id IS NOT NULL) + (group_log_id IS NOT NULL) + (special_log_id IS NOT NULL) + (consultation_id IS NOT NULL) + (test_id IS NOT NULL) + (education_id IS NOT NULL) = 1)
+    )""",
+    """CREATE INDEX counseling_student_time ON counseling(student_id, starts_at)""",
+    """CREATE INDEX counseling_time ON counseling(starts_at)""",
+    """CREATE INDEX cases_student ON counseling_cases(student_id, id)""",
+    """CREATE INDEX counseling_case_time ON counseling(case_id, starts_at)""",
+    """CREATE INDEX group_logs_time ON group_counseling_logs(group_id, starts_at)""",
+    """CREATE INDEX group_members_student ON group_counseling_members(student_id, group_id)""",
+    """CREATE INDEX teachers_name ON teachers(name)""",
+    """CREATE INDEX consultations_teacher_time ON consultations(teacher_id, starts_at)""",
+    """CREATE INDEX special_education_student ON special_educations(student_id)""",
+    """CREATE INDEX special_education_logs_time ON special_education_logs(case_id, starts_at)""",
+    """CREATE INDEX psychological_tests_student_date ON psychological_tests(student_id, test_date)""",
+    """CREATE INDEX students_name ON students(name)""",
+    """CREATE INDEX calendar_events_time ON calendar_events(calendar_id, starts_at)""",
+    """CREATE INDEX attachments_counseling_id ON journal_attachments(counseling_id)""",
+    """CREATE INDEX attachments_group_log_id ON journal_attachments(group_log_id)""",
+    """CREATE INDEX attachments_special_log_id ON journal_attachments(special_log_id)""",
+    """CREATE INDEX attachments_consultation_id ON journal_attachments(consultation_id)""",
+    """CREATE INDEX attachments_test_id ON journal_attachments(test_id)""",
+    """CREATE INDEX attachments_education_id ON journal_attachments(education_id)""",
+    """CREATE TRIGGER counseling_case_insert
+    BEFORE INSERT ON counseling
+    WHEN NEW.case_id IS NULL OR NOT EXISTS (
+        SELECT 1 FROM counseling_cases WHERE id=NEW.case_id AND student_id=NEW.student_id)
+    BEGIN SELECT RAISE(ABORT, 'Invalid counseling case'); END""",
+    """CREATE TRIGGER counseling_case_update
+    BEFORE UPDATE ON counseling
+    WHEN NEW.case_id IS NULL OR NOT EXISTS (
+        SELECT 1 FROM counseling_cases WHERE id=NEW.case_id AND student_id=NEW.student_id)
+    BEGIN SELECT RAISE(ABORT, 'Invalid counseling case'); END""",
+    """CREATE TRIGGER case_student_update BEFORE UPDATE OF student_id ON counseling_cases
+    WHEN NEW.student_id != OLD.student_id
+    BEGIN SELECT RAISE(ABORT, 'Case student cannot change'); END""",
+    """CREATE TRIGGER "counseling_snapshot_author"
+    AFTER INSERT ON "counseling"
+    BEGIN
+        UPDATE "counseling" SET author=COALESCE(
+            (SELECT counselor_name FROM school_settings WHERE id=1), '')
+        WHERE rowid=NEW.rowid;
+    END""",
+    """CREATE TRIGGER "counseling_cases_snapshot_author"
+    AFTER INSERT ON "counseling_cases"
+    BEGIN
+        UPDATE "counseling_cases" SET author=COALESCE(
+            (SELECT counselor_name FROM school_settings WHERE id=1), '')
+        WHERE rowid=NEW.rowid;
+    END""",
+    """CREATE TRIGGER "counseling_groups_snapshot_author"
+    AFTER INSERT ON "counseling_groups"
+    BEGIN
+        UPDATE "counseling_groups" SET author=COALESCE(
+            (SELECT counselor_name FROM school_settings WHERE id=1), '')
+        WHERE rowid=NEW.rowid;
+    END""",
+    """CREATE TRIGGER "group_counseling_logs_snapshot_author"
+    AFTER INSERT ON "group_counseling_logs"
+    BEGIN
+        UPDATE "group_counseling_logs" SET author=COALESCE(
+            (SELECT counselor_name FROM school_settings WHERE id=1), '')
+        WHERE rowid=NEW.rowid;
+    END""",
+    """CREATE TRIGGER "group_counseling_members_snapshot_author"
+    AFTER INSERT ON "group_counseling_members"
+    BEGIN
+        UPDATE "group_counseling_members" SET author=COALESCE(
+            (SELECT counselor_name FROM school_settings WHERE id=1), '')
+        WHERE rowid=NEW.rowid;
+    END""",
+    """CREATE TRIGGER "teachers_snapshot_author"
+    AFTER INSERT ON "teachers"
+    BEGIN
+        UPDATE "teachers" SET author=COALESCE(
+            (SELECT counselor_name FROM school_settings WHERE id=1), '')
+        WHERE rowid=NEW.rowid;
+    END""",
+    """CREATE TRIGGER "consultations_snapshot_author"
+    AFTER INSERT ON "consultations"
+    BEGIN
+        UPDATE "consultations" SET author=COALESCE(
+            (SELECT counselor_name FROM school_settings WHERE id=1), '')
+        WHERE rowid=NEW.rowid;
+    END""",
+    """CREATE TRIGGER "special_educations_snapshot_author"
+    AFTER INSERT ON "special_educations"
+    BEGIN
+        UPDATE "special_educations" SET author=COALESCE(
+            (SELECT counselor_name FROM school_settings WHERE id=1), '')
+        WHERE rowid=NEW.rowid;
+    END""",
+    """CREATE TRIGGER "special_education_logs_snapshot_author"
+    AFTER INSERT ON "special_education_logs"
+    BEGIN
+        UPDATE "special_education_logs" SET author=COALESCE(
+            (SELECT counselor_name FROM school_settings WHERE id=1), '')
+        WHERE rowid=NEW.rowid;
+    END""",
+    """CREATE TRIGGER "psychological_tests_snapshot_author"
+    AFTER INSERT ON "psychological_tests"
+    BEGIN
+        UPDATE "psychological_tests" SET author=COALESCE(
+            (SELECT counselor_name FROM school_settings WHERE id=1), '')
+        WHERE rowid=NEW.rowid;
+    END""",
+    """CREATE TRIGGER "education_events_snapshot_author"
+    AFTER INSERT ON "education_events"
+    BEGIN
+        UPDATE "education_events" SET author=COALESCE(
+            (SELECT counselor_name FROM school_settings WHERE id=1), '')
+        WHERE rowid=NEW.rowid;
+    END""",
+    """CREATE TRIGGER "calendars_snapshot_author"
+    AFTER INSERT ON "calendars"
+    BEGIN
+        UPDATE "calendars" SET author=COALESCE(
+            (SELECT counselor_name FROM school_settings WHERE id=1), '')
+        WHERE rowid=NEW.rowid;
+    END""",
+    """CREATE TRIGGER "calendar_preferences_snapshot_author"
+    AFTER INSERT ON "calendar_preferences"
+    BEGIN
+        UPDATE "calendar_preferences" SET author=COALESCE(
+            (SELECT counselor_name FROM school_settings WHERE id=1), '')
+        WHERE rowid=NEW.rowid;
+    END""",
+    """CREATE TRIGGER "school_settings_snapshot_author"
+    AFTER INSERT ON "school_settings"
+    BEGIN
+        UPDATE "school_settings" SET author=COALESCE(
+            (SELECT counselor_name FROM school_settings WHERE id=1), '')
+        WHERE rowid=NEW.rowid;
+    END""",
+    """CREATE TRIGGER "home_preferences_snapshot_author"
+    AFTER INSERT ON "home_preferences"
+    BEGIN
+        UPDATE "home_preferences" SET author=COALESCE(
+            (SELECT counselor_name FROM school_settings WHERE id=1), '')
+        WHERE rowid=NEW.rowid;
+    END""",
+    """CREATE TRIGGER "home_todos_snapshot_author"
+    AFTER INSERT ON "home_todos"
+    BEGIN
+        UPDATE "home_todos" SET author=COALESCE(
+            (SELECT counselor_name FROM school_settings WHERE id=1), '')
+        WHERE rowid=NEW.rowid;
+    END""",
+    """CREATE TRIGGER "students_snapshot_author"
+    AFTER INSERT ON "students"
+    BEGIN
+        UPDATE "students" SET author=COALESCE(
+            (SELECT counselor_name FROM school_settings WHERE id=1), '')
+        WHERE rowid=NEW.rowid;
+    END""",
+    """CREATE TRIGGER student_enrollments_snapshot_author
+    AFTER INSERT ON student_enrollments BEGIN
+        UPDATE student_enrollments SET author=COALESCE(
+            (SELECT counselor_name FROM school_settings WHERE id=1), '')
+        WHERE student_id=NEW.student_id AND school_year=NEW.school_year;
+    END""",
+    """CREATE TRIGGER "calendar_events_snapshot_author"
+    AFTER INSERT ON "calendar_events"
+    BEGIN
+        UPDATE "calendar_events" SET author=COALESCE(
+            (SELECT counselor_name FROM school_settings WHERE id=1), '')
+        WHERE rowid=NEW.rowid;
+    END""",
 )
 
 
@@ -185,18 +563,12 @@ class Database:
             self._password = new_password
 
     @contextmanager
-    def _transaction(self, *, write: bool = False, migration: bool = False):
+    def _transaction(self, *, write: bool = False):
         """잠금으로 보호된 세션 내부에서만 사용한다."""
         connection = self._connect()
         try:
-            if migration:
-                # Parent-table rebuilds must preserve all child records. Check every
-                # foreign key before committing; normal sessions keep FK enforcement.
-                connection.execute('PRAGMA foreign_keys = OFF')
             connection.execute('BEGIN IMMEDIATE' if write else 'BEGIN')
             yield connection
-            if migration and connection.execute('PRAGMA foreign_key_check').fetchone():
-                raise DatabaseError('DB 이관 중 연결된 자료의 무결성 검사에 실패했습니다.')
             connection.commit()
             if write and connection.total_changes:
                 self.write_revision += 1
@@ -213,474 +585,26 @@ class Database:
             connection.close()
 
     def initialize(self, school: SchoolSettings | None = None) -> None:
-        """원자적으로 최초 스키마를 만든다. 미래 버전 DB의 묵시적 다운그레이드는 막는다."""
-        with self._session_lock, self._transaction(write=True, migration=True) as connection:
+        """현재 구조를 버전 1로 생성한다. 기존 DB는 변경하거나 초기화하지 않는다."""
+        with self._session_lock, self._transaction(write=True) as connection:
             version = connection.execute('PRAGMA user_version').fetchone()[0]
-            new_database = version == 0
-            if version == 0:
-                for statement in SCHEMA:
-                    connection.execute(statement)
-                connection.execute('PRAGMA user_version = 1')
-                version = 1
-            if version == 1:
-                connection.execute("ALTER TABLE students ADD COLUMN family_type TEXT NOT NULL DEFAULT ''")
-                connection.execute("ALTER TABLE students ADD COLUMN family_welfare_type TEXT NOT NULL DEFAULT ''")
-                connection.execute("ALTER TABLE students ADD COLUMN family_members TEXT NOT NULL DEFAULT '[]'")
-                connection.execute('PRAGMA user_version = 2')
-                version = 2
-            if version == 2:
-                connection.execute("ALTER TABLE counseling ADD COLUMN content_format TEXT NOT NULL DEFAULT 'markdown'")
-                connection.execute('PRAGMA user_version = 3')
-                version = 3
-            if version == 3:
-                connection.execute("ALTER TABLE counseling ADD COLUMN counseling_method TEXT NOT NULL DEFAULT ''")
-                connection.execute("ALTER TABLE counseling ADD COLUMN counseling_target TEXT NOT NULL DEFAULT ''")
-                connection.execute('PRAGMA user_version = 4')
-                version = 4
-            if version == 4:
-                connection.execute("ALTER TABLE counseling ADD COLUMN counseling_area TEXT NOT NULL DEFAULT ''")
-                connection.execute('PRAGMA user_version = 5')
-                version = 5
-            if version == 5:
-                connection.execute("""CREATE TABLE counseling_cases (
-                    id INTEGER PRIMARY KEY,
-                    student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-                    title TEXT NOT NULL CHECK(length(trim(title)) > 0),
-                    report_html TEXT NOT NULL DEFAULT '',
-                    created_at TEXT NOT NULL, updated_at TEXT NOT NULL
-                )""")
-                connection.execute('CREATE INDEX cases_student ON counseling_cases(student_id, id)')
-                connection.execute('ALTER TABLE counseling ADD COLUMN case_id INTEGER REFERENCES counseling_cases(id) ON DELETE RESTRICT')
-                connection.execute("""INSERT INTO counseling_cases (student_id, title, created_at, updated_at)
-                    SELECT student_id, '기존 상담 사례', min(created_at), max(updated_at)
-                    FROM counseling GROUP BY student_id""")
-                connection.execute('UPDATE counseling SET case_id=(SELECT id FROM counseling_cases WHERE student_id=counseling.student_id)')
-                connection.execute('CREATE INDEX counseling_case_time ON counseling(case_id, starts_at)')
-                for event in ('INSERT', 'UPDATE'):
-                    connection.execute(f"""CREATE TRIGGER counseling_case_{event.lower()}
-                        BEFORE {event} ON counseling
-                        WHEN NEW.case_id IS NULL OR NOT EXISTS (
-                            SELECT 1 FROM counseling_cases WHERE id=NEW.case_id AND student_id=NEW.student_id)
-                        BEGIN SELECT RAISE(ABORT, 'Invalid counseling case'); END""")
-                connection.execute("""CREATE TRIGGER case_student_update BEFORE UPDATE OF student_id ON counseling_cases
-                    WHEN NEW.student_id != OLD.student_id
-                    BEGIN SELECT RAISE(ABORT, 'Case student cannot change'); END""")
-                connection.execute('PRAGMA user_version = 6')
-                version = 6
-            if version == 6:
-                connection.execute("ALTER TABLE counseling_cases ADD COLUMN intake_html TEXT NOT NULL DEFAULT ''")
-                connection.execute("ALTER TABLE counseling_cases ADD COLUMN closing_html TEXT NOT NULL DEFAULT ''")
-                connection.execute('PRAGMA user_version = 7')
-                version = 7
-            if version == 7:
-                connection.execute("""CREATE TABLE counseling_groups (
-                    id INTEGER PRIMARY KEY,
-                    name TEXT NOT NULL CHECK(length(trim(name)) > 0),
-                    facilitator TEXT NOT NULL, participants TEXT NOT NULL,
-                    purpose TEXT NOT NULL, notes TEXT NOT NULL,
-                    created_at TEXT NOT NULL, updated_at TEXT NOT NULL
-                )""")
-                connection.execute("""CREATE TABLE group_counseling_logs (
-                    id INTEGER PRIMARY KEY,
-                    group_id INTEGER NOT NULL REFERENCES counseling_groups(id) ON DELETE RESTRICT,
-                    title TEXT NOT NULL CHECK(length(trim(title)) > 0),
-                    starts_at TEXT NOT NULL,
-                    duration_minutes INTEGER NOT NULL CHECK(duration_minutes BETWEEN 1 AND 1440),
-                    content_html TEXT NOT NULL, follow_up TEXT NOT NULL,
-                    created_at TEXT NOT NULL, updated_at TEXT NOT NULL
-                )""")
-                connection.execute('CREATE INDEX group_logs_time ON group_counseling_logs(group_id, starts_at)')
-                connection.execute('PRAGMA user_version = 8')
-                version = 8
-            if version == 8:
-                connection.execute("""CREATE TABLE group_counseling_members (
-                    group_id INTEGER NOT NULL REFERENCES counseling_groups(id) ON DELETE CASCADE,
-                    student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE RESTRICT,
-                    PRIMARY KEY (group_id, student_id)
-                )""")
-                connection.execute('CREATE INDEX group_members_student ON group_counseling_members(student_id, group_id)')
-                connection.execute('PRAGMA user_version = 9')
-                version = 9
-            if version == 9:
-                connection.execute("ALTER TABLE counseling_groups ADD COLUMN period TEXT NOT NULL DEFAULT ''")
-                connection.execute("ALTER TABLE counseling_groups ADD COLUMN counseling_area TEXT NOT NULL DEFAULT ''")
-                connection.execute('PRAGMA user_version = 10')
-                version = 10
-            if version == 10:
-                connection.execute('''CREATE TABLE teachers (
-                    id INTEGER PRIMARY KEY,
-                    name TEXT NOT NULL CHECK(length(trim(name)) > 0),
-                    contact TEXT NOT NULL DEFAULT '',
-                    extension TEXT NOT NULL DEFAULT '',
-                    responsibilities TEXT NOT NULL DEFAULT '',
-                    created_at TEXT NOT NULL,
-                    updated_at TEXT NOT NULL
-                )''')
-                connection.execute('CREATE INDEX teachers_name ON teachers(name)')
-                connection.execute('PRAGMA user_version = 11')
-                version = 11
-            if version == 11:
-                connection.execute('''CREATE TABLE consultations (
-                    id INTEGER PRIMARY KEY,
-                    teacher_id INTEGER NOT NULL REFERENCES teachers(id) ON DELETE RESTRICT,
-                    starts_at TEXT NOT NULL,
-                    duration_minutes INTEGER NOT NULL CHECK(duration_minutes BETWEEN 1 AND 1440),
-                    status TEXT NOT NULL CHECK(status IN ('scheduled', 'completed', 'cancelled')),
-                    title TEXT NOT NULL CHECK(length(trim(title)) > 0),
-                    content_html TEXT NOT NULL DEFAULT '',
-                    follow_up TEXT NOT NULL DEFAULT '',
-                    created_at TEXT NOT NULL,
-                    updated_at TEXT NOT NULL
-                )''')
-                connection.execute('CREATE INDEX consultations_teacher_time ON consultations(teacher_id, starts_at)')
-                connection.execute('PRAGMA user_version = 12')
-                version = 12
-            if version == 12:
-                connection.execute('''CREATE TABLE special_educations (
-                    id INTEGER PRIMARY KEY,
-                    student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE RESTRICT,
-                    title TEXT NOT NULL CHECK(length(trim(title)) > 0),
-                    law TEXT NOT NULL CHECK(law IN ('학교폭력특별법', '교원지위법')),
-                    case_number TEXT NOT NULL DEFAULT '',
-                    created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
-                    UNIQUE(id, student_id)
-                )''')
-                connection.execute('''CREATE TABLE special_education_logs (
-                    id INTEGER PRIMARY KEY,
-                    student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE RESTRICT,
-                    case_id INTEGER NOT NULL,
-                    starts_at TEXT NOT NULL,
-                    duration_minutes INTEGER NOT NULL CHECK(duration_minutes BETWEEN 1 AND 1440),
-                    category TEXT NOT NULL, status TEXT NOT NULL, title TEXT NOT NULL,
-                    content_markdown TEXT NOT NULL, content_format TEXT NOT NULL,
-                    counseling_method TEXT NOT NULL, counseling_target TEXT NOT NULL,
-                    counseling_area TEXT NOT NULL, follow_up TEXT NOT NULL,
-                    created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
-                    FOREIGN KEY(case_id, student_id) REFERENCES special_educations(id, student_id) ON DELETE RESTRICT
-                )''')
-                connection.execute('CREATE INDEX special_education_student ON special_educations(student_id)')
-                connection.execute('CREATE INDEX special_education_logs_time ON special_education_logs(case_id, starts_at)')
-                connection.execute('PRAGMA user_version = 13')
-                version = 13
-            if version == 13:
-                connection.execute('''CREATE TABLE education_events (
-                    id INTEGER PRIMARY KEY,
-                    title TEXT NOT NULL CHECK(length(trim(title)) > 0),
-                    category TEXT NOT NULL CHECK(category IN ('교육', '행사')),
-                    event_date TEXT NOT NULL,
-                    location TEXT NOT NULL DEFAULT '',
-                    audience TEXT NOT NULL DEFAULT '',
-                    facilitator TEXT NOT NULL DEFAULT '',
-                    content TEXT NOT NULL DEFAULT '',
-                    created_at TEXT NOT NULL, updated_at TEXT NOT NULL
-                )''')
-                connection.execute('PRAGMA user_version = 14')
-                version = 14
-            if version == 14:
-                connection.execute("ALTER TABLE education_events ADD COLUMN event_time TEXT NOT NULL DEFAULT ''")
-                connection.execute("ALTER TABLE education_events ADD COLUMN duration_minutes INTEGER CHECK(duration_minutes BETWEEN 1 AND 1440)")
-                connection.execute('PRAGMA user_version = 15')
-                version = 15
-            if version == 15:
-                connection.execute("ALTER TABLE consultations ADD COLUMN consultation_area TEXT NOT NULL DEFAULT ''")
-                connection.execute('PRAGMA user_version = 16')
-                version = 16
-            if version == 16:
-                # 자식 일지를 보존한 채 부모 테이블의 법령 CHECK 제약을 교체한다.
-                log_schema = connection.execute(
-                    "SELECT sql FROM sqlite_master WHERE type='table' AND name='special_education_logs'"
-                ).fetchone()[0]
-                connection.execute('CREATE TEMP TABLE education_logs_backup AS SELECT * FROM special_education_logs')
-                connection.execute('DROP TABLE special_education_logs')
-                connection.execute('''CREATE TABLE special_educations_new (
-                    id INTEGER PRIMARY KEY,
-                    student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE RESTRICT,
-                    title TEXT NOT NULL CHECK(length(trim(title)) > 0),
-                    law TEXT NOT NULL CHECK(law IN ('학교폭력예방법', '교원지위법')),
-                    case_number TEXT NOT NULL DEFAULT '',
-                    created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
-                    UNIQUE(id, student_id)
-                )''')
-                connection.execute('''INSERT INTO special_educations_new
-                    SELECT id, student_id, title,
-                        CASE law WHEN '학교폭력특별법' THEN '학교폭력예방법' ELSE law END,
-                        case_number, created_at, updated_at FROM special_educations''')
-                connection.execute('DROP TABLE special_educations')
-                connection.execute('ALTER TABLE special_educations_new RENAME TO special_educations')
-                connection.execute('CREATE INDEX special_education_student ON special_educations(student_id)')
-                connection.execute(log_schema)
-                connection.execute('INSERT INTO special_education_logs SELECT * FROM education_logs_backup')
-                connection.execute('DROP TABLE education_logs_backup')
-                connection.execute('CREATE INDEX special_education_logs_time ON special_education_logs(case_id, starts_at)')
-                connection.execute('PRAGMA user_version = 17')
-                version = 17
-            if version == 17:
-                connection.execute('''CREATE TABLE IF NOT EXISTS psychological_tests (
-                    id INTEGER PRIMARY KEY,
-                    student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE RESTRICT,
-                    title TEXT NOT NULL,
-                    test_date TEXT NOT NULL,
-                    content TEXT NOT NULL DEFAULT '',
-                    created_at TEXT NOT NULL,
-                    updated_at TEXT NOT NULL
-                )''')
-                connection.execute('CREATE INDEX IF NOT EXISTS psychological_tests_student_date ON psychological_tests(student_id, test_date)')
-                connection.execute('PRAGMA user_version = 18')
-                version = 18
-            if version == 18:
-                connection.execute('''CREATE TABLE education_events_new (
-                    id INTEGER PRIMARY KEY,
-                    title TEXT NOT NULL CHECK(length(trim(title)) > 0),
-                    category TEXT NOT NULL CHECK(category IN ('교육', '행사', '단체심리검사')),
-                    event_date TEXT NOT NULL,
-                    location TEXT NOT NULL DEFAULT '',
-                    audience TEXT NOT NULL DEFAULT '',
-                    facilitator TEXT NOT NULL DEFAULT '',
-                    content TEXT NOT NULL DEFAULT '',
-                    created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
-                    event_time TEXT NOT NULL DEFAULT '',
-                    duration_minutes INTEGER CHECK(duration_minutes BETWEEN 1 AND 1440)
-                )''')
-                connection.execute('''INSERT INTO education_events_new
-                    (id, title, category, event_date, location, audience, facilitator, content,
-                     created_at, updated_at, event_time, duration_minutes)
-                    SELECT id, title, category, event_date, location, audience, facilitator, content,
-                           created_at, updated_at, event_time, duration_minutes FROM education_events''')
-                connection.execute('DROP TABLE education_events')
-                connection.execute('ALTER TABLE education_events_new RENAME TO education_events')
-                connection.execute('PRAGMA user_version = 19')
-                version = 19
-            if version == 19:
-                columns = {row['name'] for row in connection.execute('PRAGMA table_info(psychological_tests)')}
-                if 'target' not in columns:
-                    connection.execute("ALTER TABLE psychological_tests ADD COLUMN target TEXT NOT NULL DEFAULT '학생' CHECK(target IN ('학생', '보호자(학부모)'))")
-                if 'test_time' not in columns:
-                    connection.execute("ALTER TABLE psychological_tests ADD COLUMN test_time TEXT NOT NULL DEFAULT ''")
-                if 'duration_minutes' not in columns:
-                    connection.execute('ALTER TABLE psychological_tests ADD COLUMN duration_minutes INTEGER CHECK(duration_minutes BETWEEN 1 AND 1440)')
-                connection.execute('PRAGMA user_version = 20')
-                version = 20
-            if version == 20:
-                for table in ('education_events', 'psychological_tests'):
-                    columns = {row['name'] for row in connection.execute(f'PRAGMA table_info({table})')}
-                    if 'content_format' not in columns:
-                        connection.execute(f"ALTER TABLE {table} ADD COLUMN content_format TEXT NOT NULL DEFAULT 'text' CHECK(content_format IN ('text', 'html'))")
-                connection.execute('PRAGMA user_version = 21')
-                version = 21
-            if version == 21:
-                connection.execute("""CREATE TABLE IF NOT EXISTS calendars (
-                    id INTEGER PRIMARY KEY,
-                    name TEXT NOT NULL CHECK(length(trim(name)) > 0),
-                    color TEXT NOT NULL,
-                    source TEXT NOT NULL CHECK(source IN ('counseling', 'custom')),
-                    visible INTEGER NOT NULL DEFAULT 1 CHECK(visible IN (0, 1))
-                )""")
-                connection.execute("""INSERT INTO calendars (name, color, source)
-                    SELECT '개인 상담', '#0d9488', 'counseling'
-                    WHERE NOT EXISTS (SELECT 1 FROM calendars WHERE source='counseling')""")
-                connection.execute("""CREATE TABLE IF NOT EXISTS calendar_events (
-                    id INTEGER PRIMARY KEY,
-                    calendar_id INTEGER NOT NULL REFERENCES calendars(id) ON DELETE RESTRICT,
-                    title TEXT NOT NULL CHECK(length(trim(title)) > 0),
-                    starts_at TEXT NOT NULL,
-                    duration_minutes INTEGER NOT NULL CHECK(duration_minutes BETWEEN 1 AND 1440),
-                    status TEXT NOT NULL CHECK(status IN ('scheduled', 'completed', 'cancelled')),
-                    created_at TEXT NOT NULL,
-                    updated_at TEXT NOT NULL
-                )""")
-                connection.execute('CREATE INDEX IF NOT EXISTS calendar_events_time ON calendar_events(calendar_id, starts_at)')
-                connection.execute('PRAGMA user_version = 22')
-                version = 22
-            if version == 22:
-                connection.execute("""CREATE TABLE IF NOT EXISTS calendar_preferences (
-                    name TEXT PRIMARY KEY,
-                    visible INTEGER NOT NULL CHECK(visible IN (0, 1))
-                )""")
-                connection.execute("INSERT OR IGNORE INTO calendar_preferences (name, visible) VALUES ('holidays', 1)")
-                connection.execute('PRAGMA user_version = 23')
-                version = 23
-            if version == 23:
-                connection.execute("""CREATE TABLE IF NOT EXISTS school_settings (
-                    id INTEGER PRIMARY KEY CHECK(id = 1),
-                    school_name TEXT NOT NULL DEFAULT '',
-                    school_level TEXT NOT NULL DEFAULT '중학교'
-                        CHECK(school_level IN ('초등학교', '중학교', '고등학교')),
-                    counselor_name TEXT NOT NULL DEFAULT '',
-                    office_number TEXT NOT NULL DEFAULT ''
-                )""")
-                connection.execute('INSERT OR IGNORE INTO school_settings (id) VALUES (1)')
-                connection.execute('PRAGMA user_version = 24')
-                version = 24
-            if version == 24:
-                connection.execute("""CREATE TABLE IF NOT EXISTS home_preferences (
-                    id INTEGER PRIMARY KEY CHECK(id = 1),
-                    layout TEXT NOT NULL
-                )""")
-                connection.execute("""CREATE TABLE IF NOT EXISTS home_todos (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    title TEXT NOT NULL CHECK(length(trim(title)) BETWEEN 1 AND 300),
-                    done INTEGER NOT NULL DEFAULT 0 CHECK(done IN (0, 1))
-                )""")
-                connection.execute('PRAGMA user_version = 25')
-                version = 25
-            if version == 25:
-                columns = {row[1] for row in connection.execute('PRAGMA table_info(school_settings)')}
-                for column in ('neis_office_code', 'neis_school_code', 'neis_api_key'):
-                    if column not in columns:
-                        connection.execute(f"ALTER TABLE school_settings ADD COLUMN {column} TEXT NOT NULL DEFAULT ''")
-                connection.execute('PRAGMA user_version = 26')
-                version = 26
-            if version not in (26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, SCHEMA_VERSION):
-                raise DatabaseError('지원하지 않는 DB 버전입니다. 앱 버전을 확인하세요.')
-            if new_database and school is not None:
-                school = SchoolSettings.model_validate(school.model_dump())
-                connection.execute('''UPDATE school_settings SET school_name=:school_name,
-                    school_level=:school_level, counselor_name=:counselor_name,
-                    office_number=:office_number, neis_office_code=:neis_office_code,
-                    neis_school_code=:neis_school_code, neis_api_key=:neis_api_key WHERE id=1''', school.model_dump())
-            if version == 26:
-                # 설정/연결 테이블을 포함한 모든 사용자 테이블에 작성 당시 이름을 보관한다.
-                # 내부 테이블(sqlite_sequence 등)은 SQLite가 관리하므로 제외한다.
-                tables = [row[0] for row in connection.execute(
-                    "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")]
-                for table in tables:
-                    quoted = '"' + table.replace('"', '""') + '"'
-                    columns = {row['name'] for row in connection.execute(f'PRAGMA table_info({quoted})')}
-                    if 'author' not in columns:
-                        connection.execute(f"ALTER TABLE {quoted} ADD COLUMN author TEXT NOT NULL DEFAULT ''")
-                        connection.execute(f'''UPDATE {quoted} SET author=COALESCE(
-                            (SELECT counselor_name FROM school_settings WHERE id=1), '')''')
-                    trigger = '"' + (table + '_snapshot_author').replace('"', '""') + '"'
-                    connection.execute(f'''CREATE TRIGGER IF NOT EXISTS {trigger}
-                        AFTER INSERT ON {quoted}
-                        BEGIN
-                            UPDATE {quoted} SET author=COALESCE(
-                                (SELECT counselor_name FROM school_settings WHERE id=1), '')
-                            WHERE rowid=NEW.rowid;
-                        END''')
-                connection.execute('PRAGMA user_version = 27')
-                version = 27
-            if version == 27:
-                columns = {row['name'] for row in connection.execute('PRAGMA table_info(students)')}
-                for column in ('nickname', 'student_contact'):
-                    if column not in columns:
-                        connection.execute(f"ALTER TABLE students ADD COLUMN {column} TEXT NOT NULL DEFAULT ''")
-                connection.execute('PRAGMA user_version = 28')
-                version = 28
-            if version == 28:
-                # Remove the old global number uniqueness: numbers belong to a
-                # particular year, grade and classroom, not a student's identity.
-                columns = {row['name'] for row in connection.execute('PRAGMA table_info(students)')}
-                if 'school_year' not in columns:
-                    schema = connection.execute("SELECT sql FROM sqlite_master WHERE name='students'").fetchone()[0]
-                    objects = [row[0] for row in connection.execute(
-                        "SELECT sql FROM sqlite_master WHERE tbl_name='students' AND type IN ('index','trigger') AND sql IS NOT NULL")]
-                    schema = re.sub(r'^CREATE TABLE\s+"?students"?', 'CREATE TABLE students_new', schema, count=1)
-                    schema = schema.replace('student_number TEXT UNIQUE', 'student_number TEXT')
-                    connection.execute(schema)
-                    connection.execute('INSERT INTO students_new SELECT * FROM students')
-                    connection.execute('DROP TABLE students')
-                    connection.execute('ALTER TABLE students_new RENAME TO students')
-                    for statement in objects:
-                        connection.execute(statement)
-                    year = current_school_year()
-                    connection.execute(f'ALTER TABLE students ADD COLUMN school_year INTEGER NOT NULL DEFAULT {year}')
-                connection.execute('''CREATE TABLE IF NOT EXISTS student_enrollments (
-                    student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-                    school_year INTEGER NOT NULL CHECK(school_year BETWEEN 1900 AND 9999),
-                    grade INTEGER NOT NULL CHECK(grade BETWEEN 1 AND 12),
-                    classroom TEXT NOT NULL CHECK(length(trim(classroom)) > 0),
-                    student_number TEXT,
-                    created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
-                    author TEXT NOT NULL DEFAULT '',
-                    PRIMARY KEY(student_id, school_year),
-                    UNIQUE(school_year, grade, classroom, student_number)
-                )''')
-                connection.execute('''INSERT INTO student_enrollments
-                    SELECT id, school_year, grade, classroom, student_number, created_at, updated_at, author FROM students WHERE true
-                    ON CONFLICT(student_id, school_year) DO NOTHING''')
-                connection.execute('''CREATE TRIGGER IF NOT EXISTS student_enrollments_snapshot_author
-                    AFTER INSERT ON student_enrollments BEGIN
-                        UPDATE student_enrollments SET author=COALESCE(
-                            (SELECT counselor_name FROM school_settings WHERE id=1), '')
-                        WHERE student_id=NEW.student_id AND school_year=NEW.school_year;
-                    END''')
-                connection.execute('PRAGMA user_version = 29')
-                version = 29
-            if version == 29:
-                columns = {row['name'] for row in connection.execute('PRAGMA table_info(students)')}
-                if 'gender' not in columns:
-                    connection.execute("ALTER TABLE students ADD COLUMN gender TEXT CHECK(gender IN ('남', '여', '기타'))")
-                connection.execute('PRAGMA user_version = 30')
-                version = 30
-            if version == 30:
-                columns = {row['name'] for row in connection.execute('PRAGMA table_info(calendar_events)')}
-                for column in ('location', 'content'):
-                    if column not in columns:
-                        connection.execute(f"ALTER TABLE calendar_events ADD COLUMN {column} TEXT NOT NULL DEFAULT ''")
-                connection.execute('PRAGMA user_version = 31')
-                version = 31
-            if version == 31:
-                columns = {row['name'] for row in connection.execute('PRAGMA table_info(calendar_events)')}
-                if 'all_day' not in columns:
-                    connection.execute('ALTER TABLE calendar_events ADD COLUMN all_day INTEGER NOT NULL DEFAULT 0 CHECK(all_day IN (0, 1))')
-                connection.execute('PRAGMA user_version = 32')
-                version = 32
-            if version == 32:
-                schema = connection.execute("SELECT sql FROM sqlite_master WHERE name='calendar_events'").fetchone()[0]
-                objects = [row[0] for row in connection.execute(
-                    "SELECT sql FROM sqlite_master WHERE tbl_name='calendar_events' AND type IN ('index','trigger') AND sql IS NOT NULL")]
-                schema = re.sub(r'^CREATE TABLE\s+"?calendar_events"?', 'CREATE TABLE calendar_events_new', schema, count=1)
-                schema = schema.replace('duration_minutes BETWEEN 1 AND 1440', 'duration_minutes >= 1')
-                connection.execute(schema)
-                connection.execute('INSERT INTO calendar_events_new SELECT * FROM calendar_events')
-                connection.execute('DROP TABLE calendar_events')
-                connection.execute('ALTER TABLE calendar_events_new RENAME TO calendar_events')
-                for statement in objects:
-                    connection.execute(statement)
-                connection.execute('PRAGMA user_version = 33')
-                version = 33
-            if version == 33:
-                columns = {row['name'] for row in connection.execute('PRAGMA table_info(calendar_events)')}
-                if 'status' in columns:
-                    connection.execute('ALTER TABLE calendar_events DROP COLUMN status')
-                connection.execute('PRAGMA user_version = 34')
-                version = 34
-            if version == 34:
-                columns = {row['name'] for row in connection.execute('PRAGMA table_info(group_counseling_logs)')}
-                if 'status' not in columns:
-                    connection.execute("""ALTER TABLE group_counseling_logs ADD COLUMN status TEXT NOT NULL
-                        DEFAULT 'completed' CHECK(status IN ('scheduled', 'completed', 'cancelled'))""")
-                connection.execute('PRAGMA user_version = 35')
-                version = 35
-            if version == 35:
-                columns = {row['name'] for row in connection.execute('PRAGMA table_info(counseling)')}
-                if 'private_note_html' not in columns:
-                    connection.execute("ALTER TABLE counseling ADD COLUMN private_note_html TEXT NOT NULL DEFAULT ''")
-                connection.execute('PRAGMA user_version = 36')
-                version = 36
-            if version == 36:
-                columns = {row['name'] for row in connection.execute('PRAGMA table_info(education_events)')}
-                if 'participant_count' not in columns:
-                    connection.execute('ALTER TABLE education_events ADD COLUMN participant_count INTEGER CHECK(participant_count >= 0 AND participant_count <= 2147483647)')
-                connection.execute('PRAGMA user_version = 37')
-                version = 37
-            if version == 37:
-                connection.execute('''CREATE TABLE IF NOT EXISTS journal_attachments (
-                    id INTEGER PRIMARY KEY,
-                    counseling_id INTEGER REFERENCES counseling(id) ON DELETE CASCADE,
-                    group_log_id INTEGER REFERENCES group_counseling_logs(id) ON DELETE CASCADE,
-                    special_log_id INTEGER REFERENCES special_education_logs(id) ON DELETE CASCADE,
-                    consultation_id INTEGER REFERENCES consultations(id) ON DELETE CASCADE,
-                    test_id INTEGER REFERENCES psychological_tests(id) ON DELETE CASCADE,
-                    education_id INTEGER REFERENCES education_events(id) ON DELETE CASCADE,
-                    filename TEXT NOT NULL CHECK(length(filename) BETWEEN 1 AND 255),
-                    content BLOB NOT NULL CHECK(length(content) <= 20971520),
-                    created_at TEXT NOT NULL,
-                    CHECK((counseling_id IS NOT NULL) + (group_log_id IS NOT NULL)
-                        + (special_log_id IS NOT NULL) + (consultation_id IS NOT NULL)
-                        + (test_id IS NOT NULL) + (education_id IS NOT NULL) = 1)
-                )''')
-                for column in ('counseling_id', 'group_log_id', 'special_log_id', 'consultation_id', 'test_id', 'education_id'):
-                    connection.execute(f'CREATE INDEX IF NOT EXISTS attachments_{column} ON journal_attachments({column})')
-                connection.execute(f'PRAGMA user_version = {SCHEMA_VERSION}')
+            if version == SCHEMA_VERSION:
+                return
+            if version != 0 or connection.execute(
+                "SELECT 1 FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' LIMIT 1"
+            ).fetchone():
+                raise DatabaseError('지원하지 않는 DB 버전 또는 구조입니다. 새 DB 파일을 사용하세요.')
+            school = SchoolSettings.model_validate(school.model_dump()) if school is not None else SchoolSettings()
+            for statement in SCHEMA:
+                connection.execute(statement)
+            # 학교 설정을 먼저 저장하여 기본 레코드에도 작성자 이름을 반영한다.
+            connection.execute('''INSERT INTO school_settings
+                (id, school_name, school_level, counselor_name, office_number,
+                 neis_office_code, neis_school_code, neis_api_key)
+                VALUES (1, :school_name, :school_level, :counselor_name, :office_number,
+                        :neis_office_code, :neis_school_code, :neis_api_key)''', school.model_dump())
+            connection.execute("INSERT INTO calendars (name, color, source) VALUES ('개인 상담', '#0d9488', 'counseling')")
+            connection.execute("INSERT INTO calendar_preferences (name, visible) VALUES ('holidays', 1)")
+            if connection.execute('PRAGMA foreign_key_check').fetchone():
+                raise DatabaseError('DB 생성 중 연결 관계의 무결성 검사에 실패했습니다.')
+            connection.execute(f'PRAGMA user_version = {SCHEMA_VERSION}')

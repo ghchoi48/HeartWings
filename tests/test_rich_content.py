@@ -24,7 +24,7 @@ def test_plain_text_keeps_literal_markup_and_line_breaks():
 
 
 @pytest.mark.parametrize('kind', ['education_events', 'psychological_tests'])
-def test_migration_and_html_roundtrip(tmp_path, kind):
+def test_reinitialize_and_html_roundtrip(tmp_path, kind):
     db = Database('test-only', tmp_path / 'rich.db')
     db.initialize()
     student = StudentRepository(db).create(StudentInput(name='학생', grade=1, classroom='1'))
@@ -33,10 +33,6 @@ def test_migration_and_html_roundtrip(tmp_path, kind):
              if kind == 'education_events' else
              PsychologicalTestInput(student_id=student.id, title='검사', test_date='2026-10-20', content='<b>원문</b>\n둘째 줄'))
     saved = repo.save(value)
-    with db.session(write=True) as connection:
-        for table in ('education_events', 'psychological_tests'):
-            connection.execute(f'ALTER TABLE {table} DROP COLUMN content_format')
-        connection.execute('PRAGMA user_version=20')
     db.initialize()
     restored = repo.list()[0] if kind == 'education_events' else repo.list(student.id)[0]
     assert restored.content_format == 'text'

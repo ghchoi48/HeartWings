@@ -29,13 +29,10 @@ def counseling_input(student_id, **changes):
         content_markdown='  **상담 원문**\n') | changes))
 
 
-def test_private_note_migration_and_round_trip(db):
+def test_private_note_reinitialize_and_round_trip(db):
     student = StudentRepository(db).create(student_input())
     repo = CounselingRepository(db)
     original = repo.create(counseling_input(student.id))
-    with db.session(write=True) as connection:
-        connection.execute('ALTER TABLE counseling DROP COLUMN private_note_html')
-        connection.execute('PRAGMA user_version=35')
     db.initialize()
     db.initialize()
     assert repo.get(original.id) == original
@@ -201,32 +198,6 @@ def test_family_members_round_trip_and_student_edit(db):
             FamilyInput(family_members=[dict(age=age)])
 
 
-def test_version_one_family_migration(tmp_path):
-    from maeumnarae.core.database import SCHEMA
-
-    database = Database('migration-test', tmp_path / 'old.db')
-    student = student_input()
-    with database.session(write=True) as connection:
-        for statement in SCHEMA:
-            connection.execute(statement)
-        connection.execute('PRAGMA user_version=1')
-        # 구버전 fixture는 해당 버전 SQL로 만든다. 현재 저장소는 최신 열을 사용한다.
-        cursor = connection.execute('''INSERT INTO students
-            (name, student_number, grade, classroom, guardian_contact, notes, created_at, updated_at)
-            VALUES (?, ?, ?, ?, '', '', '2026-01-01', '2026-01-01')''',
-            (student.name, student.student_number, student.grade, student.classroom))
-        student_id = cursor.lastrowid
-    repo = StudentRepository(database)
-    database.initialize()
-    database.initialize()
-    restored = repo.get(student_id)
-    assert restored.name == student.name
-    assert restored.family_members == []
-    assert restored.family_type == ''
-    repo.update_family(student_id, FamilyInput(family_type='확인'))
-    assert repo.get(student_id).family_type == '확인'
-
-
 def test_html_counseling_round_trip(db):
     student = StudentRepository(db).create(student_input())
     repo = CounselingRepository(db)
@@ -278,36 +249,6 @@ def test_case_reports_and_log_ownership(db):
     assert cases.list(student.id)[1].report_html == '<p><b>보고서</b></p>'
 
 
-def test_version_five_cases_migration(tmp_path):
-    from maeumnarae.core.database import SCHEMA
-    from maeumnarae.repositories.case_repo import CaseRepository
-
-    database = Database('migration-test', tmp_path / 'v5.db')
-    with database.session(write=True) as connection:
-        for statement in SCHEMA:
-            connection.execute(statement)
-        for column in ('family_type', 'family_welfare_type'):
-            connection.execute(f"ALTER TABLE students ADD COLUMN {column} TEXT NOT NULL DEFAULT ''")
-        connection.execute("ALTER TABLE students ADD COLUMN family_members TEXT NOT NULL DEFAULT '[]'")
-        for column, default in [('content_format', 'markdown'), ('counseling_method', ''), ('counseling_target', ''), ('counseling_area', '')]:
-            connection.execute(f"ALTER TABLE counseling ADD COLUMN {column} TEXT NOT NULL DEFAULT '{default}'")
-        connection.execute('PRAGMA user_version=5')
-        connection.execute("""INSERT INTO students (id, name, grade, classroom, guardian_contact, notes, created_at, updated_at)
-            VALUES (1, '학생', 1, '1', '', '', '2026-01-01T00:00:00+00:00', '2026-01-01T00:00:00+00:00')""")
-        connection.execute("""INSERT INTO counseling (student_id, starts_at, duration_minutes, category, status, title,
-            content_markdown, follow_up, created_at, updated_at)
-            VALUES (1, '2026-01-01T00:00:00+00:00', 50, '개인상담', 'completed', '기존',
-            '  원문  ', '', '2026-01-01T00:00:00+00:00', '2026-01-01T00:00:00+00:00')""")
-    database.initialize()
-    database.initialize()
-    cases = CaseRepository(database).list(1)
-    entries = CounselingRepository(database).list(student_id=1)
-    assert len(cases) == 1
-    assert cases[0].title == '기존 상담 사례'
-    assert entries[0].case_id == cases[0].id
-    assert entries[0].content_markdown == '  원문  '
-
-
 def test_case_documents_save_independently(db):
     from maeumnarae.core.models import CounselingCaseInput
     from maeumnarae.repositories.case_repo import CaseRepository
@@ -332,25 +273,7 @@ def test_case_documents_save_independently(db):
         repo.save(CounselingCaseInput(student_id=student.id, title='사례'), case.id, 'unknown')
 
 
-def test_version_six_report_migration(tmp_path):
-    from maeumnarae.repositories.case_repo import CaseRepository
-
-    db = Database('migration-test', tmp_path / 'v6.db')
-    with db.session(write=True) as connection:
-        connection.execute('''CREATE TABLE counseling_cases (id INTEGER PRIMARY KEY,
-            student_id INTEGER NOT NULL, title TEXT NOT NULL, report_html TEXT NOT NULL,
-            created_at TEXT NOT NULL, updated_at TEXT NOT NULL)''')
-        connection.execute("""INSERT INTO counseling_cases VALUES
-            (1, 1, '기존 사례', '<p>기존 보고서</p>', '2026-01-01T00:00:00+00:00', '2026-01-01T00:00:00+00:00')""")
-        connection.execute('PRAGMA user_version=6')
-    db.initialize()
-    db.initialize()
-    case = CaseRepository(db).list(1)[0]
-    assert case.report_html == '<p>기존 보고서</p>'
-    assert case.intake_html == case.closing_html == ''
-
-
-def test_student_gender_persistence_and_migration(db):
+def test_student_gender_persistence_and_reinitialize(db):
     repo = StudentRepository(db)
     student = repo.create(student_input(gender='남'))
     assert repo.get(student.id).gender == '남'
@@ -359,10 +282,6 @@ def test_student_gender_persistence_and_migration(db):
         assert repo.get(student.id).gender == gender
     with pytest.raises(ValidationError):
         student_input(gender='invalid')
-    # Simulate the previous schema with an existing student.
-    with db.session(write=True) as connection:
-        connection.execute('ALTER TABLE students DROP COLUMN gender')
-        connection.execute('PRAGMA user_version = 29')
     db.initialize()
     assert repo.get(student.id).gender is None
     assert repo.get(student.id).name == student.name

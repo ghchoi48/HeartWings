@@ -108,11 +108,8 @@ def test_log_delete_cascades_and_missing_owner_cannot_upload(records):
         assert not connection.execute('SELECT * FROM journal_attachments').fetchall()
 
 
-def test_migration_validation_and_rollback(records):
+def test_reinitialize_validation_and_rollback(records):
     db, ids, _ = records
-    with db.session(write=True) as connection:
-        connection.execute('DROP TABLE journal_attachments')
-        connection.execute('PRAGMA user_version=37')
     db.initialize()
     db.initialize()
     repo = AttachmentRepository(db, 'counseling', ids['counseling'])

@@ -32,7 +32,7 @@ def data(tmp_path):
     return db, repo, custom, counseling
 
 
-def test_calendar_storage_filtering_and_migration(data):
+def test_calendar_storage_filtering_and_reinitialize(data):
     db, repo, custom, counseling = data
     calendars = repo.list()
     assert calendars[0].source == 'counseling'
@@ -55,28 +55,22 @@ def test_calendar_storage_filtering_and_migration(data):
     with pytest.raises(NotFoundError):
         repo.save_event(CalendarEventInput(calendar_id=calendars[0].id, title='연동 캘린더에 직접 저장 불가',
             starts_at=datetime(2026, 10, 20, 9, tzinfo=KST)))
-    # 이전 스키마에서 업그레이드해도 이미 있는 캘린더/일정이 보존된다.
-    with db.session(write=True) as connection:
-        connection.execute('PRAGMA user_version=21')
     db.initialize()
     assert len(repo.list()) == 3
     assert len(repo.events(date(2026, 10, 21), date(2026, 10, 21), [custom.id])) == 1
 
 
-def test_event_status_column_removed_preserving_records(data):
+def test_events_without_status_preserve_records_on_reinitialize(data):
     db, repo, custom, counseling = data
     assert 'status' not in CalendarEventInput.model_fields
     with db.session(write=True) as connection:
         assert 'status' not in {row['name'] for row in connection.execute('PRAGMA table_info(calendar_events)')}
-        # 버전 33의 상태 열이 있는 DB를 재현한다.
-        connection.execute("ALTER TABLE calendar_events ADD COLUMN status TEXT NOT NULL DEFAULT 'cancelled' CHECK(status IN ('scheduled', 'completed', 'cancelled'))")
-        connection.execute('PRAGMA user_version=33')
         original = dict(connection.execute('SELECT * FROM calendar_events').fetchone())
     db.initialize()
     db.initialize()  # 재실행해도 데이터나 스키마를 바꾸지 않는다.
     with db.session() as connection:
         saved = dict(connection.execute('SELECT * FROM calendar_events').fetchone())
-        assert saved == {key: value for key, value in original.items() if key != 'status'}
+        assert saved == original
         assert connection.execute('PRAGMA user_version').fetchone()[0] == SCHEMA_VERSION
         assert not connection.execute('PRAGMA foreign_key_check').fetchall()
     day = date(2026, 10, 20)
@@ -352,15 +346,10 @@ def test_unified_counseling_calendar_names_filtering_and_open(data):
     asyncio.run(check())
 
 
-def test_event_location_content_persistence_and_migration(data):
+def test_event_location_content_persistence_and_reinitialize(data):
     db, repo, custom, _ = data
     day = date(2026, 10, 20)
     entry = repo.events(day, day, [custom.id])[0]
-    # Upgrade an existing calendar with the previous schema.
-    with db.session(write=True) as connection:
-        connection.execute('ALTER TABLE calendar_events DROP COLUMN location')
-        connection.execute('ALTER TABLE calendar_events DROP COLUMN content')
-        connection.execute('PRAGMA user_version=30')
     db.initialize()
     original = repo.events(day, day, [custom.id])[0]
     assert original.location == original.content == ''
@@ -472,13 +461,10 @@ def test_event_editor_saves_and_restores_location_content(data, all_day, start_t
     asyncio.run(check())
 
 
-def test_all_day_migration_preserves_existing_events(data):
+def test_all_day_reinitialize_preserves_existing_events(data):
     db, repo, custom, _ = data
     day = date(2026, 10, 20)
     previous = repo.events(day, day, [custom.id])
-    with db.session(write=True) as connection:
-        connection.execute('ALTER TABLE calendar_events DROP COLUMN all_day')
-        connection.execute('PRAGMA user_version=31')
     db.initialize()
     assert repo.events(day, day, [custom.id]) == previous
     assert not previous[0].all_day

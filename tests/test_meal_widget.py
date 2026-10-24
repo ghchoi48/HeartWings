@@ -1,4 +1,4 @@
-"""나이스 요청·오류·구버전 학교 설정·급식 위젯 날짜 전환 검증."""
+"""나이스 요청·오류·학교 설정 저장·급식 위젯 날짜 전환 검증."""
 
 import asyncio
 import json
@@ -58,14 +58,11 @@ def test_no_meal_api_error_and_network_failure_are_distinct():
         request.assert_not_called()
 
 
-def test_school_neis_migration_and_persistence(tmp_path):
+def test_school_neis_reinitialize_and_persistence(tmp_path):
     db = Database('test-password', tmp_path / 'meal.db')
     db.initialize()
     with db.session(write=True) as connection:
-        for column in ('neis_office_code', 'neis_school_code', 'neis_api_key'):
-            connection.execute(f'ALTER TABLE school_settings DROP COLUMN {column}')
         connection.execute("UPDATE school_settings SET school_name='기존 학교'")
-        connection.execute('PRAGMA user_version=25')
     db.initialize()
     repo = SchoolSettingsRepository(db)
     assert repo.get().school_name == '기존 학교'

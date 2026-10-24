@@ -18,16 +18,12 @@ from maeumnarae.core.settings_store import SettingsStore
 from maeumnarae.views.home_layout import arrange, overlaps
 
 
-def test_migration_and_home_persistence(tmp_path):
+def test_reinitialize_and_home_persistence(tmp_path):
     path = tmp_path / 'home.db'
     db = Database('test-password', path)
     db.initialize()
     teachers = TeacherRepository(db)
     teachers.save(TeacherInput(name='기존 교사'))
-    with db.session(write=True) as connection:
-        connection.execute('DROP TABLE home_preferences')
-        connection.execute('DROP TABLE home_todos')
-        connection.execute('PRAGMA user_version=24')
     db.initialize()
     repo = HomeRepository(db)
     assert repo.layout() == DEFAULT_LAYOUT

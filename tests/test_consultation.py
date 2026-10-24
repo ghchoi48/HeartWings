@@ -17,20 +17,12 @@ from maeumnarae.repositories.teacher_repo import TeacherRepository
 from maeumnarae.views.consultation_view import ConsultationView
 
 
-def test_migration_and_teacher_isolation(tmp_path):
+def test_reinitialize_and_teacher_isolation(tmp_path):
     db = Database('test-only', tmp_path / 'consultation.db')
     db.initialize()
     teachers = TeacherRepository(db)
     first = teachers.save(TeacherInput(name='첫 교사'))
     second = teachers.save(TeacherInput(name='다른 교사'))
-    with db.session(write=True) as connection:
-        # 이전 버전에는 첨부 테이블이 없으므로 부모 테이블보다 먼저 제거한다.
-        connection.execute('DROP TABLE IF EXISTS journal_attachments')
-        connection.execute('DROP TABLE special_education_logs')
-        connection.execute('DROP TABLE special_educations')
-        connection.execute('DROP TABLE consultations')
-        connection.execute('DROP TABLE IF EXISTS education_events')
-        connection.execute('PRAGMA user_version=11')
     db.initialize()
     db.initialize()
     assert teachers.get(first.id) == first
@@ -157,15 +149,12 @@ class ConsultationEditorTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(self.view.add_log.enabled)
 
 
-def test_consultation_area_migration(tmp_path):
+def test_consultation_area_reinitialize(tmp_path):
     db = Database('test-only', tmp_path / 'area.db')
     db.initialize()
     teacher = TeacherRepository(db).save(TeacherInput(name='교사'))
     repo = ConsultationRepository(db)
     saved = repo.save(ConsultationInput(teacher_id=teacher.id, title='기존 자문', starts_at=datetime.now(timezone.utc)))
-    with db.session(write=True) as connection:
-        connection.execute('ALTER TABLE consultations DROP COLUMN consultation_area')
-        connection.execute('PRAGMA user_version=15')
     db.initialize()
     db.initialize()
     assert repo.get(saved.id, teacher.id) == saved

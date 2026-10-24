@@ -14,15 +14,9 @@ from maeumnarae.repositories.education_event_repo import EducationEventRepositor
 from maeumnarae.views.education_event_view import EducationEventView
 
 
-def test_storage_and_migration(tmp_path):
+def test_storage_and_reinitialize(tmp_path):
     db = Database('test-only', tmp_path / 'events.db')
     db.initialize()
-    with db.session(write=True) as connection:
-        # 이전 버전에는 첨부 테이블이 없으므로 부모 테이블보다 먼저 제거한다.
-        connection.execute('DROP TABLE IF EXISTS journal_attachments')
-        connection.execute('DROP TABLE education_events')
-        connection.execute('ALTER TABLE consultations DROP COLUMN consultation_area')
-        connection.execute('PRAGMA user_version=13')
     db.initialize()
     repo = EducationEventRepository(db)
     value = EducationEventInput(title=' 생명존중 교육 ', event_date=date(2026, 10, 20), content='첫 줄\n둘째 줄', event_time='13:30', duration_minutes=90)
@@ -44,15 +38,12 @@ def test_storage_and_migration(tmp_path):
         EducationEventInput(title=' ', event_date='2026-02-30')
 
 
-def test_participant_count_migration_and_round_trip(tmp_path):
+def test_participant_count_reinitialize_and_round_trip(tmp_path):
     db = Database('test-only', tmp_path / 'participants.db')
     db.initialize()
     repo = EducationEventRepository(db)
     value = EducationEventInput(title='행사', event_date='2026-10-23')
     saved = repo.save(value)
-    with db.session(write=True) as connection:
-        connection.execute('ALTER TABLE education_events DROP COLUMN participant_count')
-        connection.execute('PRAGMA user_version=36')
     db.initialize()
     db.initialize()
     assert repo.get(saved.id) == saved
@@ -104,16 +95,11 @@ class EducationEventViewTests(unittest.IsolatedAsyncioTestCase):
                 host.delete()
 
 
-def test_version_fourteen_preserves_events(tmp_path):
+def test_reinitialize_preserves_events(tmp_path):
     db = Database('test-only', tmp_path / 'legacy-events.db')
     db.initialize()
     repo = EducationEventRepository(db)
     saved = repo.save(EducationEventInput(title='기존 행사', event_date='2026-10-20'))
-    with db.session(write=True) as connection:
-        connection.execute('ALTER TABLE education_events DROP COLUMN event_time')
-        connection.execute('ALTER TABLE education_events DROP COLUMN duration_minutes')
-        connection.execute('ALTER TABLE consultations DROP COLUMN consultation_area')
-        connection.execute('PRAGMA user_version=14')
     db.initialize()
     db.initialize()
     restored = repo.get(saved.id)
@@ -152,24 +138,13 @@ def test_editor_restores_time_and_duration():
         assert fields['시각'].parent_slot is fields['운영 시간(분)'].parent_slot
 
 
-def test_group_test_category_migration_and_storage(tmp_path):
+def test_group_test_category_reinitialize_and_storage(tmp_path):
     db = Database('test-only', tmp_path / 'category.db')
     db.initialize()
     repo = EducationEventRepository(db)
     value = EducationEventInput(title='기존 교육', event_date='2026-10-20',
                                 event_time='10:30', duration_minutes=45, content='내용')
     saved = repo.save(value)
-    with db.session(write=True) as connection:
-        schema = connection.execute("SELECT sql FROM sqlite_master WHERE name='education_events'").fetchone()[0]
-        legacy_schema = schema.replace('education_events', 'education_events_legacy').replace(
-            "'교육', '행사', '단체심리검사'", "'교육', '행사'")
-        connection.execute(legacy_schema)
-        connection.execute('INSERT INTO education_events_legacy SELECT * FROM education_events')
-        # 이전 버전에는 첨부 테이블이 없으므로 부모 테이블보다 먼저 제거한다.
-        connection.execute('DROP TABLE IF EXISTS journal_attachments')
-        connection.execute('DROP TABLE education_events')
-        connection.execute('ALTER TABLE education_events_legacy RENAME TO education_events')
-        connection.execute('PRAGMA user_version=18')
     db.initialize()
     db.initialize()
     assert repo.get(saved.id) == saved

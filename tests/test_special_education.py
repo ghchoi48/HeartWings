@@ -17,20 +17,12 @@ from maeumnarae.repositories.special_education_repo import SpecialEducationRepos
 from maeumnarae.views.special_education_view import SpecialEducationView
 
 
-def test_special_education_storage_and_migration(tmp_path):
+def test_special_education_storage_and_reinitialize(tmp_path):
     db = Database('test-only', tmp_path / 'special.db')
     db.initialize()
     students = StudentRepository(db)
     student = students.create(StudentInput(name='학생', grade=1, classroom='1'))
     other = students.create(StudentInput(name='다른 학생', grade=1, classroom='1'))
-    with db.session(write=True) as connection:
-        # 이전 버전에는 첨부 테이블이 없으므로 부모 테이블보다 먼저 제거한다.
-        connection.execute('DROP TABLE IF EXISTS journal_attachments')
-        connection.execute('DROP TABLE special_education_logs')
-        connection.execute('DROP TABLE special_educations')
-        connection.execute('DROP TABLE IF EXISTS education_events')
-        connection.execute('ALTER TABLE consultations DROP COLUMN consultation_area')
-        connection.execute('PRAGMA user_version=12')
     db.initialize()
     db.initialize()
     cases = SpecialEducationRepository(db)
@@ -145,7 +137,7 @@ async def test_student_selection_and_log_editor():
         assert not view.edit_case.enabled
 
 
-def test_law_migration_preserves_cases_and_logs(tmp_path):
+def test_law_reinitialize_preserves_cases_and_logs(tmp_path):
     db = Database('test-only', tmp_path / 'law-migration.db')
     db.initialize()
     student = StudentRepository(db).create(StudentInput(name='학생', grade=1, classroom='1'))
@@ -156,11 +148,6 @@ def test_law_migration_preserves_cases_and_logs(tmp_path):
     logs = SpecialEducationLogRepository(db)
     entry = logs.create(CounselingInput(student_id=student.id, case_id=case.id, title='기존 일지',
                                         starts_at=datetime.now(timezone.utc), content_markdown='보존할 내용'))
-    with db.session(write=True) as connection:
-        connection.execute('PRAGMA ignore_check_constraints=ON')
-        connection.execute("UPDATE special_educations SET law='학교폭력특별법' WHERE id=?", (case.id,))
-        connection.execute('PRAGMA ignore_check_constraints=OFF')
-        connection.execute('PRAGMA user_version=16')
     db.initialize()
     db.initialize()
     assert cases.list(student.id) == [other, case]

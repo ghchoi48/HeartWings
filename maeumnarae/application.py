@@ -47,8 +47,6 @@ def register_page(path: Path) -> None:
         drawer.set_visibility(False)
         with ui.header().classes('items-center justify-between px-6') as header:
             with ui.row().classes('items-center gap-3'):
-                menu = ui.button(icon='menu', on_click=drawer.toggle).props('flat color=white aria-label=사이드바').tooltip('사이드바 열기/닫기')
-                menu.set_visibility(False)
                 ui.image('/app-assets/icon.ico').classes('app-logo w-9 h-9').props('no-spinner')
                 school_heading = ui.label('마음나래 · Wee클래스').classes('text-lg font-bold')
         display = DisplaySettings(path.parent / 'display-settings.json')
@@ -140,7 +138,6 @@ def register_page(path: Path) -> None:
                                   f'마음나래 · {settings.school_name} Wee클래스'
                                   if settings.school_name else '마음나래 · Wee클래스',
                               )).build(root, drawer, header)
-                    menu.set_visibility(True)
                     drawer.set_visibility(True)
                     drawer.show()
 

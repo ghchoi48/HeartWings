@@ -1,4 +1,4 @@
-"""실제 SQLCipher에서 작성자 스냅샷, 수정 및 구버전 마이그레이션 검증."""
+"""실제 SQLCipher에서 작성자 스냅샷, 수정 및 재초기화 검증."""
 
 from datetime import datetime, timezone
 
@@ -30,9 +30,10 @@ def db(tmp_path):
     return database
 
 
-def tables(connection):
+def authored_tables(connection):
+    # 첨부파일은 부모 일지에 속하며 별도의 author 열을 두지 않는다.
     return [row[0] for row in connection.execute(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")]
+        "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name != 'journal_attachments'")]
 
 
 def test_all_records_snapshot_author_and_preserve_it_on_edit(db):
@@ -79,7 +80,7 @@ def test_all_records_snapshot_author_and_preserve_it_on_edit(db):
         connection.execute("INSERT INTO home_preferences (id, layout) VALUES (1, '[]')")
         connection.execute("INSERT INTO home_todos (title) VALUES ('할 일')")
         original = {table: [dict(row) for row in connection.execute(f'SELECT rowid, author FROM "{table}"')]
-                    for table in tables(connection)}
+                    for table in authored_tables(connection)}
         assert all(rows and all(row['author'] == '첫 상담교사' for row in rows)
                    for rows in original.values())
     SchoolSettingsRepository(db).save(SchoolSettings(counselor_name='새 상담교사'))
@@ -97,20 +98,13 @@ def test_all_records_snapshot_author_and_preserve_it_on_edit(db):
     db.initialize()
     with db.session() as connection:
         assert original == {table: [dict(row) for row in connection.execute(f'SELECT rowid, author FROM "{table}"')]
-                            for table in tables(connection)}
+                            for table in authored_tables(connection)}
     assert students.create(StudentInput(name='새 학생', grade=1, classroom='1')).author == '새 상담교사'
     assert CounselingRepository(db).create(counseling_value).author == '새 상담교사'
 
 
-def test_version_26_migration_backfills_once(db):
+def test_author_preserved_on_reinitialize(db):
     student = StudentRepository(db).create(StudentInput(name='학생', grade=1, classroom='1'))
-    with db.session(write=True) as connection:
-        connection.execute('DROP TABLE student_enrollments')
-        connection.execute('ALTER TABLE students DROP COLUMN school_year')
-        for table in tables(connection):
-            connection.execute(f'DROP TRIGGER "{table}_snapshot_author"')
-            connection.execute(f'ALTER TABLE "{table}" DROP COLUMN author')
-        connection.execute('PRAGMA user_version=26')
     db.initialize()
     assert StudentRepository(db).get(student.id).author == '첫 상담교사'
     SchoolSettingsRepository(db).save(SchoolSettings(counselor_name='새 상담교사'))

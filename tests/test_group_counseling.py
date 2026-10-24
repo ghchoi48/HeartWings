@@ -48,7 +48,7 @@ async def invoke(function, *args, **kwargs):
     return function(*args, **kwargs)
 
 
-def test_group_status_migration_and_calendar_filter(tmp_path):
+def test_group_status_reinitialize_and_calendar_filter(tmp_path):
     from datetime import timedelta
     from pydantic import ValidationError
     from maeumnarae.repositories.calendar_repo import CalendarRepository
@@ -60,14 +60,11 @@ def test_group_status_migration_and_calendar_filter(tmp_path):
     value = GroupLogInput(group_id=group.id, title='회기', starts_at=start, content_html='<p>기록</p>')
     log = repo.save_log(value)
     assert log.status == 'scheduled'
-    with db.session(write=True) as connection:
-        connection.execute('ALTER TABLE group_counseling_logs DROP COLUMN status')
-        connection.execute('PRAGMA user_version=34')
     db.initialize()
     db.initialize()
-    migrated = repo.get_log(log.id)
-    assert migrated.status == 'completed'
-    assert migrated.model_dump(exclude={'status'}) == log.model_dump(exclude={'status'})
+    restored = repo.get_log(log.id)
+    assert restored.status == 'scheduled'
+    assert restored.model_dump(exclude={'status'}) == log.model_dump(exclude={'status'})
     calendars = CalendarRepository(db)
     calendar = next(c for c in calendars.list() if c.source == 'counseling')
     for status in ('scheduled', 'completed', 'cancelled'):
@@ -206,12 +203,14 @@ def test_sidebar_group_page_order_and_reuse():
         drawer = ui.left_drawer()
         content = ui.column()
         layout = AppLayout(Mock(), Mock(), Mock())
-        with patch('maeumnarae.views.group_counseling_view.ui.timer'):
+        with patch('maeumnarae.views.group_counseling_view.ui.timer'), \
+                patch('maeumnarae.views.auto_lock.ui.run_javascript'), \
+                patch('maeumnarae.repositories.legacy_import_repo.LegacyImportRepository.load_period_times', return_value={}):
             layout.build(content, drawer, header)
             assert list(layout.buttons) == [
-                'home', 'students', 'counseling', 'groups', 'psychological_tests',
+                'home', 'students', 'groups',
                 'education_events', 'special_education', 'consultation', 'calendar',
-                'statistics', 'settings', 'about']
+                'statistics', 'settings']
             layout.navigate('groups')
             view = layout.group_view
             assert layout.panels['groups'].visible
@@ -264,23 +263,11 @@ def test_membership_and_combined_timeline(tmp_path):
     assert groups.get(group.id).participants == '이전 메모'
 
 
-def test_version_eight_membership_migration_preserves_legacy_text(tmp_path):
+def test_reinitialize_preserves_group_participant_text(tmp_path):
     db = Database('migration-members', tmp_path / 'legacy-groups.db')
     db.initialize()
     repo = GroupCounselingRepository(db)
     group = repo.save(GroupCounselingInput(name='기존 집단', participants='이름만 적어 둔 참여자'))
-    with db.session(write=True) as connection:
-        connection.execute('DROP TABLE group_counseling_members')
-        connection.execute('ALTER TABLE counseling_groups DROP COLUMN period')
-        connection.execute('ALTER TABLE counseling_groups DROP COLUMN counseling_area')
-        # 이전 버전에는 첨부 테이블이 없으므로 부모 테이블보다 먼저 제거한다.
-        connection.execute('DROP TABLE IF EXISTS journal_attachments')
-        connection.execute('DROP TABLE special_education_logs')
-        connection.execute('DROP TABLE special_educations')
-        connection.execute('DROP TABLE consultations')
-        connection.execute('DROP TABLE teachers')
-        connection.execute('DROP TABLE IF EXISTS education_events')
-        connection.execute('PRAGMA user_version=8')
     db.initialize()
     db.initialize()
     restored = repo.get(group.id)
@@ -308,22 +295,11 @@ def test_group_period_and_area_round_trip(tmp_path):
     assert cleared.period == cleared.counseling_area == ''
 
 
-def test_version_nine_group_fields_migration(tmp_path):
+def test_group_fields_survive_reinitialize(tmp_path):
     db = Database('test-v9', tmp_path / 'v9.db')
     db.initialize()
     repo = GroupCounselingRepository(db)
     old = repo.save(GroupCounselingInput(name='기존 집단', purpose='기존 목표'))
-    with db.session(write=True) as connection:
-        connection.execute('ALTER TABLE counseling_groups DROP COLUMN period')
-        connection.execute('ALTER TABLE counseling_groups DROP COLUMN counseling_area')
-        # 이전 버전에는 첨부 테이블이 없으므로 부모 테이블보다 먼저 제거한다.
-        connection.execute('DROP TABLE IF EXISTS journal_attachments')
-        connection.execute('DROP TABLE special_education_logs')
-        connection.execute('DROP TABLE special_educations')
-        connection.execute('DROP TABLE consultations')
-        connection.execute('DROP TABLE teachers')
-        connection.execute('DROP TABLE IF EXISTS education_events')
-        connection.execute('PRAGMA user_version=9')
     db.initialize()
     db.initialize()
     assert repo.get(old.id) == old

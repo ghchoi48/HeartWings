@@ -13,17 +13,12 @@ from maeumnarae.repositories.psychological_test_repo import PsychologicalTestRep
 from maeumnarae.views.psychological_test_view import PsychologicalTestView
 
 
-def test_storage_and_migration(tmp_path):
+def test_storage_and_reinitialize(tmp_path):
     db = Database('test-only', tmp_path / 'tests.db')
     db.initialize()
     students = StudentRepository(db)
     first = students.create(StudentInput(name='첫 학생', grade=1, classroom='1'))
     second = students.create(StudentInput(name='다른 학생', grade=2, classroom='2'))
-    with db.session(write=True) as connection:
-        # 이전 버전에는 첨부 테이블이 없으므로 부모 테이블보다 먼저 제거한다.
-        connection.execute('DROP TABLE IF EXISTS journal_attachments')
-        connection.execute('DROP TABLE psychological_tests')
-        connection.execute('PRAGMA user_version=17')
     db.initialize()
     repo = PsychologicalTestRepository(db)
     value = PsychologicalTestInput(student_id=first.id, title='성격 검사', test_date='2026-10-20', content='결과\n소견')
@@ -77,16 +72,12 @@ def test_student_selection_and_stale_response():
     asyncio.run(check())
 
 
-def test_editor_fields_storage_and_legacy_migration(tmp_path):
+def test_editor_fields_storage_and_legacy_reinitialize(tmp_path):
     db = Database('test-only', tmp_path / 'legacy-tests.db')
     db.initialize()
     student = StudentRepository(db).create(StudentInput(name='학생', grade=1, classroom='1'))
     repo = PsychologicalTestRepository(db)
     saved = repo.save(PsychologicalTestInput(student_id=student.id, title='직접 입력한 검사', test_date='2026-10-20'))
-    with db.session(write=True) as connection:
-        for column in ('target', 'test_time', 'duration_minutes'):
-            connection.execute(f'ALTER TABLE psychological_tests DROP COLUMN {column}')
-        connection.execute('PRAGMA user_version=19')
     db.initialize()
     restored = repo.list(student.id)[0]
     assert restored.id == saved.id

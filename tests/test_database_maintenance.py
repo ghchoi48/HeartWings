@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-from maeumnarae.core.database import Database, DatabaseError, DatabaseOpenError
+from maeumnarae.core.database import Database, DatabaseError, DatabaseOpenError, SCHEMA_VERSION
 from maeumnarae.core.models import SchoolSettings, StudentInput
 from maeumnarae.repositories.student_repo import StudentRepository
 from maeumnarae.services.database_maintenance import create_backup, database_info, restore_backup
@@ -35,7 +35,7 @@ def test_backup_is_encrypted_complete_and_does_not_change_original(tmp_path):
         student_names(Database('wrong', path))
     info = database_info(database)
     assert info['students'] == 1
-    assert info['schema_version'] == 29
+    assert info['schema_version'] == SCHEMA_VERSION
     assert info['size'] == database.path.stat().st_size
     assert Path(info['path']) == database.path.resolve()
 
@@ -122,17 +122,17 @@ def test_auto_backup_failure_prevents_replacement(tmp_path):
     assert student_names(current) == ['Original']
 
 
-def test_restore_from_older_schema_migrates_only_copy(tmp_path):
+def test_restore_rejects_pre_release_schema_without_changing_files(tmp_path):
     current = make_database(tmp_path / 'current.db')
     source = make_database(tmp_path / 'source.db', 'backup-key', 'Restored')
     with source.session(write=True) as connection:
-        connection.execute('DROP TABLE student_enrollments')
-        connection.execute('ALTER TABLE students DROP COLUMN school_year')
-        connection.execute('PRAGMA user_version=25')
-    recovery = restore_backup(current, source.path.read_bytes(), 'backup-key')
-    assert recovery.exists()
-    assert database_info(Database('backup-key', current.path))['schema_version'] == 29
-    assert database_info(source)['schema_version'] == 25
+        connection.execute('PRAGMA user_version=38')
+    before = current.path.read_bytes()
+    source_before = source.path.read_bytes()
+    with pytest.raises(DatabaseError, match='지원'):
+        restore_backup(current, source_before, 'backup-key')
+    assert current.path.read_bytes() == before
+    assert source.path.read_bytes() == source_before
 
 
 def test_locked_database_rejects_backup_and_restore(tmp_path):
