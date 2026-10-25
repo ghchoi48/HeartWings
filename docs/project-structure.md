@@ -119,6 +119,9 @@
 | [`maeumnarae/widgets/teacher_search.py`](../maeumnarae/widgets/teacher_search.py) | 기존 교사 명부를 검색해 연락처와 담당 업무를 확인한다. |
 | [`maeumnarae/widgets/todo_list.py`](../maeumnarae/widgets/todo_list.py) | 목록별 할 일과 완료 내역, 기한·우선순위를 관리한다. |
 | [`maeumnarae/widgets/weather.py`](../maeumnarae/widgets/weather.py) | 기기 위치 또는 직접 선택한 지역의 일간·주간 날씨. |
+| [`maeumnarae/widgets/scheduled_journals.py`](../maeumnarae/widgets/scheduled_journals.py) | 한국 시각 오늘까지 예약 상태인 미작성 일지 총건수와 종류별 건수. |
+| [`maeumnarae/widgets/school_timetable.py`](../maeumnarae/widgets/school_timetable.py) | 학교 시정표 편집과 현재 교시 강조 표시. |
+| [`maeumnarae/services/school_timetable.py`](../maeumnarae/services/school_timetable.py) | 시정표 시간 형식·순서·겹침 검증. |
 
 ## 테스트
 

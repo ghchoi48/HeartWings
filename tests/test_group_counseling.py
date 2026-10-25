@@ -454,8 +454,7 @@ async def test_attendance_table_edits_are_saved(existing):
             else:
                 assert [row['student_id'] for row in table.rows] == [10, 20]
                 assert not any(row['attended'] for row in table.rows)
-                title = next(e for e in dialog.descendants() if isinstance(e, ui.input) and e.label == '일지 제목')
-                title.value = '새 회기'
+            assert not any(isinstance(e, ui.input) and e.label == '일지 제목' for e in dialog.descendants())
             change = next(e.handler for e in table._event_listeners.values() if e.type == 'attendance_change')
             student_id = table.rows[0]['student_id']
             change(SimpleNamespace(args=dict(student_id=student_id, field='attended', value=True)))
@@ -468,6 +467,7 @@ async def test_attendance_table_edits_are_saved(existing):
         with patch.object(ui.dialog, '__await__', lambda dialog: interact(dialog).__await__()):
             await view.open_editor(log=True, log_id=1 if existing else None)
         value = repo.save_log.call_args.args[0]
+        assert value.title == (log.title if existing else group.name)
         assert value.attendance[0].attended
         assert value.attendance[0].attitude == '표에서 입력한 태도'
         assert value.attendance[0].student_id == (30 if existing else 10)

@@ -2,14 +2,16 @@
 
 import json
 from copy import deepcopy
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from maeumnarae.core.database import Database, DatabaseError, NotFoundError
 from maeumnarae.core.settings_store import SettingsStore
 from maeumnarae.views.home_layout import COLUMNS, MIN_HEIGHT, MAX_HEIGHT, DEFAULT_SIZES
 from maeumnarae.views.counseling_content import clean_html
+from maeumnarae.services.school_timetable import normalize_timetable
+from maeumnarae.repositories._support import utc_text
 
-WIDGET_KINDS = ('clock', 'todo', 'teacher_search', 'meal', 'memo', 'weather')
+WIDGET_KINDS = ('clock', 'todo', 'teacher_search', 'meal', 'memo', 'weather', 'scheduled_journals', 'school_timetable')
 DEFAULT_LAYOUT = [{'id': kind, 'kind': kind, 'span': 1} for kind in ('clock', 'meal', 'todo')]
 
 
@@ -99,6 +101,25 @@ class HomeRepository:
 
     def layout(self) -> list[dict]:
         return self._read()['layout']
+
+    def scheduled_journal_counts(self):
+        """한국 시각 오늘까지의 예약 일지만 집계하며 제목·본문 등은 읽지 않는다."""
+        tomorrow = datetime.now(timezone(timedelta(hours=9))).replace(
+            hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        with self.database.session() as connection:
+            return dict(connection.execute('''
+                SELECT '개인상담', count(*) FROM counseling WHERE status='scheduled' AND starts_at < :end
+                UNION ALL SELECT '집단상담', count(*) FROM group_counseling_logs WHERE status='scheduled' AND starts_at < :end
+                UNION ALL SELECT '자문', count(*) FROM consultations WHERE status='scheduled' AND starts_at < :end
+                UNION ALL SELECT '특별교육', count(*) FROM special_education_logs WHERE status='scheduled' AND starts_at < :end
+            ''', {'end': utc_text(tomorrow)}).fetchall())
+
+    def school_timetable(self):
+        return normalize_timetable(self._read().get('school_timetable', []))
+
+    def save_school_timetable(self, rows):
+        normalized = normalize_timetable(rows)
+        self._update(lambda widgets: widgets.update(school_timetable=normalized))
 
     @staticmethod
     def normalize_layout(layout: list[dict]) -> list[dict]:

@@ -333,17 +333,17 @@ class SpecialEducationView(CounselingView):
             # 공용 일지 저장 흐름에 전달할 유형은 화면에서 편집하지 않는다.
             fields['category'] = ui.input(value=initial['category'])
             fields['category'].set_visibility(False)
-            with ui.row().classes('w-full items-start'):
-                fields['starts_on'] = ui.date_input('교육 날짜', value=local_start.date().isoformat()).props('outlined').classes('grow')
-                fields['starts_time'] = time_input('시간', value=local_start.time().isoformat()).props('outlined').classes('grow')
-                fields['duration_minutes'] = ui.number('교육 시간 (분)', value=initial['duration_minutes'], min=1, max=1440, step=1).props('outlined').classes('w-36')
+            with ui.grid(columns=5).classes('w-full gap-4 items-start'):
+                fields['starts_on'] = ui.date_input('교육 날짜', value=local_start.date().isoformat()).props('outlined').classes('w-full min-w-0')
+                fields['starts_time'] = time_input('시간', value=local_start.time().isoformat()).props('outlined').classes('w-full min-w-0')
+                fields['duration_minutes'] = ui.number('교육 시간 (분)', value=initial['duration_minutes'], min=1, max=1440, step=1).props('outlined').classes('w-full min-w-0')
                 target = normalize_target(initial.get('counseling_target', ''))
                 fields['counseling_target'] = ui.select(
                     TARGET_LABELS, label='교육 대상', value=target if target in TARGET_LABELS else None,
-                ).props('outlined clearable').classes('grow')
-                if target and target not in TARGET_LABELS:
-                    ui.label(f'기존 교육 대상: {target}. 교육 대상을 다시 선택해 주세요.').classes('text-sm text-amber-700')
-                fields['status'] = ui.select(STATUSES, label='교육 상태', value=initial['status']).props('outlined').classes('w-36')
+                ).props('outlined clearable').classes('w-full min-w-0')
+                fields['status'] = ui.select(STATUSES, label='교육 상태', value=initial['status']).props('outlined').classes('w-full min-w-0')
+            if target and target not in TARGET_LABELS:
+                ui.label(f'기존 교육 대상: {target}. 교육 대상을 다시 선택해 주세요.').classes('text-sm text-amber-700')
             with ui.column().classes('w-full gap-3'):
                 ui.label('교육 내용').classes('font-semibold')
                 fields['content_markdown'] = ui.editor(

@@ -143,8 +143,20 @@ class Weather:
                         self.temperatures(day['low'], day['high'])
             ui.label(f'기준 {self.data["time"].replace("T", " ")} · 해당 지역 시각 · °C').classes('text-xs text-slate-500')
 
+    async def open_settings(self):
+        with ui.dialog() as dialog, ui.card().classes('w-full max-w-lg p-6 gap-4'):
+            self.build_settings()
+            ui.button('닫기', on_click=lambda: dialog.submit(None)).props('flat').classes('self-end')
+        try:
+            await dialog
+            if not self.body.is_deleted:
+                await self.load()
+        finally:
+            if not dialog.is_deleted:
+                dialog.delete()
+
     def build_settings(self):
-        """배치 편집의 위젯 카드 안에 지역 설정을 표시한다."""
+        """설정 대화상자에 지역 설정을 표시한다."""
         with ui.column().classes('w-full gap-2') as settings:
             ui.label('날씨 지역 설정').classes('font-semibold')
             current = ui.label('설정을 불러오는 중입니다…').classes('text-sm text-slate-500')

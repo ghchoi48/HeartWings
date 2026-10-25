@@ -50,7 +50,12 @@ class HomeView:
                 background-image: linear-gradient(to right, #cbd5e155 1px, transparent 1px),
                     linear-gradient(to bottom, #cbd5e155 1px, transparent 1px);
                 background-size: calc(var(--home-cell) + 8px) calc(var(--home-cell) + 8px); }
-            .home-widget { min-width: 0; width: 100%; position: relative; overflow: auto; }
+            .home-widget { min-width: 0; width: 100%; position: relative; overflow: hidden;
+                flex-wrap: nowrap; }
+            .home-widget-header { height: 36px; min-height: 36px; flex: 0 0 36px; }
+            .home-widget-content { flex: 1 1 0%; min-width: 0; min-height: 0;
+                overflow: auto; flex-wrap: nowrap; }
+            .home-widget-content > :not(.memo-editor) { flex-shrink: 0; }
             .home-drag-handle { cursor: grab; touch-action: none; user-select: none; }
             .home-drag-handle:active { cursor: grabbing; }
             .home-resize-handle { position: absolute; z-index: 2; touch-action: none;
@@ -134,6 +139,8 @@ class HomeView:
                         ui.label('위젯 편집을 눌러 위젯을 추가하세요.')
             for index, item in enumerate(self.layout):
                 widget = WIDGETS[item['kind']]
+                view = widget(self.repository, self.teachers, item['id'], self.refresh_todos)
+                self.widget_views.append(view)
                 with ui.card().classes('home-widget rounded-2xl shadow-sm p-4 gap-3').style(
                         f'grid-column: {item["x"] + 1} / span {item["width"]}; '
                         f'grid-row: {item["y"] + 1} / span {row_span(item)}; '
@@ -141,20 +148,21 @@ class HomeView:
                         f'--home-mobile-height: {item["height"]}px').props(
                         f'data-kind={item["kind"]} data-instance={item["id"]} data-width={item["width"]} '
                         f'data-height={item["height"]} data-x={item["x"]} data-y={item["y"]}'):
-                    with ui.row().classes('w-full items-center flex-nowrap gap-2' + (' home-drag-handle' if self.editing else '')) as header:
+                    with ui.row().classes('home-widget-header w-full items-center flex-nowrap gap-2' + (' home-drag-handle' if self.editing else '')) as header:
                         if self.editing:
                             ui.icon('drag_indicator').classes('shrink-0 text-slate-400')
                         ui.icon(widget.icon, size='24px').classes('shrink-0 text-teal-700')
-                        ui.label(widget.title).classes('min-w-0 break-words font-bold text-slate-800')
+                        ui.label(widget.title).classes('min-w-0 truncate font-bold text-slate-800').tooltip(widget.title)
+                        if self.editing:
+                            ui.space()
+                            ui.button(icon='delete_outline', on_click=lambda index=index: self.remove(index)).props(
+                                f'flat round dense color=negative aria-label="{widget.title} 위젯 삭제"').classes('shrink-0').tooltip('위젯 삭제 (데이터는 보존)')
+                            if hasattr(view, 'open_settings'):
+                                ui.button(icon='edit', on_click=view.open_settings).props(
+                                    f'flat round dense aria-label="{widget.title} 설정 수정"').classes('shrink-0').tooltip('설정 수정')
                     if self.editing:
                         header.props(f'tabindex=0 role=button aria-label="{widget.title} 위치 이동"')
                         self.bind_geometry(header, item['id'])
-                        with ui.row().classes('w-full gap-2'):
-                            ui.button(icon='delete_outline', on_click=lambda index=index: self.remove(index)).props(
-                                f'flat round color=negative aria-label="{widget.title} 위젯 삭제"').tooltip('위젯 삭제 (데이터는 보존)')
-                        if hasattr(widget, 'build_settings'):
-                            view = widget(self.repository, self.teachers, item['id'], self.refresh_todos)
-                            view.build_settings()
                         for axis, label, icon in (('x', '너비 조절', 'drag_indicator'),
                                                   ('y', '높이 조절', 'drag_handle'),
                                                   ('xy', '크기 조절', 'open_in_full')):
@@ -162,9 +170,7 @@ class HomeView:
                                     f'type=button data-resize-axis={axis} aria-label="{widget.title} {label}"') as handle:
                                 ui.icon(icon, size='16px').classes('pointer-events-none')
                             self.bind_geometry(handle, item['id'])
-                    else:
-                        view = widget(self.repository, self.teachers, item['id'], self.refresh_todos)
-                        self.widget_views.append(view)
+                    with ui.column().classes('home-widget-content w-full gap-3'):
                         view.build()
 
     async def refresh_todos(self, source):

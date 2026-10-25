@@ -274,11 +274,11 @@ class ConsultationView:
             ui.label(f'{teacher.name} 선생님').classes('text-slate-500')
             fields['consultation_area'] = ui.select(CONSULTATION_AREAS, label='자문 분야',
                 value=initial['consultation_area'] or None).props('outlined').classes('w-full')
-            with ui.row().classes('w-full items-start'):
-                fields['starts_on'] = ui.date_input('자문 날짜', value=local_start.date().isoformat()).props('outlined').classes('grow')
-                fields['starts_time'] = time_input('시작 시각 (한국 시각)', value=local_start.time().isoformat()).props('outlined').classes('grow')
-                fields['duration_minutes'] = ui.number('자문 시간 (분)', value=initial['duration_minutes'], min=1, max=1440, step=1).props('outlined').classes('w-36')
-                fields['status'] = ui.select(STATUSES, label='자문 상태', value=initial['status']).props('outlined').classes('w-36')
+            with ui.grid(columns=4).classes('w-full gap-4 items-start'):
+                fields['starts_on'] = ui.date_input('자문 날짜', value=local_start.date().isoformat()).props('outlined').classes('w-full min-w-0')
+                fields['starts_time'] = time_input('시작 시각 (한국 시각)', value=local_start.time().isoformat()).props('outlined').classes('w-full min-w-0')
+                fields['duration_minutes'] = ui.number('자문 시간 (분)', value=initial['duration_minutes'], min=1, max=1440, step=1).props('outlined').classes('w-full min-w-0')
+                fields['status'] = ui.select(STATUSES, label='자문 상태', value=initial['status']).props('outlined').classes('w-full min-w-0')
             ui.label('자문 내용').classes('font-semibold')
             fields['content_html'] = ui.editor(value=clean_html(initial['content_html']), placeholder='자문 내용을 입력하세요.').classes('w-full').props(
                 """min-height=320px :toolbar='[["bold", "italic", "underline", "strike"], ["unordered", "ordered"], ["left", "center", "right"], ["undo", "redo"]]'""")

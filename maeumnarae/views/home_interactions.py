@@ -50,6 +50,7 @@ POINTER = r'''(event) => {
 }'''
 
 KEYBOARD = r'''(event) => {
+    if (event.target.closest('.q-btn')) return;
     if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
     event.preventDefault();
     const handle = event.currentTarget;

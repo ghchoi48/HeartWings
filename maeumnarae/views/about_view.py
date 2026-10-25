@@ -32,7 +32,7 @@ def build_about() -> None:
     ui.label('항목을 펼치면 저작권 고지와 라이선스 전문을 확인할 수 있습니다.').classes('text-sm text-slate-500')
     notices = third_party_notices()
     for category, title in (('libraries', '라이브러리'), ('fonts', '폰트')):
-        with ui.expansion(title, icon='description', value=True).classes('w-full'):
+        with ui.expansion(title, icon='description', value=False).classes('w-full'):
             for notice in notices[category]:
                 heading = notice['name']
                 if notice.get('version'):

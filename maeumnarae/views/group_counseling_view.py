@@ -239,7 +239,6 @@ class GroupCounselingView:
                     if log:
                         ui.label(group.name).classes('text-slate-500')
                         local_start = entry.starts_at.astimezone(KST) if entry else datetime.now(KST).replace(second=0, microsecond=0)
-                        fields['title'] = ui.input('일지 제목', value=entry.title if entry else '').props('outlined maxlength=200').classes('w-full')
                         with ui.grid(columns=4).classes('w-full gap-4'):
                             fields['starts_on'] = ui.date_input('상담 날짜', value=local_start.date().isoformat()).props('outlined').classes('w-full min-w-0')
                             fields['starts_time'] = time_input('시작 시각 (한국 시각)', value=local_start.time().isoformat()).props('outlined').classes('w-full min-w-0')
@@ -349,6 +348,7 @@ class GroupCounselingView:
                             raise ValueError('한국 시각을 입력하세요.')
                         data['starts_at'] = data['starts_at'].replace(tzinfo=KST)
                         data['content_html'] = clean_html(data['content_html'] or '')
+                        data['title'] = entry.title if entry else group.name
                         value = GroupLogInput(group_id=group.id, **data)
                     else:
                         data['student_ids'] = data.get('student_ids') or []
@@ -359,7 +359,7 @@ class GroupCounselingView:
                         data['counseling_area'] = data.get('counseling_area') or ''
                         value = GroupCounselingInput(**data)
                 except (ValueError, TypeError):
-                    message.text = ('일지 제목, 날짜·시각, 상담 시간(1~1440분)과 입력 길이를 확인해 주세요.' if log else
+                    message.text = ('날짜·시각, 상담 시간(1~1440분)과 입력 길이를 확인해 주세요.' if log else
                                     '집단명과 입력 길이를 확인해 주세요. 운영 기간은 YYYY-MM-DD 또는 YYYY-MM-DD - YYYY-MM-DD 형식이며 종료일은 시작일 이후여야 합니다.')
                     return
                 saving = True

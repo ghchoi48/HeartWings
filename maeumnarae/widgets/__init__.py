@@ -6,5 +6,8 @@ from maeumnarae.widgets.meal import Meal
 from maeumnarae.widgets.digital_clock import DigitalClock
 from maeumnarae.widgets.todo_list import TodoList
 from maeumnarae.widgets.teacher_search import TeacherSearch
+from maeumnarae.widgets.scheduled_journals import ScheduledJournals
+from maeumnarae.widgets.school_timetable import SchoolTimetable
 
-WIDGETS = {widget.kind: widget for widget in (DigitalClock, TodoList, TeacherSearch, Meal, Memo, Weather)}
+WIDGETS = {widget.kind: widget for widget in (DigitalClock, TodoList, TeacherSearch, Meal, Memo, Weather,
+                                           ScheduledJournals, SchoolTimetable)}

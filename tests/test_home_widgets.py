@@ -1,6 +1,9 @@
 """홈 저장소의 지속성, 마이그레이션, 검색 범위와 배치 실패 복원 검증."""
 
+import asyncio
+import inspect
 import json
+from datetime import datetime, timezone
 import unittest
 from unittest.mock import Mock, patch
 
@@ -9,13 +12,23 @@ from nicegui import Client, ui
 from nicegui.page import page
 
 from maeumnarae.core.database import Database, DatabaseError
-from maeumnarae.core.models import TeacherInput
-from maeumnarae.repositories.home_repo import DEFAULT_LAYOUT, HomeRepository
+from maeumnarae.core.models import (TeacherInput, StudentInput, CounselingInput, GroupCounselingInput,
+                                   GroupLogInput, ConsultationInput, SpecialEducationInput)
+from maeumnarae.repositories.home_repo import DEFAULT_LAYOUT, HomeRepository, WIDGET_KINDS
 from maeumnarae.repositories.teacher_repo import TeacherRepository
 from maeumnarae.views.home_view import HomeView
 from maeumnarae.views.display_settings import DisplaySettings
 from maeumnarae.core.settings_store import SettingsStore
-from maeumnarae.views.home_layout import arrange, overlaps
+from maeumnarae.views.home_layout import arrange, overlaps, DEFAULT_SIZES
+from maeumnarae.repositories.student_repo import StudentRepository
+from maeumnarae.repositories.counseling_repo import CounselingRepository
+from maeumnarae.repositories.group_counseling_repo import GroupCounselingRepository
+from maeumnarae.repositories.consultation_repo import ConsultationRepository
+from maeumnarae.repositories.special_education_repo import SpecialEducationRepository, SpecialEducationLogRepository
+from maeumnarae.services.school_timetable import normalize_timetable
+from maeumnarae.widgets import WIDGETS
+from maeumnarae.widgets.scheduled_journals import ScheduledJournals
+from maeumnarae.widgets.school_timetable import SchoolTimetable, active_period, KST
 
 
 def test_reinitialize_and_home_persistence(tmp_path):
@@ -164,6 +177,35 @@ class HomeViewTests(unittest.IsolatedAsyncioTestCase):
             host.delete()
 
 
+
+    async def test_edit_mode_keeps_contents_and_header_settings(self):
+        with Client(page('/home-edit-contents')), patch('maeumnarae.views.home_view.ui.timer'):
+            view = HomeView(Mock(), Mock(), Mock())
+            view.build()
+            view.layout = arrange([
+                dict(id=kind, kind=kind, width=8, height=400)
+                for kind in ('scheduled_journals', 'weather', 'school_timetable')
+            ])
+            view.editing = True
+            view.render()
+            assert len(view.widget_views) == 3
+            assert all(not widget.body.is_deleted for widget in view.widget_views)
+            cards = [element for element in view.grid.descendants() if 'home-widget' in element.classes]
+            for card in cards:
+                header = next(iter(card))
+                buttons = [element for element in header.descendants() if isinstance(element, ui.button)]
+                expected = ['delete_outline']
+                if card.props['data-kind'] != 'scheduled_journals':
+                    expected.append('edit')
+                assert [button.props['icon'] for button in buttons] == expected
+            view.editing = False
+            view.render()
+            assert len(view.widget_views) == 3
+            assert not any(isinstance(element, ui.button) and
+                           element.props.get('icon') in ('edit', 'delete_outline')
+                           for element in view.grid.descendants())
+
+
 def test_multiple_todo_lists_due_priority_and_completion(tmp_path):
     db = Database('test-password', tmp_path / 'lists.db')
     db.initialize()
@@ -302,3 +344,141 @@ def test_widget_addition_only_while_editing():
         assert not any(isinstance(e, ui.number) for e in dialogs[0].descendants())
         view.toggle_edit()
         assert not view.add_button.visible
+
+
+SCHEDULE = [dict(label='1교시', start='09:00', end='09:50'),
+            dict(label='2교시', start='10:00', end='10:50')]
+
+
+@pytest.fixture
+def home(tmp_path):
+    db = Database('test-only', tmp_path / 'home.db')
+    db.initialize()
+    return HomeRepository(db)
+
+
+async def inline(function, *args, **kwargs):
+    return function(*args, **kwargs)
+
+
+def test_scheduled_counts_through_today_and_status_changes(home):
+    db = home.database
+    assert home.scheduled_journal_counts() == {'개인상담': 0, '집단상담': 0, '자문': 0, '특별교육': 0}
+    student = StudentRepository(db).create(StudentInput(name='테스트 학생', grade=1, classroom='1'))
+    teacher = TeacherRepository(db).save(TeacherInput(name='테스트 교사'))
+    group_repo = GroupCounselingRepository(db)
+    group = group_repo.save(GroupCounselingInput(name='집단'))
+    special = SpecialEducationRepository(db).save(SpecialEducationInput(student_id=student.id, title='교육', law='교원지위법'))
+    for starts_at, status in [
+        (datetime(2020, 1, 1, tzinfo=KST), 'scheduled'),
+        (datetime(2026, 10, 25, 23, 59, 59, 999999, tzinfo=KST), 'scheduled'),
+        (datetime(2026, 10, 26, tzinfo=KST), 'scheduled'),
+        (datetime(2030, 1, 1, tzinfo=KST), 'scheduled'),
+        (datetime(2026, 1, 1, tzinfo=KST), 'completed'),
+        (datetime(2026, 1, 1, tzinfo=KST), 'cancelled'),
+    ]:
+        common = dict(title='제목', starts_at=starts_at, status=status)
+        CounselingRepository(db).create(CounselingInput(student_id=student.id, **common))
+        group_repo.save_log(GroupLogInput(group_id=group.id, **common))
+        ConsultationRepository(db).save(ConsultationInput(teacher_id=teacher.id, **common))
+        SpecialEducationLogRepository(db).create(CounselingInput(student_id=student.id, case_id=special.id, **common))
+    with patch('maeumnarae.repositories.home_repo.datetime') as clock:
+        # UTC 날짜는 전날이지만 한국 시각으로는 25일이며, 오늘 늦은 예약도 포함한다.
+        clock.now.return_value = datetime(2026, 10, 25, 0, 30, tzinfo=KST)
+        assert home.scheduled_journal_counts() == {'개인상담': 2, '집단상담': 2, '자문': 2, '특별교육': 2}
+    with db.session(write=True) as connection:
+        connection.execute("UPDATE counseling SET status='completed' WHERE status='scheduled'")
+    assert home.scheduled_journal_counts()['개인상담'] == 0
+
+
+def test_widget_registration_and_timetable_persistence(home):
+    assert set(WIDGETS) == set(WIDGET_KINDS) == set(DEFAULT_SIZES)
+    home.save_layout([dict(id=kind, kind=kind, width=8, height=400)
+                      for kind in ('scheduled_journals', 'school_timetable')])
+    assert home.school_timetable() == []
+    home.save_school_timetable(list(reversed(SCHEDULE)))
+    reopened = HomeRepository(home.database)
+    assert reopened.school_timetable() == SCHEDULE
+    assert len(reopened.layout()) == 2
+    with pytest.raises(ValueError, match='겹칩니다'):
+        home.save_school_timetable([SCHEDULE[0], dict(label='겹치는 교시', start='09:30', end='10:30')])
+    assert reopened.school_timetable() == SCHEDULE
+    home.save_school_timetable([])
+    assert reopened.school_timetable() == []
+
+
+@pytest.mark.parametrize('row', [
+    dict(label='', start='09:00', end='10:00'),
+    dict(label='교시', start='', end='10:00'),
+    dict(label='교시', start='24:00', end='25:00'),
+    dict(label='교시', start='10:00', end='09:00'),
+    dict(label='교시', start='10:00', end='10:00'),
+])
+def test_timetable_rejects_invalid_rows(row):
+    with pytest.raises(ValueError):
+        normalize_timetable([row])
+
+
+def test_active_period_uses_korean_time_and_excludes_end():
+    assert active_period(SCHEDULE, datetime(2026, 10, 26, 0, 0, tzinfo=timezone.utc)) == SCHEDULE[0]
+    assert active_period(SCHEDULE, datetime(2026, 10, 26, 9, 49, 59, tzinfo=KST)) == SCHEDULE[0]
+    assert active_period(SCHEDULE, datetime(2026, 10, 26, 9, 50, tzinfo=KST)) is None
+    assert active_period(SCHEDULE, datetime(2026, 10, 26, 10, 0, tzinfo=KST)) == SCHEDULE[1]
+    assert active_period([], datetime.now(KST)) is None
+    assert normalize_timetable([SCHEDULE[0], dict(label='연속 활동', start='09:50', end='10:00')])
+
+
+def test_scheduled_widget_refresh_error_and_recovery():
+    async def check():
+        home = Mock()
+        home.scheduled_journal_counts.return_value = {'개인상담': 2, '집단상담': 1, '자문': 0, '특별교육': 3}
+        with Client(page('/scheduled-widget')), patch('maeumnarae.widgets.scheduled_journals.ui.timer'), \
+                patch('maeumnarae.widgets.scheduled_journals.run.io_bound', side_effect=inline):
+            widget = ScheduledJournals(home, None)
+            widget.build()
+            await widget.reload()
+            labels = [e.text for e in widget.body.descendants() if isinstance(e, ui.label)]
+            assert '6' in labels and '3건' in labels
+            home.scheduled_journal_counts.side_effect = DatabaseError('집계 실패')
+            await widget.reload()
+            assert '집계 실패' in [e.text for e in widget.body.descendants() if isinstance(e, ui.label)]
+            assert widget.refresh.enabled and not widget.busy
+            home.scheduled_journal_counts.side_effect = None
+            home.scheduled_journal_counts.return_value = dict.fromkeys(['개인상담', '집단상담', '자문', '특별교육'], 0)
+            await widget.reload()
+            assert '미작성 일지가 없습니다.' in [e.text for e in widget.body.descendants() if isinstance(e, ui.label)]
+    asyncio.run(check())
+
+
+def test_timetable_editor_validates_preserves_input_and_saves(home):
+    async def check():
+        with Client(page('/timetable-editor')), patch('maeumnarae.widgets.school_timetable.ui.timer'), \
+                patch('maeumnarae.widgets.school_timetable.run.io_bound', side_effect=inline):
+            widget = SchoolTimetable(home, None)
+            widget.build()
+            await widget.reload()
+
+            async def interact(dialog):
+                fields = {e.label: e for e in dialog.descendants() if isinstance(e, (ui.input, ui.time_input))}
+                fields['교시/활동'].value = '1교시'
+                fields['시작 시각'].value = '오전 09:00'
+                fields['종료 시각'].value = '오전 08:00'
+                button = next(e for e in dialog.descendants() if isinstance(e, ui.button) and e.text == '저장')
+                handler = next(e.handler for e in button._event_listeners.values() if e.type == 'click')
+                save = inspect.getclosurevars(handler).nonlocals['callback']
+                await save()
+                assert not dialog.submitted.is_set()
+                assert fields['교시/활동'].value == '1교시' and button.enabled
+                assert home.school_timetable() == []
+                fields['종료 시각'].value = '오전 09:50'
+                with patch.object(home, 'save_school_timetable', side_effect=DatabaseError('저장 실패')):
+                    await save()
+                assert not dialog.submitted.is_set() and button.enabled
+                await save()
+                return dialog._result
+
+            with patch.object(ui.dialog, '__await__', lambda dialog: interact(dialog).__await__()):
+                await widget.open_settings()
+            assert home.school_timetable() == [SCHEDULE[0]]
+            assert widget.rows == [SCHEDULE[0]] and not widget.editing
+    asyncio.run(check())
