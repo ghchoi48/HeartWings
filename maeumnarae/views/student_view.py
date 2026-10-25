@@ -14,6 +14,7 @@ from maeumnarae.repositories.counseling_repo import CounselingRepository
 from maeumnarae.repositories.student_repo import StudentRepository
 from maeumnarae.repositories.school_settings_repo import SchoolSettingsRepository
 from maeumnarae.views.student_list import StudentList
+from maeumnarae.views.counseling_view import TARGET_LABELS, normalize_target
 
 KST = timezone(timedelta(hours=9))
 PAGE_SIZE = 10
@@ -196,6 +197,8 @@ class StudentView:
             with self.timeline:
                 for entry in entries[:PAGE_SIZE]:
                     date_label = entry.starts_at.astimezone(KST).strftime('%Y.%m.%d %H:%M')
+                    target = normalize_target(entry.counseling_target)
+                    target_label = TARGET_LABELS.get(target, target) or '미입력'
                     with ui.timeline_entry(title=date_label,
                                            icon={'group': 'groups', 'special_education': 'menu_book'}.get(entry.kind, 'chat_bubble_outline')):
                         if entry.kind == 'group':
@@ -203,13 +206,13 @@ class StudentView:
                             ui.label(entry.title).classes('text-sm text-slate-500')
                         elif entry.kind == 'special_education':
                             ui.label(f'특별교육 · {entry.education_name} · {entry.duration_minutes}분').classes('text-sm text-slate-500')
-                            ui.label(f'교육 대상: {entry.counseling_target or "미입력"}').classes('text-sm text-slate-500')
+                            ui.label(f'교육 대상: {target_label}').classes('text-sm text-slate-500')
                         else:
                             ui.label(
                                 f'{entry.counseling_area or "미지정"} · {entry.category} · {entry.duration_minutes}분'
                             ).classes('text-sm text-slate-500')
                             ui.label(
-                                f'{entry.counseling_method or "미입력"} · {entry.counseling_target or "미입력"}'
+                                f'{entry.counseling_method or "미입력"} · {target_label}'
                             ).classes('text-sm text-slate-500')
             self.timeline_offset += min(len(entries), PAGE_SIZE)
             self.timeline_more = len(entries) > PAGE_SIZE

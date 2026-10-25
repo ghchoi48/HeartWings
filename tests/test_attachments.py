@@ -195,3 +195,94 @@ def test_concurrent_uploads_are_queued_without_losing_files():
                 assert view.close.enabled and view.pending == 0
             view.dialog.delete()
     asyncio.run(check())
+
+
+@pytest.mark.parametrize('kind', ['counseling', 'group_log', 'special_log', 'consultation', 'test', 'education'])
+def test_new_journal_attachments_are_atomic_and_retryable(records, kind):
+    from functools import partial
+    from maeumnarae.repositories.attachment_repo import OWNERS
+    from maeumnarae.views.attachment_view import AttachmentButton
+
+    db, _, parents = records
+    start = datetime.now(timezone.utc)
+    creators = {
+        'counseling': partial(CounselingRepository(db).create, CounselingInput(
+            student_id=parents['student'], title='새 상담', starts_at=start)),
+        'special_log': partial(SpecialEducationLogRepository(db).create, CounselingInput(
+            student_id=parents['student'], case_id=parents['special'], title='새 교육', starts_at=start)),
+        'group_log': partial(GroupCounselingRepository(db).save_log, GroupLogInput(
+            group_id=parents['group'], title='새 집단 일지', starts_at=start)),
+        'consultation': partial(ConsultationRepository(db).save, ConsultationInput(
+            teacher_id=parents['teacher'], title='새 자문', starts_at=start)),
+        'test': partial(PsychologicalTestRepository(db).save, PsychologicalTestInput(
+            student_id=parents['student'], title='새 검사', test_date=start.date())),
+        'education': partial(EducationEventRepository(db).save, EducationEventInput(
+            title='새 행사', event_date=start.date())),
+    }
+    table = OWNERS[kind][0]
+
+    async def invoke(function, *args, **kwargs):
+        return function(*args, **kwargs)
+
+    async def check():
+        with Client(page('/draft-' + kind)):
+            button = AttachmentButton(db, kind)
+            view = AttachmentView(button.repository, button.lock)
+            view.build()
+            file = SimpleNamespace(name='첨부.txt', size=lambda: 4, read=AsyncMock(return_value=b'data'))
+            with patch('maeumnarae.views.attachment_view.run.io_bound', side_effect=invoke), patch('maeumnarae.views.attachment_view.ui.notify'):
+                await view.receive(SimpleNamespace(file=file))
+                await view.receive(SimpleNamespace(file=file))
+                assert button.pending and len(button.repository.list()) == 2
+                assert button.repository.download(1) == ('첨부.txt', b'data')
+                with db.session() as c:
+                    before = c.execute(f'SELECT count(*) FROM {table}').fetchone()[0]
+                    assert c.execute('SELECT count(*) FROM journal_attachments').fetchone()[0] == 0
+                with db.session(write=True) as c:
+                    c.execute("CREATE TRIGGER fail_draft BEFORE INSERT ON journal_attachments WHEN (SELECT count(*) FROM journal_attachments) > 0 BEGIN SELECT RAISE(ABORT, 'test'); END")
+                with pytest.raises(ConflictError):
+                    await button.save_record(creators[kind])
+                assert button.pending and button.repository.record_id is None and button.enabled
+                with db.session() as c:
+                    assert c.execute(f'SELECT count(*) FROM {table}').fetchone()[0] == before
+                    assert c.execute('SELECT count(*) FROM journal_attachments').fetchone()[0] == 0
+                with db.session(write=True) as c:
+                    c.execute('DROP TRIGGER fail_draft')
+                saved = await button.save_record(creators[kind])
+                assert not button.pending and button.repository.record_id == saved.id
+                attachments = AttachmentRepository(db, kind, saved.id)
+                assert len(attachments.list()) == 2
+                assert all(attachments.download(item.id) == ('첨부.txt', b'data') for item in attachments.list())
+                # 저장 후 같은 버튼에서 추가한 파일은 저장된 일지에 바로 연결된다.
+                await view.receive(SimpleNamespace(file=file))
+                assert len(attachments.list()) == 3
+                with db.session() as c:
+                    assert c.execute(f'SELECT count(*) FROM {table}').fetchone()[0] == before + 1
+            view.dialog.delete()
+            button.delete()
+            assert len(attachments.list()) == 3
+    asyncio.run(check())
+
+
+def test_draft_files_are_isolated_validated_and_discarded_without_database():
+    from maeumnarae.views.attachment_view import AttachmentButton
+
+    with Client(page('/draft-discard')):
+        first = AttachmentButton(None, 'counseling')
+        second = AttachmentButton(None, 'counseling')
+        first.repository.add('C:\\fakepath\\파일\n.txt', b'data')
+        assert first.repository.list()[0].filename == '파일.txt'
+        assert not second.repository.list()
+        with pytest.raises(NotFoundError):
+            second.repository.download(1)
+        with pytest.raises(ValueError):
+            first.repository.add('large', b'x' * (MAX_ATTACHMENT_BYTES + 1))
+        first.repository.delete(1)
+        assert not first.pending
+        first.repository.add('파일.txt', b'data')
+        draft = first.repository
+        first.delete()
+        assert draft.closed and not draft.files
+        with pytest.raises(ValueError, match='닫힌 일지'):
+            draft.add('늦게 도착한 파일', b'data')
+        second.delete()

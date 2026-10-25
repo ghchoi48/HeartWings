@@ -240,11 +240,11 @@ class GroupCounselingView:
                         ui.label(group.name).classes('text-slate-500')
                         local_start = entry.starts_at.astimezone(KST) if entry else datetime.now(KST).replace(second=0, microsecond=0)
                         fields['title'] = ui.input('일지 제목', value=entry.title if entry else '').props('outlined maxlength=200').classes('w-full')
-                        with ui.row().classes('w-full'):
-                            fields['starts_on'] = ui.date_input('상담 날짜', value=local_start.date().isoformat()).props('outlined')
-                            fields['starts_time'] = time_input('시작 시각 (한국 시각)', value=local_start.time().isoformat()).props('outlined')
-                            fields['duration_minutes'] = ui.number('상담 시간 (분)', value=entry.duration_minutes if entry else 50, min=1, max=1440, step=1).props('outlined')
-                            fields['status'] = ui.select(STATUSES, label='상담 상태', value=entry.status if entry else 'scheduled').props('outlined')
+                        with ui.grid(columns=4).classes('w-full gap-4'):
+                            fields['starts_on'] = ui.date_input('상담 날짜', value=local_start.date().isoformat()).props('outlined').classes('w-full min-w-0')
+                            fields['starts_time'] = time_input('시작 시각 (한국 시각)', value=local_start.time().isoformat()).props('outlined').classes('w-full min-w-0')
+                            fields['duration_minutes'] = ui.number('상담 시간 (분)', value=entry.duration_minutes if entry else 50, min=1, max=1440, step=1).props('outlined').classes('w-full min-w-0')
+                            fields['status'] = ui.select(STATUSES, label='상담 상태', value=entry.status if entry else 'scheduled').props('outlined').classes('w-full min-w-0')
                         ui.label('참여 학생 출석 및 참여 태도').classes('font-semibold')
                         attendance_rows = ([row.model_dump() for row in entry.attendance]
                                            if entry and entry.attendance else [
@@ -292,10 +292,10 @@ class GroupCounselingView:
                     else:
                         fields['name'] = ui.input('집단명', value=group.name if group else '').props(
                             'outlined maxlength=200').classes('w-full')
-                        with ui.row().classes('w-full'):
-                            fields['facilitator'] = ui.input('진행자', value=group.facilitator if group else '').props('outlined maxlength=100').classes('grow')
-                            fields['period'] = ui.date_input('운영 기간 *', range_input=True, value=group.period if group else '').props('outlined required').classes('grow')
-                            fields['counseling_area'] = ui.select(['학업', '진로', '학교폭력', '성격/대인관계', '기타'], label='상담 영역', value=group.counseling_area or None if group else None).props('outlined').classes('grow')
+                        with ui.grid().classes('w-full gap-4').style('grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr)'):
+                            fields['facilitator'] = ui.input('진행자', value=group.facilitator if group else '').props('outlined maxlength=100').classes('w-full min-w-0')
+                            fields['period'] = ui.date_input('운영 기간 *', range_input=True, value=group.period if group else '').props('outlined required').classes('w-full min-w-0')
+                            fields['counseling_area'] = ui.select(['학업', '진로', '학교폭력', '성격/대인관계', '기타'], label='상담 영역', value=group.counseling_area or None if group else None).props('outlined').classes('w-full min-w-0')
                         if group and group.participants:
                             fields['participants'] = ui.textarea('기존 참여자 메모', value=group.participants).props(
                                 'outlined maxlength=20000').classes('w-full')
@@ -310,7 +310,7 @@ class GroupCounselingView:
                     message = ui.label().classes('text-red-700 text-sm')
                     with ui.row().classes('w-full items-center'):
                         if log:
-                            attachment_button(self.repository.database, 'group_log', entry.id if entry else None)
+                            files = attachment_button(self.repository.database, 'group_log', entry.id if entry else None)
                         ui.space()
                         cancel_button = ui.button('취소').props('flat')
                         save_button = ui.button('저장', icon='save')
@@ -325,7 +325,7 @@ class GroupCounselingView:
             async def cancel():
                 if saving:
                     return
-                if original != form_data():
+                if (log and files.pending) or original != form_data():
                     with ui.dialog().props('persistent') as confirm, ui.card():
                         ui.label('저장하지 않은 내용을 버릴까요?')
                         ui.button('계속 작성', on_click=lambda: confirm.submit(False))
@@ -369,7 +369,7 @@ class GroupCounselingView:
                     field.disable()
                 try:
                     if log:
-                        saved = await run.io_bound(self.repository.save_log, value, log_id)
+                        saved = await files.save_record(self.repository.save_log, value, log_id)
                     else:
                         saved = await run.io_bound(self.repository.save, value, group.id if group else None)
                     dialog.submit(saved)

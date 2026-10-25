@@ -18,11 +18,15 @@ class JournalExportRepository:
         # 이름·연락처·제목·본문·비밀 메모는 조회하지 않는다.
         with self.database.session() as connection:
             records = []
-            for kind, table in (('individual', 'counseling'), ('special', 'special_education_logs')):
-                records.extend(dict(row, kind=kind) for row in connection.execute(f'''
-                    SELECT id, student_id, starts_at, duration_minutes, status,
-                           counseling_area AS area, counseling_target AS target, counseling_method AS method
-                    FROM {table}'''))
+            records.extend(dict(row, kind='individual') for row in connection.execute('''
+                SELECT id, student_id, starts_at, duration_minutes, status,
+                       counseling_area AS area, counseling_target AS target, counseling_method AS method
+                FROM counseling'''))
+            records.extend(dict(row, kind='special') for row in connection.execute('''
+                SELECT l.id, l.student_id, l.starts_at, l.duration_minutes, l.status,
+                       l.counseling_area AS area, l.counseling_target AS target,
+                       l.counseling_method AS method, e.law
+                FROM special_education_logs l LEFT JOIN special_educations e ON e.id=l.case_id'''))
             records.extend(dict(row, kind='group') for row in connection.execute('''
                 SELECT l.id, l.group_id, l.starts_at, l.duration_minutes, l.status,
                        g.counseling_area AS area

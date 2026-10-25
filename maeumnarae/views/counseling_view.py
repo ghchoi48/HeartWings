@@ -26,6 +26,12 @@ COUNSELING_AREAS = ['학업', '진로', '성격', '성', '대인관계', '가정
                     '컴퓨터 및 스마트폰 과사용', '정보제공', '기타']
 STATUSES = {'scheduled': '예약', 'completed': '완료', 'cancelled': '취소'}
 TARGET_CATEGORIES = {'학생본인': '개인상담', '보호자(가족)': '학부모상담'}
+TARGET_LABELS = {'학생본인': '학생', '보호자(가족)': '학부모'}
+
+
+def normalize_target(value):
+    return {'학생': '학생본인', '학부모': '보호자(가족)',
+            '보호자': '보호자(가족)', '보호자(학부모)': '보호자(가족)'}.get(value, value)
 
 
 def counseling_form_input(student_id: int, values: dict) -> CounselingInput:
@@ -84,13 +90,14 @@ class CounselingView:
         self.editor_request = 0
         self.editor_fields = {}
         self.editor_original = {}
+        self.editor_attachments = None
 
     @property
     def editor_open(self) -> bool:
         return self.report_open or self.editor_saving or self.editor_dirty()
 
     def editor_dirty(self) -> bool:
-        return self.editor_original != {key: field.value for key, field in self.editor_fields.items()}
+        return bool(self.editor_attachments and self.editor_attachments.pending) or self.editor_original != {key: field.value for key, field in self.editor_fields.items()}
 
     async def confirm_editor_discard(self) -> bool:
         if self.editor_saving or self.report_open:
@@ -113,6 +120,7 @@ class CounselingView:
         self.editor_request += 1
         self.editor_fields = {}
         self.editor_original = {}
+        self.editor_attachments = None
         self.editor_container.clear()
         with self.editor_container:
             ui.label('새 상담일지를 작성하거나, 상담일지를 선택해주세요').classes('text-slate-500')
@@ -430,6 +438,7 @@ class CounselingView:
         with self.editor_container:
             _, fields, message, save_button = self.build_editor(student, entry)
         self.editor_fields = fields
+        self.editor_attachments = save_button.attachments
         self.editor_original = {key: field.value for key, field in fields.items()}
 
         async def save() -> None:
@@ -438,7 +447,7 @@ class CounselingView:
                 return
             target = fields['counseling_target'].value
             if target not in TARGET_CATEGORIES:
-                message.text = '상담 대상을 학생본인 또는 보호자(가족) 중에서 선택해 주세요.'
+                message.text = '상담 대상을 학생 또는 학부모 중에서 선택해 주세요.'
                 return
             fields['category'].value = TARGET_CATEGORIES[target]
             try:
@@ -453,9 +462,9 @@ class CounselingView:
             message.text = '저장 중입니다…'
             try:
                 if entry is None:
-                    entry = await run.io_bound(self.counseling.create, value)
+                    entry = await save_button.attachments.save_record(self.counseling.create, value)
                 else:
-                    entry = await run.io_bound(self.counseling.update, entry.id, value)
+                    entry = await save_button.attachments.save_record(self.counseling.update, entry.id, value)
             except DatabaseError as error:
                 message.text = str(error)
             else:
@@ -510,46 +519,45 @@ class CounselingView:
             duration_minutes=50, content_markdown='', follow_up='', starts_at=datetime.now(KST).replace(second=0, microsecond=0))
         fields = {}
         local_start = initial['starts_at'].astimezone(KST)
-        target = initial.get('counseling_target') or '학생본인'
-        if target == '보호자':
-            target = '보호자(가족)'
+        target = normalize_target(initial.get('counseling_target') or '학생본인')
         previous_target = target
         if target not in TARGET_CATEGORIES:
             target = None
         with ui.column().classes('w-full min-w-0 gap-4') as panel:
             ui.label('상담 일지 수정' if entry else '새 상담 일지 작성').classes('text-2xl font-bold')
             ui.label(f'{student.name} · {student.grade}학년 {student.classroom}반 · 학번 {student.student_number or "미입력"}').classes('text-slate-500')
-            with ui.row().classes('w-full items-start'):
-                fields['starts_on'] = ui.date_input('상담 날짜', value=local_start.date().isoformat()).props('outlined').classes('grow')
-                fields['starts_time'] = time_input('시작 시각 (한국 시각)', value=local_start.time().isoformat()).props('outlined').classes('grow')
-                fields['duration_minutes'] = ui.number('상담 시간 (분)', value=initial['duration_minutes'], min=1, max=1440, step=1).props('outlined').classes('w-36')
-                fields['category'] = ui.input('상담 유형', value=TARGET_CATEGORIES.get(target, initial['category']))
-                fields['category'].set_visibility(False)
-                fields['status'] = ui.select(STATUSES, label='상담 상태', value=initial['status']).props('outlined').classes('w-36')
-            with ui.row().classes('w-full items-start'):
+            fields['category'] = ui.input('상담 유형', value=TARGET_CATEGORIES.get(target, initial['category']))
+            fields['category'].set_visibility(False)
+            with ui.grid(columns=4).classes('w-full gap-4 items-start'):
+                fields['starts_on'] = ui.date_input('상담 날짜', value=local_start.date().isoformat()).props('outlined').classes('w-full min-w-0')
+                fields['starts_time'] = time_input('시작 시각 (한국 시각)', value=local_start.time().isoformat()).props('outlined').classes('w-full min-w-0')
+                fields['duration_minutes'] = ui.number('상담 시간 (분)', value=initial['duration_minutes'], min=1, max=1440, step=1).props('outlined').classes('w-full min-w-0')
+                fields['status'] = ui.select(STATUSES, label='상담 상태', value=initial['status']).props('outlined').classes('w-full min-w-0')
+            field_warnings = []
+            with ui.grid(columns=3).classes('w-full gap-4 items-start'):
                 method = initial.get('counseling_method', '')
                 methods = ['면담', '전화상담', '사이버상담']
                 if method and method not in methods:
                     methods.append(method)
                 fields['counseling_method'] = ui.select(
                     methods, label='상담 방법', value=method or None,
-                ).props('outlined clearable').classes('grow')
+                ).props('outlined clearable').classes('w-full min-w-0')
                 fields['counseling_target'] = ui.select(
-                    list(TARGET_CATEGORIES), label='상담 대상', value=target,
-                ).props('outlined').classes('grow')
+                    TARGET_LABELS, label='상담 대상', value=target,
+                ).props('outlined').classes('w-full min-w-0')
                 if target is None:
-                    ui.label(f'기존 상담 대상: {previous_target}. 상담 대상을 다시 선택해 주세요.').classes('text-sm text-amber-700')
+                    field_warnings.append(f'기존 상담 대상: {previous_target}. 상담 대상을 다시 선택해 주세요.')
                 areas = list(GUARDIAN_COUNSELING_AREAS if target == '보호자(가족)' else COUNSELING_AREAS)
                 area = initial.get('counseling_area') or None
                 if area and area not in areas:
                     if target == '보호자(가족)':
-                        ui.label(f'기존 상담 분야: {area}. 보호자 상담 분야를 다시 선택하세요.').classes('text-sm text-amber-700')
+                        field_warnings.append(f'기존 상담 분야: {area}. 보호자 상담 분야를 다시 선택하세요.')
                         area = None
                     else:
                         areas.append(area)
                 fields['counseling_area'] = ui.select(
                     areas, label='상담 분야', value=area,
-                ).props('outlined clearable').classes('grow')
+                ).props('outlined clearable').classes('w-full min-w-0')
 
                 def update_areas(event):
                     if event.value in TARGET_CATEGORIES:
@@ -559,6 +567,8 @@ class CounselingView:
                     fields['counseling_area'].set_options(options, value=selected if selected in options else None)
 
                 fields['counseling_target'].on_value_change(update_areas)
+            for warning in field_warnings:
+                ui.label(warning).classes('text-sm text-amber-700')
             with ui.element('div').classes('w-full grid grid-cols-1 lg:grid-cols-2 gap-4 items-start'):
                 with ui.column().classes('w-full min-w-0 gap-3'):
                     ui.label('상담 내용').classes('font-semibold')
@@ -577,7 +587,8 @@ class CounselingView:
             for field in fields.values():
                 field.on_value_change(lambda: message.set_text(''))
             with ui.row().classes('w-full items-center'):
-                attachment_button(self.counseling.database, 'counseling', entry.id if entry else None)
+                files = attachment_button(self.counseling.database, 'counseling', entry.id if entry else None)
                 ui.space()
                 save = ui.button('일지 저장', icon='save')
+                save.attachments = files
         return panel, fields, message, save

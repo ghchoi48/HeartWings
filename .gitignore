@@ -9,3 +9,5 @@ build/
 dist/
 .env
 .DS_Store
+tests/
+artifacts/

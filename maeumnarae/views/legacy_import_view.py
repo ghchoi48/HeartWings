@@ -7,8 +7,18 @@ import re
 
 from maeumnarae.core.database import DatabaseError
 from maeumnarae.core.models import StudentInput, TeacherInput, ConsultationInput, CounselingInput, PsychologicalTestInput, EducationEventInput, current_school_year
-from maeumnarae.repositories.legacy_import_repo import LegacyImportRepository
-from maeumnarae.services.legacy_import import MAX_BYTES, read_rows, period_key, DESTINATIONS, SPECIAL_LAWS, text
+from maeumnarae.repositories.legacy_import_repo import ALREADY_IMPORTED, LegacyImportRepository
+from maeumnarae.services.legacy_import import MAX_BYTES, read_rows, period_key, DESTINATIONS, SPECIAL_LAWS, text, excel_day
+
+
+def correction_text(label, value):
+    """날짜는 읽을 수 있게 표시하고 잘못된 원본 값은 수정할 수 있도록 남긴다."""
+    if label in ('일자', '상담일자', '생년월일') and text(value):
+        try:
+            return excel_day(value).isoformat()
+        except (ValueError, TypeError, OverflowError):
+            pass
+    return text(value)
 
 
 class LegacyImportView:
@@ -26,7 +36,7 @@ class LegacyImportView:
     def build(self, *, collapsible: bool = False):
         with settings_card('울산형 상담기록관리 DB 가져오기', 'drive_folder_upload',
                            'XLSB의 인적사항등록·상담대장을 상담·교사 자문·심리검사·교육/행사로 추가합니다. 대분류가 자문이면 인적사항의 성명을 교사로 등록합니다. 사례번호로 연결하며 기존 대상과 식별 정보가 일치하면 연결합니다.', collapsible=collapsible):
-            self.year = ui.number('인적사항 학년도', value=current_school_year(), min=1900, max=9999, step=1)
+            self.year = ui.number('자료의 학년도', value=current_school_year(), min=1900, max=9999, step=1)
             with ui.dialog() as self.period_dialog, ui.card().classes('w-full max-w-lg max-h-[80vh] overflow-auto'):
                 ui.label('교시별 시작 시간 (한국 시간)').classes('text-lg font-bold')
                 ui.label('원본에 사용된 교시의 시작 시간을 입력하세요. 파일에서 발견한 교시도 자동으로 추가됩니다.')
@@ -164,7 +174,10 @@ class LegacyImportView:
                         ui.label(label).classes('text-sm text-slate-500')
                         ui.label(f'{count:,}').classes('text-xl font-bold ' + ('text-red-700' if label == '오류' and count else 'text-teal-700'))
             if batch.errors:
-                ui.label('오류를 수정한 뒤 다시 검사하세요. 오류가 있으면 전체 저장을 중단합니다.').classes('text-red-700')
+                message = ('업로드 한 파일을 다시 확인하세요. 이미 등록한 파일입니다.'
+                           if ALREADY_IMPORTED in batch.errors else
+                           '오류를 수정한 뒤 다시 검사하세요. 오류가 있으면 전체 저장을 중단합니다.')
+                ui.label(message).classes('text-red-700')
                 errors = []
                 for index, error in enumerate(batch.errors):
                     match = re.match(r'^(인적사항등록|상담대장) (\d+)행: (.*)$', error, re.DOTALL)
@@ -176,6 +189,8 @@ class LegacyImportView:
                 if self.excluded:
                     ui.label(f'사용자가 제외한 행: {len(self.excluded)}건')
                     ui.button('제외한 행 모두 복원 후 다시 검사', on_click=self.restore_excluded)
+            if ALREADY_IMPORTED in batch.errors:
+                return
             table('인적사항 등록 대상', [('row', '원본 행'), ('key', '사례번호'), ('kind', '등록 유형'),
                   ('name', '성명 / 집단명'), ('year', '학년도'), ('grade', '학년'), ('classroom', '반')],
                   [dict(id=p.row, row=p.row, key=p.key,
@@ -250,8 +265,11 @@ class LegacyImportView:
                         state['law'].bind_visibility_from(state['route'], 'value', lambda value: value == '특별교육')
                     with ui.grid(columns=2).classes('w-full'):
                         for label, value in row.items():
-                            control = (ui.textarea(label, value=text(value)) if label in ('상담내용', '비고')
-                                       else ui.input(label, value=text(value)))
+                            display = correction_text(label, value)
+                            control = (ui.textarea(label, value=display) if label in ('상담내용', '비고')
+                                       else ui.input(label, value=display))
+                            if label in ('일자', '상담일자', '생년월일'):
+                                control.props('placeholder=YYYY-MM-DD')
                             controls[label] = control
 
             async def apply():
@@ -262,7 +280,7 @@ class LegacyImportView:
                 original = records[key]
                 # 변경하지 않은 Excel 날짜/숫자는 원래 타입을 유지한다.
                 self.corrections[key] = {label: control.value for label, control in controls.items()
-                                         if control.value != text(original[label])}
+                                         if control.value != correction_text(label, original[label])}
                 if state['excluded'].value:
                     self.excluded.add(key)
                 else:

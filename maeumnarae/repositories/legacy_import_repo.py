@@ -7,6 +7,8 @@ from maeumnarae.repositories._support import now_text, values
 from maeumnarae.repositories.student_repo import StudentRepository
 from maeumnarae.services.legacy_import import parse_legacy
 
+ALREADY_IMPORTED = '이미 가져온 원본 자료입니다.'
+
 
 class LegacyImportRepository:
     def __init__(self, database):
@@ -16,7 +18,7 @@ class LegacyImportRepository:
         errors = list(batch.errors)
         exists = connection.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='legacy_imports'").fetchone()
         if exists and connection.execute('SELECT 1 FROM legacy_imports WHERE fingerprint=?', (batch.fingerprint,)).fetchone():
-            errors.append('이미 가져온 원본 자료입니다.')
+            return [ALREADY_IMPORTED], {}, ()
         existing = {}
         for row in connection.execute('''SELECT s.*, e.school_year AS match_year, e.grade AS match_grade,
                 e.classroom AS match_classroom FROM students s JOIN student_enrollments e ON e.student_id=s.id'''):
@@ -132,6 +134,8 @@ class LegacyImportRepository:
                     table = 'counseling'
                 else:
                     data['group_id'] = ids[log.key]
+                    # 울산형 원본에는 출석 정보가 없으므로 DB의 빈 목록 기본값을 사용한다.
+                    data.pop('attendance')
                     table = 'group_counseling_logs'
                 log_id = insert(table, data)
                 # 일반 작성자 트리거는 현재 교사를 기록한다. 이관은 원본 작성자를 보존한다.

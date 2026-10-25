@@ -4,6 +4,7 @@ import json
 
 from maeumnarae.core.database import Database, NotFoundError
 from maeumnarae.core.models import GroupCounseling, GroupCounselingInput, GroupLog, GroupLogInput
+from maeumnarae.repositories.attachment_repo import insert_attachments
 from maeumnarae.repositories._support import check_page, now_text, values
 
 
@@ -77,7 +78,7 @@ class GroupCounselingRepository:
             row = connection.execute('SELECT * FROM group_counseling_logs WHERE id=?', (log_id,)).fetchone()
             return GroupLog.model_validate(dict(row)) if row else None
 
-    def save_log(self, value: GroupLogInput, log_id: int | None = None) -> GroupLog:
+    def save_log(self, value: GroupLogInput, log_id: int | None = None, *, attachments=()) -> GroupLog:
         data = values(GroupLogInput.model_validate(value.model_dump(include=set(GroupLogInput.model_fields))))
         data['attendance'] = json.dumps(data['attendance'], ensure_ascii=False)
         data['updated_at'] = now_text()
@@ -95,5 +96,6 @@ class GroupCounselingRepository:
                     follow_up=:follow_up, attendance=:attendance, updated_at=:updated_at WHERE id=:id AND group_id=:group_id''', data)
                 if not cursor.rowcount:
                     raise NotFoundError('이 집단의 상담 일지를 찾을 수 없습니다.')
+            insert_attachments(connection, 'group_log', log_id, attachments)
             row = connection.execute('SELECT * FROM group_counseling_logs WHERE id=?', (log_id,)).fetchone()
             return GroupLog.model_validate(dict(row))

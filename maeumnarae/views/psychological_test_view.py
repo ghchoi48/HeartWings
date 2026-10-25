@@ -33,10 +33,11 @@ class PsychologicalTestView:
         self.editor_request = 0
         self.editor_values = lambda: ()
         self.editor_original = ()
+        self.editor_attachments = None
 
     @property
     def editor_open(self):
-        return self.editor_saving or self.editor_original != self.editor_values()
+        return self.editor_saving or bool(self.editor_attachments and self.editor_attachments.pending) or self.editor_original != self.editor_values()
 
     async def confirm_editor_discard(self):
         if self.editor_saving:
@@ -57,6 +58,7 @@ class PsychologicalTestView:
         self.editor_request += 1
         self.editor_values = lambda: ()
         self.editor_original = ()
+        self.editor_attachments = None
         self.editor_container.clear()
         with self.editor_container:
             ui.label('새 심리검사 일지를 작성하거나 일지를 선택해 주세요.').classes('text-slate-500')
@@ -199,7 +201,7 @@ class PsychologicalTestView:
                 'outlined maxlength=200 placeholder="검사명의 일부를 입력하거나 직접 작성하세요"').classes('w-full')
             # Enter로 확정하지 않은 직접 입력도 저장 및 미저장 변경 감지에 포함한다.
             title.on('input-value', lambda event: title_text.update(value=event.args or ''))
-            target = ui.select(['학생', '보호자(학부모)'], label='대상',
+            target = ui.select({'학생': '학생', '보호자(학부모)': '학부모'}, label='대상',
                                value=entry.target if entry else '학생').props('outlined').classes('w-full')
             with ui.row().classes('w-full items-start'):
                 test_date = ui.date_input('검사일 *', value=(entry.test_date if entry else datetime.now(KST).date()).isoformat()).props('outlined').classes('grow min-w-40')
@@ -211,8 +213,7 @@ class PsychologicalTestView:
                                 placeholder='검사 결과 및 소견을 입력하세요.').classes('w-full').props("""min-height=320px :toolbar='[["bold", "italic", "underline", "strike"], ["unordered", "ordered"], ["left", "center", "right"], ["undo", "redo"]]'""")
             message = ui.label().classes('text-sm text-red-700')
             with ui.row().classes('w-full items-center'):
-                with ui.row() as attachments:
-                    attachment_button(self.repository.database, 'test', entry.id if entry else None)
+                files = attachment_button(self.repository.database, 'test', entry.id if entry else None)
                 ui.space()
                 save_button = ui.button('일지 저장', icon='save')
         fields = (title, target, test_date, test_time, duration, content)
@@ -220,6 +221,7 @@ class PsychologicalTestView:
         def current_values():
             return (title_text['value'], *(field.value for field in fields[1:]))
 
+        self.editor_attachments = files
         self.editor_values = current_values
         self.editor_original = current_values()
 
@@ -240,14 +242,11 @@ class PsychologicalTestView:
             for control in controls:
                 control.disable()
             try:
-                entry = await run.io_bound(self.repository.save, value, entry.id if entry else None)
+                entry = await files.save_record(self.repository.save, value, entry.id if entry else None)
             except DatabaseError as error:
                 message.text = str(error)
             else:
                 self.editor_original = current_values()
-                attachments.clear()
-                with attachments:
-                    attachment_button(self.repository.database, 'test', entry.id)
                 message.text = '심리검사 일지를 저장했습니다.'
                 ui.notify('심리검사 일지를 저장했습니다.', type='positive')
                 self.offset = 0

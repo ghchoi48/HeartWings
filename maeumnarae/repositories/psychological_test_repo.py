@@ -1,6 +1,7 @@
 """학생별 심리검사 일지 저장과 조회."""
 from maeumnarae.core.database import Database, NotFoundError
 from maeumnarae.core.models import PsychologicalTest, PsychologicalTestInput
+from maeumnarae.repositories.attachment_repo import insert_attachments
 from maeumnarae.repositories._support import check_page, now_text, values
 
 
@@ -21,7 +22,7 @@ class PsychologicalTestRepository:
                 (student_id, limit, offset)).fetchall()
             return [PsychologicalTest.model_validate(dict(row)) for row in rows]
 
-    def save(self, value: PsychologicalTestInput, entry_id: int | None = None) -> PsychologicalTest:
+    def save(self, value: PsychologicalTestInput, entry_id: int | None = None, *, attachments=()) -> PsychologicalTest:
         data = values(PsychologicalTestInput.model_validate(value.model_dump(include=set(PsychologicalTestInput.model_fields))))
         data['updated_at'] = now_text()
         with self.database.session(write=True) as connection:
@@ -38,5 +39,6 @@ class PsychologicalTestRepository:
                     WHERE id=:id AND student_id=:student_id''', data)
                 if not cursor.rowcount:
                     raise NotFoundError('심리검사 일지를 찾을 수 없습니다.')
+            insert_attachments(connection, 'test', entry_id, attachments)
             row = connection.execute('SELECT * FROM psychological_tests WHERE id=?', (entry_id,)).fetchone()
             return PsychologicalTest.model_validate(dict(row))

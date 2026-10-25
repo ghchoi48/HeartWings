@@ -112,7 +112,7 @@ def test_editor_fields_storage_and_legacy_reinitialize(tmp_path):
                 assert any('MMPI-A' in option for option in fields['검사명 *'].options)
                 assert fields['검사명 *']._props['use-input']
                 assert fields['검사명 *']._props['new-value-mode'] == 'add-unique'
-                assert fields['대상'].options == ['학생', '보호자(학부모)']
+                assert fields['대상'].options == {'학생': '학생', '보호자(학부모)': '학부모'}
                 assert fields['대상'].value == '보호자(학부모)'
                 assert isinstance(fields['시각'], ui.time_input)
                 assert fields['시각'].value == '오후 02:30'

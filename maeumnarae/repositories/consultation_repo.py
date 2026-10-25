@@ -2,6 +2,7 @@
 
 from maeumnarae.core.database import Database, NotFoundError
 from maeumnarae.core.models import Consultation, ConsultationInput
+from maeumnarae.repositories.attachment_repo import insert_attachments
 from maeumnarae.repositories._support import check_page, now_text, values
 
 
@@ -27,7 +28,7 @@ class ConsultationRepository:
                                      (entry_id, teacher_id)).fetchone()
             return Consultation.model_validate(dict(row)) if row else None
 
-    def save(self, value: ConsultationInput, entry_id: int | None = None) -> Consultation:
+    def save(self, value: ConsultationInput, entry_id: int | None = None, *, attachments=()) -> Consultation:
         data = values(ConsultationInput.model_validate(value.model_dump(include=set(ConsultationInput.model_fields))))
         data['updated_at'] = now_text()
         with self.database.session(write=True) as connection:
@@ -44,5 +45,6 @@ class ConsultationRepository:
                     follow_up=:follow_up, updated_at=:updated_at WHERE id=:id AND teacher_id=:teacher_id''', data)
                 if not cursor.rowcount:
                     raise NotFoundError('자문 일지를 찾을 수 없습니다.')
+            insert_attachments(connection, 'consultation', entry_id, attachments)
             row = connection.execute('SELECT * FROM consultations WHERE id=?', (entry_id,)).fetchone()
             return Consultation.model_validate(dict(row))

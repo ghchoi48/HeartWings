@@ -88,11 +88,13 @@ def test_all_record_types_export_without_private_text(tmp_path):
     for row in rows:
         assert len(row) == 16
         assert row[0] == '전문상담' and row[14] == '전문상담교사'
-        assert row[4] == row[10] == row[11]
+        assert row[10] == row[11]
+        if row[10] != '교권보호 특별교육':
+            assert row[4] == row[10]
     assert rows[0][6:10] == (2025, '20260228', None, None)
     assert rows[0][12:14] == (1, 20) and rows[0][15] == '전화'
-    special_row = next(row for row in rows if row[4] == '학교폭력 가해')
-    assert special_row[2:5] == ('상담', '개인상담', '학교폭력 가해')
+    special_row = next(row for row in rows if row[10] == '교권보호 특별교육')
+    assert special_row[2:5] == ('교육', '프로그램운영', '기타')
     assert special_row[6:10] == (2026, '20260301', None, None)
     group_row = next(row for row in rows if row[3] == '집단상담')
     assert group_row[5] == 2 and group_row[8:10] == (None, None)
@@ -108,6 +110,30 @@ def test_all_record_types_export_without_private_text(tmp_path):
         assert all('절대포함금지'.encode() not in archive.read(name) for name in archive.namelist())
     filtered, _, _ = export_rows(snapshot, ExportOptions(start=date(2026, 3, 1), end=date(2026, 3, 1), status='completed'))
     assert len(filtered) == 5  # 예약 특별교육과 취소 개인상담 제외, 상태 없는 검사·교육 포함
+
+
+@pytest.mark.parametrize('law,summary', [
+    ('학교폭력예방법', '학교폭력 특별교육'), ('교원지위법', '교권보호 특별교육'),
+])
+@pytest.mark.parametrize('target', ['학생본인', '보호자(가족)'])
+def test_special_export_uses_law_and_education_classification(tmp_path, law, summary, target):
+    db = Database('test-export', tmp_path / 'special.db')
+    db.initialize()
+    student = StudentRepository(db).create(StudentInput(name='학생', grade=1, classroom='1'))
+    case = SpecialEducationRepository(db).save(SpecialEducationInput(
+        student_id=student.id, title='원본 교육명', law=law))
+    SpecialEducationLogRepository(db).create(CounselingInput(
+        student_id=student.id, case_id=case.id, title='원본 일지 제목', content_markdown='원본 본문',
+        counseling_target=target, starts_at=datetime(2026, 9, 3, 10, tzinfo=KST), status='completed'))
+    snapshot = JournalExportRepository(db).snapshot()
+    assert snapshot.records[0]['law'] == law
+    assert snapshot.records[0]['target'] == target
+    result = export_journals(db, ExportOptions())
+    sheet = read_workbook(result.content)['입력']
+    assert tuple(sheet.cell(2, col).value for col in (3, 4, 5)) == ('교육', '프로그램운영', '기타')
+    assert sheet['K2'].value == sheet['L2'].value == summary
+    assert sheet.max_column == 16
+    assert not result.issues
 
 
 def test_template_preserved_validation_extended_and_strings_are_not_formulas():

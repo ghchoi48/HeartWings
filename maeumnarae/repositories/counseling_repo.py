@@ -4,6 +4,7 @@ from datetime import datetime
 
 from maeumnarae.core.database import Database, NotFoundError
 from maeumnarae.core.models import Counseling, CounselingInput, StudentTimelineEntry
+from maeumnarae.repositories.attachment_repo import insert_attachments
 from maeumnarae.repositories._support import check_page, now_text, utc_text, values
 
 
@@ -18,7 +19,7 @@ class CounselingRepository:
             return connection.execute('SELECT COUNT(*) FROM counseling WHERE student_id=? AND case_id=?',
                                       (student_id, case_id)).fetchone()[0]
 
-    def create(self, counseling: CounselingInput) -> Counseling:
+    def create(self, counseling: CounselingInput, *, attachments=()) -> Counseling:
         """존재하는 학생의 상담을 추가한다. 마크다운 원문을 보존한다."""
         data = values(CounselingInput.model_validate(counseling.model_dump(include=set(CounselingInput.model_fields))))
         data['created_at'] = data['updated_at'] = now_text()
@@ -40,6 +41,7 @@ class CounselingRepository:
                 VALUES (:student_id, :case_id, :starts_at, :duration_minutes, :category, :status, :title,
                         :content_markdown, :content_format, :counseling_method, :counseling_target, :counseling_area,
                         :follow_up, :private_note_html, :created_at, :updated_at)''', data)
+            insert_attachments(connection, 'counseling', cursor.lastrowid, attachments)
             row = connection.execute('SELECT * FROM counseling WHERE id=?', (cursor.lastrowid,)).fetchone()
             return Counseling.model_validate(dict(row))
 

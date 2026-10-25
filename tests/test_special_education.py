@@ -131,6 +131,7 @@ async def test_student_selection_and_log_editor():
         dialog, fields, _, _, _ = view.build_editor(student, None)
         assert fields['category'].value == '특별교육'
         assert fields['starts_on'].label == '교육 날짜'
+        assert fields['counseling_target'].options == {'학생본인': '학생', '보호자(가족)': '학부모'}
         dialog.delete()
         await view.select_student(None)
         assert not view.add.enabled
@@ -199,9 +200,11 @@ async def test_student_row_click_loads_and_saves_special_log(tmp_path):
             button = next(e for e in dialog.descendants() if isinstance(e, ui.button) and e.text == '일지 저장')
             handler = next(listener.handler for listener in button._event_listeners.values() if listener.type == 'click')
             save = inspect.getclosurevars(handler).nonlocals['callback']
+            button.attachments.repository.add('교육 자료.txt', b'special attachment')
             with patch.object(view.counseling, 'create', side_effect=DatabaseError('저장 실패')):
                 await save()
             assert not dialog.submitted.is_set()
+            assert button.attachments.pending
             assert button.enabled and editor.value == '<p>특별교육 내용</p>'
             await save()
             assert dialog.submitted.is_set()
@@ -213,6 +216,9 @@ async def test_student_row_click_loads_and_saves_special_log(tmp_path):
         logs = view.counseling.list(student_id=student.id, case_id=case.id)
         assert len(logs) == 1
         assert logs[0].content_markdown == '<p>특별교육 내용</p>'
+        from maeumnarae.repositories.attachment_repo import AttachmentRepository
+        attached = AttachmentRepository(db, 'special_log', logs[0].id)
+        assert attached.download(attached.list()[0].id) == ('교육 자료.txt', b'special attachment')
         assert '1건' in view.log_message.text
 
         async def edit(dialog):

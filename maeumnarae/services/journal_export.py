@@ -23,6 +23,7 @@ AREAS = {
     '교원자문': ('학교학습', '사회성발달', '정서발달', '진로발달', '행동발달', '기타'),
 }
 METHODS = ('면담', '전화상담', '사이버상담')
+SPECIAL_TITLES = {'학교폭력예방법': '학교폭력 특별교육', '교원지위법': '교권보호 특별교육'}
 
 
 @dataclass(frozen=True)
@@ -88,6 +89,8 @@ def export_rows(snapshot: JournalSnapshot, options: ExportOptions):
             major, middle = '자문', '교원자문'
         elif kind == 'test':
             major, middle, area = '검사', '심리검사', '개인심리검사'
+        elif kind == 'special':
+            major, middle, area = '교육', '프로그램운영', '기타'
         elif kind == 'education':
             if record['category'] == '단체심리검사':
                 major, middle, area = '검사', '심리검사', '집단심리검사'
@@ -115,8 +118,13 @@ def export_rows(snapshot: JournalSnapshot, options: ExportOptions):
         method = (record.get('method') or '') if kind == 'individual' else '면담'
         if kind == 'individual' and method not in METHODS:
             problems.append('개인상담의 상담매체 미입력 또는 서식에 없는 값(저장된 값 유지)')
+        summary = area
+        if kind == 'special':
+            summary = SPECIAL_TITLES.get(record.get('law'), '')
+            if not summary:
+                problems.append('특별교육 근거 법률 확인 필요(상담제목·상담내용 빈칸)')
         rows.append(('전문상담', options.wee_class, major, middle, area, headcount, year,
-                     day.strftime('%Y%m%d'), '', '', area, area, hours, minutes,
+                     day.strftime('%Y%m%d'), '', '', summary, summary, hours, minutes,
                      '전문상담교사', method))
         counts[KINDS[kind]] += 1
         if problems:

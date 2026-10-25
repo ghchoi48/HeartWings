@@ -232,7 +232,7 @@ class StudentViewTests(unittest.IsolatedAsyncioTestCase):
         await self.view.load_profile(1)
         texts = [element.text for element in self.view.timeline.descendants() if isinstance(element, ui.label)]
         self.assertIn('특별교육 · 학교생활 특별교육 · 50분', texts)
-        self.assertIn('교육 대상: 보호자(가족)', texts)
+        self.assertIn('교육 대상: 학부모', texts)
         self.assertNotIn('상담 분야 미지정', texts)
 
     async def test_database_failure_clears_previous_rows(self):

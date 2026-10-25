@@ -61,8 +61,24 @@ def test_roundtrip_and_duplicate(db):
         group_log = c.execute('SELECT * FROM group_counseling_logs').fetchone()
         assert group_log['duration_minutes'] == 90
         assert 'T04:20:00' in group_log['starts_at']
+        assert group_log['attendance'] == '[]'
     with pytest.raises(ValueError, match='이미 가져온'):
         repository.save(batch)
+
+
+def test_duplicate_preview_ignores_other_errors(db):
+    from unittest.mock import patch
+
+    repository = LegacyImportRepository(db)
+    rows = source()
+    repository.save(parse_rows(rows, 2025, PERIODS))
+    # 동일 원본을 잘못된 교시 설정으로 재검사해도 중복 오류만 표시한다.
+    invalid = parse_rows(rows, 2025, {})
+    assert len(invalid.errors) == 2
+    with patch('maeumnarae.repositories.legacy_import_repo.parse_legacy', return_value=invalid):
+        preview = repository.preview(b'file', 2025, {})
+    assert preview.errors == ('이미 가져온 원본 자료입니다.',)
+    assert preview.actions == ()
 
 
 def test_missing_link_and_duplicate_case_block_whole_batch(db):

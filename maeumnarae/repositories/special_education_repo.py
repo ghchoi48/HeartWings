@@ -2,6 +2,7 @@
 
 from maeumnarae.core.database import Database, NotFoundError
 from maeumnarae.core.models import SpecialEducation, SpecialEducationInput, Counseling, CounselingInput
+from maeumnarae.repositories.attachment_repo import insert_attachments
 from maeumnarae.repositories._support import check_page, now_text, values
 
 
@@ -55,13 +56,13 @@ class SpecialEducationLogRepository:
             row = connection.execute('SELECT * FROM special_education_logs WHERE id=?', (entry_id,)).fetchone()
             return Counseling.model_validate(dict(row)) if row else None
 
-    def create(self, value: CounselingInput) -> Counseling:
-        return self._save(value)
+    def create(self, value: CounselingInput, *, attachments=()) -> Counseling:
+        return self._save(value, attachments=attachments)
 
     def update(self, entry_id: int, value: CounselingInput) -> Counseling:
         return self._save(value, entry_id)
 
-    def _save(self, value: CounselingInput, entry_id: int | None = None) -> Counseling:
+    def _save(self, value: CounselingInput, entry_id: int | None = None, *, attachments=()) -> Counseling:
         data = values(CounselingInput.model_validate(value.model_dump(include=set(CounselingInput.model_fields))))
         if data['case_id'] is None:
             raise ValueError('특별교육을 선택해 주세요.')
@@ -85,5 +86,6 @@ class SpecialEducationLogRepository:
                     WHERE id=:id AND student_id=:student_id AND case_id=:case_id''', data)
                 if not cursor.rowcount:
                     raise NotFoundError('특별 교육 일지를 찾을 수 없습니다.')
+            insert_attachments(connection, 'special_log', entry_id, attachments)
             row = connection.execute('SELECT * FROM special_education_logs WHERE id=?', (entry_id,)).fetchone()
             return Counseling.model_validate(dict(row))

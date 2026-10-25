@@ -5,19 +5,21 @@ from contextlib import asynccontextmanager
 from nicegui import run, ui
 
 from maeumnarae.core.database import DatabaseError
-from maeumnarae.repositories.attachment_repo import AttachmentRepository, MAX_ATTACHMENT_BYTES
+from maeumnarae.repositories.attachment_repo import AttachmentRepository, DraftAttachments, MAX_ATTACHMENT_BYTES
 
 
 class AttachmentView:
-    def __init__(self, repository: AttachmentRepository):
+    def __init__(self, repository: AttachmentRepository | DraftAttachments, lock=None):
         self.repository = repository
-        self.lock = asyncio.Lock()
+        self.lock = lock or asyncio.Lock()
         self.pending = 0
 
     def build(self):
         with ui.dialog().props('persistent') as self.dialog, ui.card().classes('w-full max-w-2xl p-6 gap-4'):
             ui.label('일지 첨부파일').classes('text-2xl font-bold')
-            ui.label('파일당 최대 20MB · 첨부와 삭제는 즉시 저장됩니다. 일지 삭제 시 첨부파일도 함께 삭제됩니다.').classes('text-sm text-slate-500')
+            draft = isinstance(self.repository, DraftAttachments) and self.repository.record_id is None
+            ui.label('파일당 최대 20MB · 일지 저장 시 첨부파일도 함께 저장됩니다. 작성을 취소하면 첨부파일도 폐기됩니다.' if draft else
+                     '파일당 최대 20MB · 첨부와 삭제는 즉시 저장됩니다. 일지 삭제 시 첨부파일도 함께 삭제됩니다.').classes('text-sm text-slate-500')
             self.upload = ui.upload(label='파일 선택 또는 끌어놓기', auto_upload=True, multiple=True,
                                     max_file_size=MAX_ATTACHMENT_BYTES, on_upload=self.receive,
                                     on_rejected=lambda: ui.notify('파일당 20MB 이하의 파일을 선택해 주세요.', type='warning')).classes('w-full')
@@ -71,7 +73,8 @@ class AttachmentView:
             content = await event.file.read()
             await run.io_bound(self.repository.add, event.file.name, content)
             await self.refresh()
-            ui.notify('첨부파일을 저장했습니다.', type='positive')
+            draft = isinstance(self.repository, DraftAttachments) and self.repository.record_id is None
+            ui.notify('첨부파일을 추가했습니다. 일지를 저장하면 함께 저장됩니다.' if draft else '첨부파일을 저장했습니다.', type='positive')
 
     async def download(self, entry):
         async with self.operation():
@@ -95,29 +98,61 @@ class AttachmentView:
             ui.notify('첨부파일을 삭제했습니다.', type='positive')
 
 
-def attachment_button(database, kind: str, record_id: int | None):
-    if record_id is None:
-        ui.label('일지를 저장한 후 목록의 파일 첨부 버튼에서 파일을 추가할 수 있습니다.').classes('text-sm text-slate-500')
-        return
-    opened = False
+class AttachmentButton(ui.button):
+    def __init__(self, database, kind, record_id=None):
+        self.repository = DraftAttachments(database, kind, record_id)
+        self.lock = asyncio.Lock()
+        self.opened = False
+        self.view = None
+        super().__init__('파일 첨부', icon='attach_file', on_click=self.show)
+        self.props('outline')
 
-    async def show():
-        nonlocal opened
-        if opened:
-            return
-        opened = True
-        view = None
+    @property
+    def pending(self):
+        return self.repository.pending
+
+    async def save_record(self, function, *args):
+        """파일 저장 실패도 일지 저장 실패로 처리하고 재시도할 파일을 보존한다."""
+        self.disable()
         try:
-            view = AttachmentView(AttachmentRepository(database, kind, record_id))
-            with ui.context.client.content:
-                view.build()
-            view.dialog.open()
-            async with view.operation():
-                await view.refresh()
-            await view.dialog
+            async with self.lock:
+                if self.repository.closed:
+                    raise DatabaseError('닫힌 일지는 저장할 수 없습니다.')
+                attachments = tuple(self.repository.files.values())
+                kwargs = {'attachments': attachments} if attachments else {}
+                saved = await run.io_bound(function, *args, **kwargs)
+                self.repository.record_id = saved.id
+                self.repository.files.clear()
+                return saved
         finally:
-            opened = False
-            if view is not None and not view.dialog.is_deleted:
-                view.dialog.delete()
+            if not self.is_deleted:
+                self.enable()
 
-    return ui.button('파일 첨부', icon='attach_file', on_click=show).props('outline')
+    async def show(self):
+        if self.opened or not self.enabled:
+            return
+        self.opened = True
+        try:
+            self.view = AttachmentView(self.repository, self.lock)
+            with ui.context.client.content:
+                self.view.build()
+            self.view.dialog.open()
+            async with self.view.operation():
+                await self.view.refresh()
+            await self.view.dialog
+        finally:
+            self.opened = False
+            if self.view is not None and not self.view.dialog.is_deleted:
+                self.view.dialog.delete()
+            self.view = None
+
+    def _handle_delete(self):
+        self.repository.discard()
+        if self.view is not None and not self.view.dialog.is_deleted:
+            self.view.dialog.submit(None)
+            self.view.dialog.delete()
+        super()._handle_delete()
+
+
+def attachment_button(database, kind: str, record_id: int | None):
+    return AttachmentButton(database, kind, record_id)

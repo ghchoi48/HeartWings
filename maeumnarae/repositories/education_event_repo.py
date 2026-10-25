@@ -1,6 +1,7 @@
 """교육/행사 기록의 조회와 저장."""
 from maeumnarae.core.database import Database, NotFoundError
 from maeumnarae.core.models import EducationEvent, EducationEventInput
+from maeumnarae.repositories.attachment_repo import insert_attachments
 from maeumnarae.repositories._support import check_page, now_text, values
 
 
@@ -21,7 +22,7 @@ class EducationEventRepository:
             row = connection.execute('SELECT * FROM education_events WHERE id=?', (event_id,)).fetchone()
             return EducationEvent.model_validate(dict(row)) if row else None
 
-    def save(self, value: EducationEventInput, event_id: int | None = None) -> EducationEvent:
+    def save(self, value: EducationEventInput, event_id: int | None = None, *, attachments=()) -> EducationEvent:
         data = values(EducationEventInput.model_validate(value.model_dump(include=set(EducationEventInput.model_fields))))
         data['updated_at'] = now_text()
         with self.database.session(write=True) as connection:
@@ -39,5 +40,6 @@ class EducationEventRepository:
                     content=:content, content_format=:content_format, updated_at=:updated_at WHERE id=:id''', data)
                 if not cursor.rowcount:
                     raise NotFoundError('교육/행사를 찾을 수 없습니다.')
+            insert_attachments(connection, 'education', event_id, attachments)
             row = connection.execute('SELECT * FROM education_events WHERE id=?', (event_id,)).fetchone()
             return EducationEvent.model_validate(dict(row))

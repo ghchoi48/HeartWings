@@ -15,7 +15,7 @@ from maeumnarae.views.time_inputs import time_input
 from maeumnarae.core.database import DatabaseError
 from maeumnarae.core.models import Counseling, Student, SpecialEducation, SpecialEducationInput
 from maeumnarae.repositories.special_education_repo import SpecialEducationRepository, SpecialEducationLogRepository
-from maeumnarae.views.counseling_view import CounselingView, KST, STATUSES, counseling_form_input
+from maeumnarae.views.counseling_view import CounselingView, KST, STATUSES, TARGET_LABELS, normalize_target, counseling_form_input
 from maeumnarae.views.counseling_content import editor_html
 from maeumnarae.views.student_list import StudentList
 
@@ -76,7 +76,7 @@ class SpecialEducationView(CounselingView):
             async def cancel():
                 if saving:
                     return
-                if original != {key: field.value for key, field in fields.items()}:
+                if save_button.attachments.pending or original != {key: field.value for key, field in fields.items()}:
                     with ui.dialog().props('persistent') as confirm, ui.card():
                         ui.label('저장하지 않은 내용을 버릴까요?')
                         ui.button('계속 작성', on_click=lambda: confirm.submit(False))
@@ -104,9 +104,9 @@ class SpecialEducationView(CounselingView):
                     field.disable()
                 try:
                     if entry is None:
-                        await run.io_bound(self.counseling.create, value)
+                        await save_button.attachments.save_record(self.counseling.create, value)
                     else:
-                        await run.io_bound(self.counseling.update, entry.id, value)
+                        await save_button.attachments.save_record(self.counseling.update, entry.id, value)
                     dialog.submit(True)
                 except DatabaseError as error:
                     message.text = str(error)
@@ -337,13 +337,12 @@ class SpecialEducationView(CounselingView):
                 fields['starts_on'] = ui.date_input('교육 날짜', value=local_start.date().isoformat()).props('outlined').classes('grow')
                 fields['starts_time'] = time_input('시간', value=local_start.time().isoformat()).props('outlined').classes('grow')
                 fields['duration_minutes'] = ui.number('교육 시간 (분)', value=initial['duration_minutes'], min=1, max=1440, step=1).props('outlined').classes('w-36')
-                targets = ['학생본인', '보호자(가족)']
-                target = initial.get('counseling_target', '')
-                if target and target not in targets:
-                    targets.append(target)
+                target = normalize_target(initial.get('counseling_target', ''))
                 fields['counseling_target'] = ui.select(
-                    targets, label='교육 대상', value=target or None,
+                    TARGET_LABELS, label='교육 대상', value=target if target in TARGET_LABELS else None,
                 ).props('outlined clearable').classes('grow')
+                if target and target not in TARGET_LABELS:
+                    ui.label(f'기존 교육 대상: {target}. 교육 대상을 다시 선택해 주세요.').classes('text-sm text-amber-700')
                 fields['status'] = ui.select(STATUSES, label='교육 상태', value=initial['status']).props('outlined').classes('w-36')
             with ui.column().classes('w-full gap-3'):
                 ui.label('교육 내용').classes('font-semibold')
@@ -356,8 +355,9 @@ class SpecialEducationView(CounselingView):
             for field in fields.values():
                 field.on_value_change(lambda: message.set_text(''))
             with ui.row().classes('w-full items-center'):
-                attachment_button(self.counseling.database, 'special_log', entry.id if entry else None)
+                files = attachment_button(self.counseling.database, 'special_log', entry.id if entry else None)
                 ui.space()
                 cancel = ui.button('취소').props('flat')
                 save = ui.button('일지 저장', icon='save')
+                save.attachments = files
         return dialog, fields, message, save, cancel

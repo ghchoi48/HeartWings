@@ -208,7 +208,7 @@ class ConsultationView:
             async def cancel():
                 if saving:
                     return
-                if original != {key: field.value for key, field in fields.items()}:
+                if save_button.attachments.pending or original != {key: field.value for key, field in fields.items()}:
                     with self.log_panel.client.content:
                         with ui.dialog().props('persistent') as confirm, ui.card():
                             ui.label('저장하지 않은 내용을 버릴까요?')
@@ -243,7 +243,7 @@ class ConsultationView:
                 for field in (*fields.values(), save_button, cancel_button):
                     field.disable()
                 try:
-                    await run.io_bound(self.consultations.save, value, entry_id)
+                    await save_button.attachments.save_record(self.consultations.save, value, entry_id)
                     dialog.submit(True)
                 except DatabaseError as error:
                     message.text = str(error)
@@ -285,10 +285,11 @@ class ConsultationView:
             fields['follow_up'] = ui.textarea('후속 조치', value=initial['follow_up']).props('outlined rows=2 maxlength=20000').classes('w-full')
             message = ui.label().classes('text-sm text-red-700')
             with ui.row().classes('w-full items-center'):
-                attachment_button(self.teachers.database, 'consultation', entry.id if entry else None)
+                files = attachment_button(self.teachers.database, 'consultation', entry.id if entry else None)
                 ui.space()
                 cancel = ui.button('취소').props('flat')
                 save = ui.button('일지 저장', icon='save')
+                save.attachments = files
         return dialog, fields, message, save, cancel
 
     async def open_editor(self, teacher: Teacher | None = None) -> None:

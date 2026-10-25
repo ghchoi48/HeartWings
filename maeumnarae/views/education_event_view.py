@@ -26,10 +26,11 @@ class EducationEventView:
         self.deleting = False
         self.editor_fields = {}
         self.editor_original = {}
+        self.editor_attachments = None
 
     @property
     def editor_open(self):
-        return self.editor_saving or self.editor_original != self.editor_values()
+        return self.editor_saving or bool(self.editor_attachments and self.editor_attachments.pending) or self.editor_original != self.editor_values()
 
     def editor_values(self):
         return {key: field.value for key, field in self.editor_fields.items()}
@@ -52,6 +53,7 @@ class EducationEventView:
     def clear_editor(self):
         self.editor_fields = {}
         self.editor_original = {}
+        self.editor_attachments = None
         self.details.clear()
 
     def build(self):
@@ -199,26 +201,28 @@ class EducationEventView:
         with self.details:
             ui.label('교육/행사 수정' if entry else '새 교육/행사 등록').classes('text-2xl font-bold')
             fields = {}
-            fields['title'] = ui.input('교육/행사명 *', value=initial['title']).props('outlined maxlength=200').classes('w-full')
+            with ui.grid().classes('w-full gap-4').style('grid-template-columns: minmax(0, 1fr) minmax(0, 3fr)'):
+                fields['category'] = ui.select(['교육', '행사', '단체심리검사'], label='구분', value=initial['category']).props('outlined').classes('w-full min-w-0')
+                fields['title'] = ui.input('교육/행사명 *', value=initial['title']).props('outlined maxlength=200').classes('w-full min-w-0')
             with ui.row().classes('w-full items-start flex-nowrap'):
-                fields['category'] = ui.select(['교육', '행사', '단체심리검사'], label='구분', value=initial['category']).props('outlined').classes('flex-1 min-w-0')
                 fields['event_date'] = ui.date_input('날짜 *', value=initial['event_date'].isoformat()).props('outlined').classes('flex-1 min-w-0')
                 fields['event_time'] = time_input('시각', value=initial['event_time']).props('outlined').classes('flex-1 min-w-0')
                 fields['duration_minutes'] = ui.number('운영 시간(분)', value=initial['duration_minutes'], min=1, max=1440, step=1).props('outlined').classes('flex-1 min-w-0')
-            for key, label, maximum in [('location', '장소', 200), ('audience', '대상', 200), ('facilitator', '담당자 / 강사', 100)]:
-                fields[key] = ui.input(label, value=initial[key]).props(f'outlined maxlength={maximum}').classes('w-full')
-            fields['participant_count'] = ui.number('참여인원(명)', value=initial.get('participant_count'), min=0, max=2147483647, step=1).props('outlined clearable').classes('w-full')
+            with ui.grid(columns=4).classes('w-full gap-4'):
+                for key, label, maximum in [('location', '장소', 200), ('audience', '대상', 200), ('facilitator', '담당자 / 강사', 100)]:
+                    fields[key] = ui.input(label, value=initial[key]).props(f'outlined maxlength={maximum}').classes('w-full min-w-0')
+                fields['participant_count'] = ui.number('참여인원(명)', value=initial.get('participant_count'), min=0, max=2147483647, step=1).props('outlined clearable').classes('w-full min-w-0')
             ui.label('상세 내용').classes('font-semibold')
             fields['content'] = ui.editor(value=editor_html(initial['content'], initial.get('content_format', 'text')),
                                           placeholder='상세 내용을 입력하세요.').classes('w-full').props("""min-height=320px :toolbar='[["bold", "italic", "underline", "strike"], ["unordered", "ordered"], ["left", "center", "right"], ["undo", "redo"]]'""")
             message = ui.label().classes('text-sm text-red-700')
             with ui.row().classes('w-full items-center'):
-                with ui.row() as attachments:
-                    attachment_button(self.repository.database, 'education', entry.id if entry else None)
+                files = attachment_button(self.repository.database, 'education', entry.id if entry else None)
                 ui.space()
                 save_button = ui.button('저장', icon='save')
 
         self.editor_fields = fields
+        self.editor_attachments = files
         self.editor_original = self.editor_values()
 
         async def save():
@@ -238,15 +242,12 @@ class EducationEventView:
             for control in controls:
                 control.disable()
             try:
-                entry = await run.io_bound(self.repository.save, value, entry.id if entry else None)
+                entry = await files.save_record(self.repository.save, value, entry.id if entry else None)
             except DatabaseError as error:
                 message.text = str(error)
             else:
                 self.selected = entry
                 self.editor_original = self.editor_values()
-                attachments.clear()
-                with attachments:
-                    attachment_button(self.repository.database, 'education', entry.id)
                 message.text = '교육/행사를 저장했습니다.'
                 await self.reload()
                 ui.notify('교육/행사를 저장했습니다.', type='positive')

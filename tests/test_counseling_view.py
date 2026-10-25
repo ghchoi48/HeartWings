@@ -125,7 +125,7 @@ class CounselingViewTests(unittest.IsolatedAsyncioTestCase):
     async def test_target_automatically_sets_hidden_category(self):
         with self.host:
             panel, fields, _, _ = self.view.build_editor(self.student, None)
-        self.assertEqual(fields['counseling_target'].options, ['학생본인', '보호자(가족)'])
+        self.assertEqual(fields['counseling_target'].options, {'학생본인': '학생', '보호자(가족)': '학부모'})
         self.assertFalse(fields['category'].visible)
         for target, category in [('학생본인', '개인상담'), ('보호자(가족)', '학부모상담'), ('학생본인', '개인상담')]:
             fields['counseling_target'].value = target

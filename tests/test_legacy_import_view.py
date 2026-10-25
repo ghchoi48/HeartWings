@@ -1,13 +1,33 @@
 import asyncio
+from datetime import date, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
+import pytest
 from nicegui import Client, ui
 from nicegui.page import page
 
 from maeumnarae.core.database import Database
 from maeumnarae.services.legacy_import import parse_rows, PERSON_HEADERS
-from maeumnarae.views.legacy_import_view import LegacyImportView
+from maeumnarae.views.legacy_import_view import LegacyImportView, correction_text
+
+
+@pytest.mark.parametrize('label', ['일자', '상담일자', '생년월일'])
+@pytest.mark.parametrize('value,expected', [
+    (46000, '2025-12-09'),
+    (46000.5, '2025-12-09'),
+    (date(2026, 9, 3), '2026-09-03'),
+    (datetime(2026, 9, 3, 10, 30), '2026-09-03'),
+    ('2026/09/03', '2026-09-03'),
+    ('2026-09-03', '2026-09-03'),
+    (None, ''),
+    ('', ''),
+    (0, '0'),
+    ('잘못된 날짜', '잘못된 날짜'),
+])
+def test_correction_dates_preserve_invalid_values(label, value, expected):
+    assert correction_text(label, value) == expected
+    assert correction_text('사례번호', 46000) == '46000'
 
 
 def test_preview_save_and_option_invalidation(tmp_path):
@@ -89,6 +109,32 @@ def test_result_tables_include_all_rows_errors_and_consultation_kind():
         assert tables[2].rows[0]['duration'] == 30
 
 
+def test_duplicate_preview_shows_file_guidance_and_disables_actions():
+    from maeumnarae.services.legacy_import import LegacyBatch
+
+    with Client(page('/legacy-duplicate')):
+        view = LegacyImportView(None, lambda: False, lambda _: None, AsyncMock())
+        view.build()
+        view.rows = {'인적사항등록': [], '상담대장': []}
+        view.batch = LegacyBatch((), (), ('이미 가져온 원본 자료입니다.',), 'hash')
+        view.render_results()
+        view.apply_busy(False)
+        labels = [e.text for e in view.preview.descendants() if isinstance(e, ui.label)]
+        assert '업로드 한 파일을 다시 확인하세요. 이미 등록한 파일입니다.' in labels
+        assert '오류를 수정한 뒤 다시 검사하세요. 오류가 있으면 전체 저장을 중단합니다.' not in labels
+        assert not any('등록 대상' in label for label in labels)
+        tables = [e for e in view.preview.descendants() if isinstance(e, ui.table)]
+        assert len(tables) == 1
+        table = tables[0]
+        assert len(table.rows) == 1
+        assert table.rows[0]['message'] == '이미 가져온 원본 자료입니다.'
+        assert not view.row_errors()
+        assert not view.save_button.enabled
+        edit = next(e for e in view.preview.descendants() if isinstance(e, ui.button)
+                    and e.text == '행 수정 / 일지 지정 / 제외')
+        assert not edit.enabled
+
+
 def test_psychological_test_preview_uses_test_date_and_time():
     from datetime import date
     from maeumnarae.core.models import StudentInput, PsychologicalTestInput
@@ -118,11 +164,14 @@ def test_edit_dialog_applies_fields_route_exclusion_and_cancel(tmp_path):
             view.build()
             view.period_inputs['1'].set_value('09:10')
             view.rows = {'상담대장': [(5, dict.fromkeys(LOG_HEADERS, '') | {
-                '일자': 46000, '교시': 1, '대분류': '연구', '상담내용': '본문'})], '인적사항등록': []}
+                '일자': 46000, '상담일자': 46000.0, '교시': 1, '대분류': '연구', '상담내용': '본문'})], '인적사항등록': []}
             view.content = b'file'
             view.batch = parse_rows(view.rows, 2026, {'1': '09:10'})
             view.open_corrections()
             elements = list(client.elements.values())
+            dates = {e.label: e for e in elements if isinstance(e, ui.input) and e.label in ('일자', '상담일자')}
+            assert {label: control.value for label, control in dates.items()} == {
+                '일자': '2025-12-09', '상담일자': '2025-12-09'}
             route = next(e for e in elements if isinstance(e, ui.select) and e.label == '등록할 일지')
             route.set_value('교육/행사')
             title = next(e for e in elements if isinstance(e, ui.input) and e.label == '상담제목')
@@ -137,6 +186,12 @@ def test_edit_dialog_applies_fields_route_exclusion_and_cancel(tmp_path):
             assert view.corrections == {('상담대장', 5): {'상담제목': '수정 제목'}}
             assert view.destinations == {5: '교육/행사'}
             assert view.excluded == {('상담대장', 5)}
+            date_input = next(e for e in client.elements.values() if isinstance(e, ui.input) and e.label == '일자')
+            date_input.set_value('2026-09-03')
+            with patch.object(view, 'check', new_callable=AsyncMock):
+                await inspect.getclosurevars(handler).nonlocals['callback']()
+            assert view.corrections[('상담대장', 5)]['일자'] == '2026-09-03'
+            assert '상담일자' not in view.corrections[('상담대장', 5)]
             view.cancel_file()
             assert view.content is None and view.batch is None
             assert not view.rows and not view.corrections and not view.destinations and not view.excluded
