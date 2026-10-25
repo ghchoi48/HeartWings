@@ -6,6 +6,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from uuid import uuid4
 
+from maeumnarae.core.upload_limits import MAX_BACKUP_BYTES
 from maeumnarae.core.database import Database, DatabaseError, SCHEMA_VERSION
 
 
@@ -75,8 +76,8 @@ def create_backup(database: Database) -> bytes:
 
 def restore_backup(database: Database, content: bytes, password: str) -> Path:
     """복원 후보를 검증하고 자동 백업 후 원자적으로 교체한다."""
-    if not content:
-        raise DatabaseError('복원할 DB 파일이 비어 있습니다.')
+    if not content or len(content) > MAX_BACKUP_BYTES:
+        raise DatabaseError('복원 파일은 비어 있지 않은 256MB 이하의 DB 파일이어야 합니다.')
     with database._session_lock:
         try:
             # 같은 볼륨에서 os.replace하여 교체 중 부분 파일이 노출되지 않게 한다.

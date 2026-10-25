@@ -11,6 +11,14 @@ from weakref import WeakValueDictionary
 from maeumnarae.core.models import SchoolSettings, current_school_year
 
 SCHEMA_VERSION = 1
+WIDGET_SCHEMA = """CREATE TABLE IF NOT EXISTS home_widget_state (
+    id INTEGER PRIMARY KEY CHECK(id = 1), payload TEXT NOT NULL
+)"""
+
+
+def validate_new_password(password: str) -> None:
+    if len(password) < 4 or '\x00' in password:
+        raise ValueError('새 비밀번호는 4글자 이상이며 NUL 문자를 포함할 수 없습니다.')
 
 
 class DatabaseError(RuntimeError):
@@ -42,6 +50,7 @@ def default_database_path() -> Path:
 
 # 신규 DB는 현재 구조를 버전 1로 직접 생성한다.
 SCHEMA = (
+    WIDGET_SCHEMA,
     """CREATE TABLE counseling (
         id INTEGER PRIMARY KEY,
         student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE RESTRICT,
@@ -525,8 +534,7 @@ class Database:
 
     def change_password(self, current_password: str, new_password: str) -> None:
         """SQLCipher의 자체 rekey 트랜잭션으로 키를 바꾸고 성공 후 메모리 키를 갱신한다."""
-        if not new_password or '\x00' in new_password:
-            raise ValueError('새 비밀번호는 비어 있거나 NUL 문자를 포함할 수 없습니다.')
+        validate_new_password(new_password)
         with self._session_lock:
             if self._password is None:
                 raise DatabaseOpenError('DB가 잠겨 있습니다. 비밀번호를 입력해 다시 열어 주세요.')
@@ -587,9 +595,12 @@ class Database:
 
     def initialize(self, school: SchoolSettings | None = None, *, onboarding: bool = False) -> None:
         """버전 1 구조를 생성하고 출석 저장 및 Wee센터 지원을 보완한다."""
+        if not self.path.exists() or self.path.stat().st_size == 0:
+            validate_new_password(self._password or '')
         with self._session_lock, self._transaction(write=True) as connection:
             version = connection.execute('PRAGMA user_version').fetchone()[0]
             if version == SCHEMA_VERSION:
+                connection.execute(WIDGET_SCHEMA)
                 columns = {row['name'] for row in connection.execute('PRAGMA table_info(group_counseling_logs)')}
                 if columns and 'attendance' not in columns:
                     connection.execute("ALTER TABLE group_counseling_logs ADD COLUMN attendance TEXT NOT NULL DEFAULT '[]'")
@@ -609,6 +620,7 @@ class Database:
                 "SELECT 1 FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' LIMIT 1"
             ).fetchone():
                 raise DatabaseError('지원하지 않는 DB 버전 또는 구조입니다. 새 DB 파일을 사용하세요.')
+            validate_new_password(self._password or '')
             school = SchoolSettings.model_validate(school.model_dump()) if school is not None else SchoolSettings()
             for statement in SCHEMA:
                 connection.execute(statement)

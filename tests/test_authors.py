@@ -31,9 +31,9 @@ def db(tmp_path):
 
 
 def authored_tables(connection):
-    # 첨부파일은 부모 일지에 속하며 별도의 author 열을 두지 않는다.
+    # 첨부파일은 부모 일지에 속한다. 위젯 상태는 업무 일지가 아닌 암호화 설정이다.
     return [row[0] for row in connection.execute(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name != 'journal_attachments'")]
+        "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT IN ('journal_attachments', 'home_widget_state')")]
 
 
 def test_all_records_snapshot_author_and_preserve_it_on_edit(db):

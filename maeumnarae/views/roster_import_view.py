@@ -1,5 +1,7 @@
 """XLSX 명부 서식 다운로드, 업로드 미리보기와 일괄 등록 컨트롤."""
 
+from maeumnarae.core.secure_upload import SecureUpload
+
 from nicegui import events, run, ui
 
 from maeumnarae.core.database import DatabaseError
@@ -22,7 +24,7 @@ class RosterImportView:
             ui.label(f'{title} 일괄 등록').classes('text-lg font-bold text-slate-800')
             ui.label('서식을 내려받아 작성한 뒤 업로드하세요. 미리보기를 확인하고 등록할 수 있습니다.').classes('text-sm text-slate-500')
             self.download = ui.button(f'{title} 서식 다운로드', icon='download', on_click=self.download_template).props('outline')
-            self.upload = ui.upload(label=f'{title} XLSX 파일', auto_upload=True, max_files=1,
+            self.upload = SecureUpload(label=f'{title} XLSX 파일', auto_upload=True, max_files=1,
                                     max_file_size=MAX_FILE_BYTES, on_upload=self.receive,
                                     on_rejected=lambda: ui.notify('10MB 이하의 XLSX 파일 하나를 선택해 주세요.', type='warning')
                                     ).props('accept=.xlsx').classes('w-full')

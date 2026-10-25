@@ -125,17 +125,17 @@ class PasswordFormTests(unittest.IsolatedAsyncioTestCase):
                 await change()
                 io.assert_not_awaited()
                 fields['현재 비밀번호'].value = 'old'
-                fields['새 비밀번호'].value = 'new'
+                fields['새 비밀번호'].value = 'new4'
                 fields['새 비밀번호 확인'].value = 'mismatch'
                 await change()
                 io.assert_not_awaited()
-                fields['새 비밀번호 확인'].value = 'new'
+                fields['새 비밀번호 확인'].value = 'new4'
                 task = asyncio.create_task(change())
                 await asyncio.sleep(0)
                 self.assertFalse(button.enabled)
                 self.assertFalse(cancel.enabled)
                 await change()
-                io.assert_awaited_once_with(database.change_password, 'old', 'new')
+                io.assert_awaited_once_with(database.change_password, 'old', 'new4')
                 release.set()
                 await task
                 self.assertTrue(button.enabled)
@@ -143,7 +143,7 @@ class PasswordFormTests(unittest.IsolatedAsyncioTestCase):
                 self.assertTrue(all(field.value == '' for field in fields.values()))
 
                 for field in fields.values():
-                    field.value = 'new' if field is not fields['현재 비밀번호'] else 'old'
+                    field.value = 'new4' if field is not fields['현재 비밀번호'] else 'old'
                 io.side_effect = DatabaseError('현재 비밀번호가 올바르지 않습니다.')
                 dialog.open()
                 await change()

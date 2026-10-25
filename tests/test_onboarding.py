@@ -18,7 +18,7 @@ async def inline(function, *args):
 
 
 def test_existing_database_does_not_start_onboarding(tmp_path):
-    database = Database('key', tmp_path / 'existing.db')
+    database = Database('key4', tmp_path / 'existing.db')
     database.initialize()
     assert OnboardingRepository(database).get() is None
 
@@ -33,11 +33,11 @@ def test_onboarding_validation_save_resume_and_branches(tmp_path):
             assert view.fields['school_level'].value == '초등학교'
             await view.create_database()
             assert not path.exists()
-            view.password.value = 'key'
+            view.password.value = 'key4'
             view.confirmation.value = 'different'
             await view.create_database()
             assert not path.exists()
-            view.confirmation.value = 'key'
+            view.confirmation.value = 'key4'
             await view.create_database()
             assert view.step == 'school'
             assert view.password.value == view.confirmation.value == ''
@@ -59,7 +59,7 @@ def test_onboarding_validation_save_resume_and_branches(tmp_path):
             assert len(view.import_views) == 3
             assert not started.called
             view.database.lock()
-            reopened = Database('key', path)
+            reopened = Database('key4', path)
             reopened.initialize()
             assert OnboardingRepository(reopened).get() == 'welcome'
             resumed = OnboardingView(path, started, reopened, 'welcome', SchoolSettingsRepository(reopened).get())
@@ -77,7 +77,7 @@ def test_school_lookup_autosaves_selection_and_invalidates_changed_name(tmp_path
                 patch('maeumnarae.views.onboarding_view.ui.notify'):
             view = OnboardingView(tmp_path / 'new.db', Mock())
             view.build()
-            view.password.value = view.confirmation.value = 'key'
+            view.password.value = view.confirmation.value = 'key4'
             await view.create_database()
             view.fields['neis_office_code'].value = 'H10'
             view.fields['school_name'].value = '테스트'

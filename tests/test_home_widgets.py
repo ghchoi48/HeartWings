@@ -70,7 +70,7 @@ def test_reinitialize_and_home_persistence(tmp_path):
         saved.save_layout([{'kind': 'clock', 'span': 1, 'height': 10000}])
 
 
-def test_legacy_data_moves_to_shared_json_only_once(tmp_path):
+def test_legacy_db_data_moves_to_encrypted_widget_state_only_once(tmp_path):
     db = Database('test-password', tmp_path / 'legacy.db')
     db.initialize()
     layout = [{'kind': 'todo', 'span': 3}]
@@ -92,8 +92,9 @@ def test_legacy_data_moves_to_shared_json_only_once(tmp_path):
     assert data['mode'] == 'light'
     assert data['size'] == 20
     assert data['other'] == 123
-    assert len(data['widgets']['todos']) == 2
-    assert data['widgets']['next_todo_id'] == 9
+    assert 'widgets' not in data
+    assert len(repo.todos()) == 2
+    assert repo._read()['next_todo_id'] == 9
     repo.save_layout([])
     repo.delete_todo(7)
     repo.delete_todo(8)
@@ -105,26 +106,20 @@ def test_legacy_data_moves_to_shared_json_only_once(tmp_path):
         assert json.loads(connection.execute('SELECT layout FROM home_preferences').fetchone()[0]) == layout
 
 
-def test_failed_json_save_preserves_previous_data(tmp_path):
+def test_failed_widget_change_rolls_back_database(tmp_path):
     db = Database('test-password', tmp_path / 'home.db')
     db.initialize()
     repo = HomeRepository(db)
     repo.add_todo('유지할 할 일')
-    path = tmp_path / 'display-settings.json'
-    before = path.read_bytes()
-    with patch('maeumnarae.core.settings_store.Path.replace', side_effect=OSError('read-only')):
-        with pytest.raises(DatabaseError):
-            repo.add_todo('실패할 할 일')
-    assert path.read_bytes() == before
-    assert len(repo.todos()) == 1
-    assert not list(tmp_path.glob('*.tmp'))
-    path.write_text('broken json')
+
+    def broken(widgets):
+        widgets['todos'].clear()
+        raise ValueError('invalid update')
+
     with pytest.raises(DatabaseError):
-        repo.save_layout([])
-    assert path.read_text() == 'broken json'
-    path.write_text(json.dumps({'widgets': {}}))
-    with pytest.raises(DatabaseError):
-        repo.layout()
+        repo._update(broken)
+    assert [item['title'] for item in repo.todos()] == ['유지할 할 일']
+    assert not (tmp_path / 'display-settings.json').exists()
 
 
 def test_teacher_search_uses_full_directory_and_literal_patterns(tmp_path):

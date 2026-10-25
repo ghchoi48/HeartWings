@@ -3,7 +3,7 @@
 from nicegui import run, ui
 from pydantic import ValidationError
 
-from maeumnarae.core.database import Database, DatabaseError
+from maeumnarae.core.database import Database, DatabaseError, validate_new_password
 from maeumnarae.core.models import SchoolSettings
 from maeumnarae.repositories.onboarding_repo import OnboardingRepository
 from maeumnarae.repositories.school_settings_repo import SchoolSettingsRepository
@@ -39,7 +39,7 @@ class OnboardingView:
                 with ui.tab_panel('password'):
                     ui.icon('lock_outline', size='40px').classes('text-teal-700')
                     ui.label('학생들의 이야기를 안전하게').classes('text-xl font-bold')
-                    ui.label('상담 자료를 보호할 DB 비밀번호를 설정해 주세요.')
+                    ui.label('상담 자료를 보호할 DB 비밀번호를 4글자 이상으로 설정해 주세요.')
                     self.password = ui.input('DB 비밀번호', password=True, password_toggle_button=True).props('outlined').classes('w-full')
                     self.confirmation = ui.input('새 DB 비밀번호 확인', password=True, password_toggle_button=True).props('outlined').classes('w-full')
                     self.controls.extend([self.password, self.confirmation])
@@ -130,8 +130,10 @@ class OnboardingView:
         if self.busy or self.database is not None:
             return
         secret = self.password.value or ''
-        if not secret:
-            self.message.set_text('비밀번호를 입력해 주세요.')
+        try:
+            validate_new_password(secret)
+        except ValueError as error:
+            self.message.set_text(str(error))
             return
         if secret != self.confirmation.value:
             self.message.set_text('새 DB의 비밀번호를 다시 확인해 주세요.')

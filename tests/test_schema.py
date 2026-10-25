@@ -24,7 +24,7 @@ def test_fresh_database_has_current_structure_and_seed_authors(tmp_path):
             'counseling_groups', 'group_counseling_logs', 'group_counseling_members',
             'teachers', 'consultations', 'special_educations', 'special_education_logs',
             'psychological_tests', 'education_events', 'calendars', 'calendar_events',
-            'calendar_preferences', 'school_settings', 'home_preferences', 'home_todos',
+            'calendar_preferences', 'school_settings', 'home_preferences', 'home_todos', 'home_widget_state',
             'journal_attachments',
         }
         for table in ('school_settings', 'calendars', 'calendar_preferences'):

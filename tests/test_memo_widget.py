@@ -1,6 +1,8 @@
 """메모의 서식·인스턴스 분리·저장 실패 복구 검증."""
 
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 import pytest
@@ -36,7 +38,11 @@ class MemoWidgetTests(unittest.IsolatedAsyncioTestCase):
     async def test_failed_save_keeps_draft_across_rebuild_and_retry(self):
         store = SettingsStore(None)
         store.update(lambda data: data.update(widgets={'layout': [], 'todos': [], 'next_todo_id': 1}))
-        repo = HomeRepository(None, store)
+        directory = TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        database = Database('memo-test', Path(directory.name) / 'memo.db')
+        database.initialize()
+        repo = HomeRepository(database, store)
         with Client(page('/memo-test')):
             host = ui.column()
             with host, patch('maeumnarae.widgets.memo.ui.timer'):

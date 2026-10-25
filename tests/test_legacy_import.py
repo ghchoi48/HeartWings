@@ -149,7 +149,7 @@ def test_header_detection_and_formula_only_rows(monkeypatch):
         def get_sheet(self, name):
             return nullcontext(Sheet(PERSON_HEADERS if name == '인적사항등록' else LOG_HEADERS))
 
-    monkeypatch.setattr(module, 'open_workbook', lambda _: nullcontext(Book()))
+    monkeypatch.setattr(module, 'open_memory_workbook', lambda _: nullcontext(Book()))
     stream = BytesIO()
     with ZipFile(stream, 'w') as z:
         z.writestr('fake', '')

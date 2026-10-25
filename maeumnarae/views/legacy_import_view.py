@@ -2,6 +2,8 @@
 
 from maeumnarae.views.settings_card import settings_card
 
+from maeumnarae.core.secure_upload import SecureUpload
+
 from nicegui import run, ui
 import re
 
@@ -45,7 +47,7 @@ class LegacyImportView:
             self.period_button = ui.button('교시별 시작 시간 설정', on_click=self.period_dialog.open)
             ui.label('시작 시각은 교시별 설정을 적용하며, 소요 시간은 원본의 시간(시) × 60 + 시간(분)으로 계산합니다. '
                      '원본 수식은 저장된 값을 읽으므로 Excel에서 계산·저장한 파일을 사용하세요.').classes('text-sm text-slate-500')
-            self.upload = ui.upload(label='상담기록관리 XLSB 파일', auto_upload=True, max_files=1,
+            self.upload = SecureUpload(label='상담기록관리 XLSB 파일', auto_upload=True, max_files=1,
                 max_file_size=MAX_BYTES, on_upload=self.receive,
                 on_rejected=lambda: ui.notify('10MB 이하의 XLSB 파일 하나를 선택하세요.', type='warning')).props('accept=.xlsb')
             self.upload.on('removed', self.remove_file)

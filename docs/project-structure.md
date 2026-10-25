@@ -46,10 +46,13 @@
 | [`maeumnarae/core/app_fonts.py`](../maeumnarae/core/app_fonts.py) | 번들 fonts 폴더의 글꼴 목록과 브라우저용 @font-face 정의. |
 | [`maeumnarae/core/database.py`](../maeumnarae/core/database.py) | SQLCipher 연결, 트랜잭션 및 스키마 관리. 평문 SQLite 대체는 금지한다. |
 | [`maeumnarae/core/desktop.py`](../maeumnarae/core/desktop.py) | 네이티브 창 설정과 운영 로그. DB·화면 비즈니스 로직과 분리한다. |
+| [`maeumnarae/core/secure_upload.py`](../maeumnarae/core/secure_upload.py) | 크기·동시 수신 제한과 디스크 스풀 없는 메모리 업로드. |
+| [`maeumnarae/core/upload_limits.py`](../maeumnarae/core/upload_limits.py) | 업로드와 복원 서비스가 공유하는 크기 제한. |
+| [`maeumnarae/services/memory_xlsb.py`](../maeumnarae/services/memory_xlsb.py) | XLSB를 평문 임시파일 없이 ZIP 스트림에서 읽는 어댑터. |
 | [`maeumnarae/core/models.py`](../maeumnarae/core/models.py) | UI나 DB 드라이버에 의존하지 않는 입력 및 저장 데이터 모델. |
 | [`maeumnarae/core/paths.py`](../maeumnarae/core/paths.py) | 소스 실행과 PyInstaller 번들에서 동일하게 쓰는 읽기 전용 리소스 경로. |
 | [`maeumnarae/core/program_info.py`](../maeumnarae/core/program_info.py) | 프로그램 소개 정보와 배포에 포함되는 라이선스 자료. |
-| [`maeumnarae/core/settings_store.py`](../maeumnarae/core/settings_store.py) | 화면 설정과 위젯이 공유하는 JSON 파일의 원자적 읽기·수정·저장. |
+| [`maeumnarae/core/settings_store.py`](../maeumnarae/core/settings_store.py) | 화면 설정 JSON의 원자적 읽기·수정·저장 및 위젯 이전 잠금. |
 | [`maeumnarae/repositories/__init__.py`](../maeumnarae/repositories/__init__.py) | UI는 이 계층의 API를 통해서만 학생/상담 데이터를 읽고 쓴다. |
 | [`maeumnarae/repositories/_support.py`](../maeumnarae/repositories/_support.py) | 저장소 내부의 날짜 직렬화와 페이지 검증. |
 | [`maeumnarae/repositories/attachment_repo.py`](../maeumnarae/repositories/attachment_repo.py) | 파일 본문을 암호화 DB에 저장하며 일지별 접근 범위를 검증한다. |
@@ -60,7 +63,7 @@
 | [`maeumnarae/repositories/deletion_repo.py`](../maeumnarae/repositories/deletion_repo.py) | 명시적으로 확인한 항목과 종속 기록을 한 트랜잭션에서 삭제한다. |
 | [`maeumnarae/repositories/education_event_repo.py`](../maeumnarae/repositories/education_event_repo.py) | 교육/행사 기록의 조회와 저장. |
 | [`maeumnarae/repositories/group_counseling_repo.py`](../maeumnarae/repositories/group_counseling_repo.py) | 집단 상담과 집단별 일지의 조회 및 저장. |
-| [`maeumnarae/repositories/home_repo.py`](../maeumnarae/repositories/home_repo.py) | 위젯 배치와 할 일을 화면 설정 JSON의 widgets 항목에 보관한다. |
+| [`maeumnarae/repositories/home_repo.py`](../maeumnarae/repositories/home_repo.py) | 위젯 배치·메모·할 일을 현재 암호화 DB에 보관하고 기존 JSON을 한 번 이전한다. |
 | [`maeumnarae/repositories/journal_export_repo.py`](../maeumnarae/repositories/journal_export_repo.py) | 업로드 서식에 필요한 메타데이터만 한 읽기 트랜잭션에서 조회한다. |
 | [`maeumnarae/repositories/legacy_import_repo.py`](../maeumnarae/repositories/legacy_import_repo.py) | 기존 XLSB 자료를 한 트랜잭션으로 추가한다. |
 | [`maeumnarae/repositories/psychological_test_repo.py`](../maeumnarae/repositories/psychological_test_repo.py) | 학생별 심리검사 일지 저장과 조회. |
@@ -115,7 +118,7 @@
 | [`maeumnarae/widgets/__init__.py`](../maeumnarae/widgets/__init__.py) | 홈 위젯 등록부. 각 위젯의 UI와 동작은 개별 모듈에서 관리한다. |
 | [`maeumnarae/widgets/digital_clock.py`](../maeumnarae/widgets/digital_clock.py) | 한국 표준시 디지털 시계 위젯. |
 | [`maeumnarae/widgets/meal.py`](../maeumnarae/widgets/meal.py) | 학교 설정을 이용하는 날짜별 나이스 급식 위젯. |
-| [`maeumnarae/widgets/memo.py`](../maeumnarae/widgets/memo.py) | 인스턴스별 서식 있는 메모. 변경 즉시 공용 설정 JSON에 저장한다. |
+| [`maeumnarae/widgets/memo.py`](../maeumnarae/widgets/memo.py) | 인스턴스별 서식 있는 메모. 변경 즉시 현재 암호화 DB에 저장한다. |
 | [`maeumnarae/widgets/teacher_search.py`](../maeumnarae/widgets/teacher_search.py) | 기존 교사 명부를 검색해 연락처와 담당 업무를 확인한다. |
 | [`maeumnarae/widgets/todo_list.py`](../maeumnarae/widgets/todo_list.py) | 목록별 할 일과 완료 내역, 기한·우선순위를 관리한다. |
 | [`maeumnarae/widgets/weather.py`](../maeumnarae/widgets/weather.py) | 기기 위치 또는 직접 선택한 지역의 일간·주간 날씨. |

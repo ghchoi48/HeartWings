@@ -10,7 +10,8 @@ import hashlib
 import json
 import re
 
-from pyxlsb import open_workbook, convert_date
+from pyxlsb import convert_date
+from maeumnarae.services.memory_xlsb import open_memory_workbook
 from pydantic import ValidationError
 
 from maeumnarae.core.models import (StudentInput, GroupCounselingInput, CounselingInput, GroupLogInput,
@@ -83,7 +84,7 @@ def read_rows(content):
             if len(archive.infolist()) > 512 or sum(i.file_size for i in archive.infolist()) > 80 * 1024 * 1024:
                 raise ValueError('압축 해제 크기가 너무 큽니다.')
         result = {}
-        with open_workbook(BytesIO(content)) as book:
+        with open_memory_workbook(content) as book:
             for name, required in [('인적사항등록', PERSON_HEADERS), ('상담대장', LOG_HEADERS)]:
                 with book.get_sheet(name) as sheet:
                     if sheet.dimension.h > 20000 or sheet.dimension.w > 100:

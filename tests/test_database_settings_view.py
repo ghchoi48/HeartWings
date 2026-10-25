@@ -60,7 +60,7 @@ class DatabaseSettingsTests(unittest.IsolatedAsyncioTestCase):
                 await restore()
                 notify.assert_called()
                 await upload._upload_handlers[0](SimpleNamespace(
-                    file=SimpleNamespace(read=AsyncMock(return_value=content))))
+                    file=SimpleNamespace(read=AsyncMock(return_value=content), size=lambda: len(content))))
                 confirm.value = True
                 password.value = 'wrong'
                 await restore()

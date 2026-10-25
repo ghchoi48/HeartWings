@@ -36,7 +36,7 @@ def test_preview_save_and_option_invalidation(tmp_path):
             return function(*args, **kwargs)
 
         with Client(page('/legacy-test')):
-            db = Database('key', tmp_path / 'view.db')
+            db = Database('key4', tmp_path / 'view.db')
             db.initialize()
             busy = False
 
@@ -158,7 +158,7 @@ def test_edit_dialog_applies_fields_route_exclusion_and_cancel(tmp_path):
 
     async def check():
         with Client(page('/legacy-edit')) as client:
-            database = Database('key', tmp_path / 'edit.db')
+            database = Database('key4', tmp_path / 'edit.db')
             database.initialize()
             view = LegacyImportView(database, lambda: False, lambda _: None, AsyncMock())
             view.build()

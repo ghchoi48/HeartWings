@@ -1,8 +1,9 @@
-"""화면 설정과 위젯이 공유하는 JSON 파일의 원자적 읽기·수정·저장."""
+"""화면 설정 JSON의 원자적 읽기·수정·저장과 기존 위젯 이전 잠금."""
 
 import json
 import os
 from copy import deepcopy
+from contextlib import contextmanager
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from threading import RLock
@@ -14,6 +15,12 @@ class SettingsStore:
     def __init__(self, path: Path | None):
         self.path = path
         self._memory = {}
+
+    @contextmanager
+    def locked(self):
+        """여러 저장과 DB 이전을 같은 프로세스 안에서 직렬화한다."""
+        with _LOCK:
+            yield
 
     def _read(self) -> dict:
         if self.path is None:

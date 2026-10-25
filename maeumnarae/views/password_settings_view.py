@@ -2,11 +2,11 @@
 
 from nicegui import run, ui
 
-from maeumnarae.core.database import Database, DatabaseError
+from maeumnarae.core.database import Database, DatabaseError, validate_new_password
 
 
 def build_password_settings(database: Database) -> None:
-    ui.label('변경 후에는 새 비밀번호로 DB를 열 수 있습니다.').classes('text-sm text-slate-500')
+    ui.label('새 비밀번호는 4글자 이상이어야 합니다. 변경 후에는 새 비밀번호로 DB를 열 수 있습니다.').classes('text-sm text-slate-500')
     busy = False
 
     def clear():
@@ -25,6 +25,11 @@ def build_password_settings(database: Database) -> None:
         old_secret, new_secret = current.value or '', new.value or ''
         if not old_secret or not new_secret or not confirmation.value:
             ui.notify('현재 비밀번호와 새 비밀번호, 확인란을 모두 입력해 주세요.', type='negative')
+            return
+        try:
+            validate_new_password(new_secret)
+        except ValueError as error:
+            ui.notify(str(error), type='negative')
             return
         if new_secret != confirmation.value:
             ui.notify('새 비밀번호와 확인 값이 일치하지 않습니다.', type='negative')

@@ -2,6 +2,8 @@
 import asyncio
 from contextlib import asynccontextmanager
 
+from maeumnarae.core.secure_upload import SecureUpload
+
 from nicegui import run, ui
 
 from maeumnarae.core.database import DatabaseError
@@ -18,9 +20,9 @@ class AttachmentView:
         with ui.dialog().props('persistent') as self.dialog, ui.card().classes('w-full max-w-2xl p-6 gap-4'):
             ui.label('일지 첨부파일').classes('text-2xl font-bold')
             draft = isinstance(self.repository, DraftAttachments) and self.repository.record_id is None
-            ui.label('파일당 최대 20MB · 일지 저장 시 첨부파일도 함께 저장됩니다. 작성을 취소하면 첨부파일도 폐기됩니다.' if draft else
-                     '파일당 최대 20MB · 첨부와 삭제는 즉시 저장됩니다. 일지 삭제 시 첨부파일도 함께 삭제됩니다.').classes('text-sm text-slate-500')
-            self.upload = ui.upload(label='파일 선택 또는 끌어놓기', auto_upload=True, multiple=True,
+            ui.label('파일당 최대 20MB · 한 번에 10개까지 · 일지 저장 시 첨부파일도 함께 저장됩니다. 작성을 취소하면 첨부파일도 폐기됩니다.' if draft else
+                     '파일당 최대 20MB · 한 번에 10개까지 · 첨부와 삭제는 즉시 저장됩니다. 일지 삭제 시 첨부파일도 함께 삭제됩니다.').classes('text-sm text-slate-500')
+            self.upload = SecureUpload(label='파일 선택 또는 끌어놓기', auto_upload=True, multiple=True,
                                     max_file_size=MAX_ATTACHMENT_BYTES, on_upload=self.receive,
                                     on_rejected=lambda: ui.notify('파일당 20MB 이하의 파일을 선택해 주세요.', type='warning')).classes('w-full')
             self.message = ui.label().classes('text-sm text-red-700')

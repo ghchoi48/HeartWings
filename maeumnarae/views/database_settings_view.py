@@ -5,6 +5,8 @@ from subprocess import SubprocessError
 
 from maeumnarae.core.desktop import open_folder
 
+from maeumnarae.core.secure_upload import SecureUpload, MAX_BACKUP_BYTES
+
 from nicegui import events, run, ui
 
 from maeumnarae.core.database import Database, DatabaseError
@@ -75,8 +77,10 @@ def build_database_settings(database: Database, on_roster_import=None) -> None:
         set_busy(True)
         uploaded = None
         try:
+            if event.file.size() > MAX_BACKUP_BYTES:
+                raise ValueError('복원 파일은 256MB까지 지원합니다.')
             uploaded = await event.file.read()
-        except OSError:
+        except (OSError, ValueError):
             ui.notify('백업 파일을 읽지 못했습니다. 다시 선택해 주세요.', type='negative')
         finally:
             set_busy(False)
@@ -123,8 +127,8 @@ def build_database_settings(database: Database, on_roster_import=None) -> None:
         ui.label('백업 파일로 현재 데이터를 교체합니다. 복원 전 DB는 자동 백업되며, 복원 후에는 DB를 다시 열어야 합니다.').classes('text-sm text-slate-500')
         with ui.dialog().props('persistent') as dialog, ui.card().classes('w-full max-w-xl p-6 gap-4'):
             ui.label('DB 복원').classes('text-xl font-bold text-slate-800')
-            ui.label('백업 파일을 선택하고, 백업 당시의 DB 비밀번호를 입력하세요.').classes('text-sm text-slate-500')
-            upload = ui.upload(label='복원할 DB 파일', auto_upload=True, max_files=1,
+            ui.label('256MB 이하의 백업 파일을 선택하고, 백업 당시의 DB 비밀번호를 입력하세요.').classes('text-sm text-slate-500')
+            upload = SecureUpload(label='복원할 DB 파일', auto_upload=True, max_files=1, max_file_size=MAX_BACKUP_BYTES,
                                on_upload=receive_file).props('accept=.db,.sqlite,.sqlite3').classes('w-full')
             upload.on('removed', remove_file)
             password = ui.input('백업 파일 비밀번호', password=True, password_toggle_button=True).props(

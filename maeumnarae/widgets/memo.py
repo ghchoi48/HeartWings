@@ -1,4 +1,4 @@
-"""인스턴스별 서식 있는 메모. 변경 즉시 공용 설정 JSON에 저장한다."""
+"""인스턴스별 서식 있는 메모. 변경 즉시 현재 암호화 DB에 저장한다."""
 
 from nicegui import ui
 
@@ -60,7 +60,7 @@ class Memo:
             self.save(event.value or '')
 
     def save(self, content):
-        # 파일 저장은 짧은 동기 작업으로 처리해 배치 재구성 전에 변경을 확정한다.
+        # DB 저장을 동기 작업으로 처리해 배치 재구성 전에 변경을 확정한다.
         self.repository.note_drafts[self.instance_id] = content
         try:
             self.repository.save_note(self.instance_id, content)

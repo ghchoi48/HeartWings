@@ -1,4 +1,4 @@
-"""위젯 배치와 할 일을 화면 설정 JSON의 widgets 항목에 보관한다."""
+"""위젯 데이터와 메모·할 일을 현재 암호화 DB에 보관한다."""
 
 import json
 from copy import deepcopy
@@ -20,6 +20,7 @@ class HomeRepository:
         self.database = database
         self._settings = settings
         self.note_drafts: dict[str, str] = {}
+        self._storage_ready = False
 
     @property
     def settings(self) -> SettingsStore:
@@ -79,25 +80,53 @@ class HomeRepository:
             raise ValueError('할 일 번호가 올바르지 않습니다.')
         return widgets
 
+    def _ensure_storage(self) -> None:
+        if self._storage_ready:
+            return
+        # 이전 JSON에는 DB 식별자가 없으므로 처음 여는 DB가 한 번만 인수한다.
+        # 인수 대상을 먼저 기록하여 DB 커밋/JSON 정리 사이에 중단되어도 다른 DB로 복제하지 않는다.
+        with self.database._session_lock, self.settings.locked():
+            with self.database.session() as connection:
+                exists = connection.execute('SELECT 1 FROM home_widget_state WHERE id=1').fetchone()
+            data = self.settings.read()
+            owner = str(self.database.path.resolve())
+            legacy = data.get('widgets')
+            eligible = legacy is not None and data.get('widgets_migration_owner', owner) == owner
+            if not exists:
+                widgets = self._validate(deepcopy(legacy) if eligible else self._legacy())
+                if eligible:
+                    self.settings.update(lambda settings: settings.update(widgets_migration_owner=owner))
+                with self.database.session(write=True) as connection:
+                    connection.execute('INSERT INTO home_widget_state (id, payload) VALUES (1, ?)',
+                                       (json.dumps(widgets, ensure_ascii=False),))
+            if eligible:
+                def remove_plaintext(settings):
+                    settings.pop('widgets', None)
+                    settings.pop('widgets_migration_owner', None)
+                self.settings.update(remove_plaintext)
+            self._storage_ready = True
+
     def _update(self, change):
-        def update(data):
-            if 'widgets' not in data:
-                data['widgets'] = self._legacy()
-            widgets = self._validate(data['widgets'])
-            return change(widgets)
         try:
-            return self.settings.update(update)
+            self._ensure_storage()
+            with self.database.session(write=True) as connection:
+                widgets = self._validate(json.loads(connection.execute(
+                    'SELECT payload FROM home_widget_state WHERE id=1').fetchone()[0]))
+                result = change(widgets)
+                connection.execute('UPDATE home_widget_state SET payload=? WHERE id=1',
+                                   (json.dumps(widgets, ensure_ascii=False),))
+                return deepcopy(result)
         except (OSError, ValueError, KeyError, TypeError) as error:
-            raise DatabaseError('위젯 설정을 저장하지 못했습니다. 설정 파일과 폴더 권한을 확인해 주세요.') from error
+            raise DatabaseError('위젯 데이터를 저장하지 못했습니다. DB와 설정 파일을 확인해 주세요.') from error
 
     def _read(self) -> dict:
         try:
-            data = self.settings.read()
-            if 'widgets' in data:
-                return self._validate(data['widgets'])
-            return self._update(lambda widgets: widgets)
+            self._ensure_storage()
+            with self.database.session() as connection:
+                return self._validate(json.loads(connection.execute(
+                    'SELECT payload FROM home_widget_state WHERE id=1').fetchone()[0]))
         except (OSError, ValueError, KeyError, TypeError) as error:
-            raise DatabaseError('위젯 설정을 읽지 못했습니다. 설정 파일을 확인해 주세요.') from error
+            raise DatabaseError('위젯 데이터를 읽지 못했습니다. DB와 설정 파일을 확인해 주세요.') from error
 
     def layout(self) -> list[dict]:
         return self._read()['layout']
@@ -192,9 +221,10 @@ class HomeRepository:
         self._update(lambda widgets: widgets.setdefault('weather', {}).update({instance_id: value}))
 
     def note(self, instance_id: str) -> str:
+        widgets = self._read()  # 초안도 잠금 상태에서는 반환하지 않는다.
         if instance_id in self.note_drafts:
             return clean_html(self.note_drafts[instance_id])
-        return clean_html(self._read()['notes'].get(instance_id, ''))
+        return clean_html(widgets['notes'].get(instance_id, ''))
 
     def save_note(self, instance_id: str, content: str) -> None:
         if not isinstance(content, str) or len(content) > 100_000:
