@@ -8,6 +8,7 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 from maeumnarae.core.paths import RESOURCE_ROOT
+from maeumnarae.core.startup import log_folders
 
 ICON_PATH = RESOURCE_ROOT / 'icons' / 'icon.ico'
 
@@ -51,22 +52,26 @@ def update_native_icon(dark: bool) -> None:
         native.method_queue.put(('set_app_icon', (dark,), {}))
 
 
-# spawn으로 다시 import되는 웹뷰 프로세스에도 동일한 메서드를 등록한다.
-# NiceGUI의 WindowProxy에는 아이콘 변경 API가 없어 기존 메서드 큐를 이용한다.
-try:
-    import webview
-except ImportError:
-    pass
-else:
+def register_native_icon() -> None:
+    """freeze_support 이전에 각 프로세스의 Window에 메서드를 등록한다."""
+    try:
+        import webview
+    except ImportError:
+        return
     webview.Window.set_app_icon = _set_app_icon
 
 
 def configure_logging(database_path: Path) -> Path:
     """콘솔 없는 앱에서도 오류 위치를 확인할 수 있도록 회전 로그를 생성한다."""
-    folder = database_path.parent / 'logs'
-    folder.mkdir(parents=True, exist_ok=True, mode=0o700)
-    path = folder / 'maeumnarae.log'
-    handler = RotatingFileHandler(path, maxBytes=1_000_000, backupCount=2, encoding='utf-8')
+    for folder in log_folders(database_path):
+        try:
+            folder.mkdir(parents=True, exist_ok=True, mode=0o700)
+            path = folder / 'maeumnarae.log'
+            handler = RotatingFileHandler(path, maxBytes=1_000_000, backupCount=2, encoding='utf-8')
+            break
+        except OSError:
+            if folder == log_folders(database_path)[-1]:
+                raise
     handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(name)s: %(message)s'))
     handler.setLevel(logging.WARNING)
     for name in ('nicegui', 'uvicorn.error', 'webview'):
