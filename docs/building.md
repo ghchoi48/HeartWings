@@ -72,11 +72,12 @@ python scripts/build_desktop.py
 ```
 
 - macOS: Cocoa/WebKit 백엔드와 PyObjC를 사용합니다. `dist/마음나래.app` 및 ZIP 생성.
-- Windows: Microsoft Edge WebView2 Runtime이 필요합니다. 대상 환경에 런타임을 설치하고 같은 아키텍처로 빌드합니다. 결과는 `dist/maeumnarae/maeumnarae.exe`이며 폴더 전체를 배포합니다.
-- Linux: GTK 백엔드를 사용하므로 PyGObject, GTK 3, WebKit2GTK 및 배포판별 개발 패키지가 필요합니다. 빌드 환경에 `pywebview[gtk]`를 설치하세요. 결과는 `dist/maeumnarae/maeumnarae`이며 폴더 전체를 배포합니다. 대상 glibc/GUI 라이브러리 호환성은 별도 검증이 필요합니다.
+- Windows: Microsoft Edge WebView2 Runtime이 필요합니다. 대상 환경에 런타임을 설치하고 같은 아키텍처로 빌드합니다. 결과는 단일 실행 파일 `dist/maeumnarae.exe`입니다.
+- Linux: GTK 백엔드를 사용하므로 PyGObject, GTK 3, WebKit2GTK 및 배포판별 개발 패키지가 필요합니다. 빌드 환경에 `pywebview[gtk]`를 설치하세요. 결과는 단일 실행 파일 `dist/maeumnarae`입니다. 대상 glibc/GUI 라이브러리 호환성은 별도 검증이 필요합니다.
 
 Windows/Linux의 위 절차는 빌드 가이드이며 이번 환경에서는 실행하지 않았습니다.
 `packaging/maeumnarae.spec`은 NiceGUI 정적 파일, pywebview 리소스 및 플랫폼별 백엔드를 수집합니다.
+단일 파일 모드(`--onefile`에 해당)는 spec에 설정되어 있으므로 빌드 명령에 별도 옵션을 추가하지 않습니다.
 `main.py`는 frozen 자식 프로세스가 UI를 중복 실행하지 않도록 NiceGUI import 전에 `freeze_support()`를 호출합니다.
 
 ## SQLCipher 네이티브 의존성
