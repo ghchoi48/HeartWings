@@ -9,7 +9,7 @@ MAX_HEIGHT = 1600
 DEFAULT_SIZES = {
     'clock': (8, 290), 'todo': (8, 390), 'teacher_search': (8, 390),
     'meal': (8, 520), 'memo': (8, 430), 'weather': (8, 440),
-    'scheduled_journals': (8, 340), 'school_timetable': (8, 520),
+    'scheduled_journals': (8, 340), 'school_timetable': (8, 520), 'calendar': (8, 520),
 }
 
 

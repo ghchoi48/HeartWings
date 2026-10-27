@@ -11,7 +11,7 @@ from maeumnarae.views.counseling_content import clean_html
 from maeumnarae.services.school_timetable import normalize_timetable
 from maeumnarae.repositories._support import utc_text
 
-WIDGET_KINDS = ('clock', 'todo', 'teacher_search', 'meal', 'memo', 'weather', 'scheduled_journals', 'school_timetable')
+WIDGET_KINDS = ('clock', 'todo', 'teacher_search', 'meal', 'memo', 'weather', 'scheduled_journals', 'school_timetable', 'calendar')
 DEFAULT_LAYOUT = [{'id': kind, 'kind': kind, 'span': 1} for kind in ('clock', 'meal', 'todo')]
 
 

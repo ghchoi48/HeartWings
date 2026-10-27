@@ -9,5 +9,6 @@ build/
 dist/
 .env
 .DS_Store
-tests/
+tests/*
+!tests/test_calendar_widget.py
 artifacts/

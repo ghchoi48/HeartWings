@@ -28,10 +28,11 @@ WELCOME_MESSAGES = (
 
 
 class HomeView:
-    def __init__(self, repository, teachers, on_students, school=None):
+    def __init__(self, repository, teachers, on_students, school=None, *, on_calendar=None, on_open_schedule=None, on_open_linked=None):
         self.repository = repository
         self.teachers = teachers
         self.on_students = on_students
+        self.calendar_callbacks = dict(on_calendar=on_calendar, on_open=on_open_schedule, on_open_linked=on_open_linked)
         self.school = school
         self.welcome_message = choice(WELCOME_MESSAGES)
         self.layout = []
@@ -139,7 +140,8 @@ class HomeView:
                         ui.label('위젯 편집을 눌러 위젯을 추가하세요.')
             for index, item in enumerate(self.layout):
                 widget = WIDGETS[item['kind']]
-                view = widget(self.repository, self.teachers, item['id'], self.refresh_todos)
+                view = widget(self.repository, self.teachers, item['id'], self.refresh_todos,
+                              **(self.calendar_callbacks if item['kind'] == 'calendar' else {}))
                 self.widget_views.append(view)
                 with ui.card().classes('home-widget rounded-2xl shadow-sm p-4 gap-3').style(
                         f'grid-column: {item["x"] + 1} / span {item["width"]}; '
@@ -153,8 +155,11 @@ class HomeView:
                             ui.icon('drag_indicator').classes('shrink-0 text-slate-400')
                         ui.icon(widget.icon, size='24px').classes('shrink-0 text-teal-700')
                         ui.label(widget.title).classes('min-w-0 truncate font-bold text-slate-800').tooltip(widget.title)
-                        if self.editing:
+                        if self.editing or hasattr(view, 'build_header_actions'):
                             ui.space()
+                        if hasattr(view, 'build_header_actions'):
+                            view.build_header_actions()
+                        if self.editing:
                             ui.button(icon='delete_outline', on_click=lambda index=index: self.remove(index)).props(
                                 f'flat round dense color=negative aria-label="{widget.title} 위젯 삭제"').classes('shrink-0').tooltip('위젯 삭제 (데이터는 보존)')
                             if hasattr(view, 'open_settings'):
