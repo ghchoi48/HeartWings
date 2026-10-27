@@ -5,6 +5,7 @@ from datetime import datetime
 from maeumnarae.views.journal_pagination import PAGE_SIZE, load_page
 
 from nicegui import run, ui
+from maeumnarae.views.journal_print_view import list_print_tools, editor_print_button
 
 from maeumnarae.views.attachment_view import attachment_button
 
@@ -72,6 +73,9 @@ class SpecialEducationView(CounselingView):
             with ui.context.client.content:
                 dialog, fields, message, save_button, cancel_button = self.build_editor(student, entry)
             original = {key: field.value for key, field in fields.items()}
+            with save_button.parent_slot:
+                editor_print_button(self.students.database, 'special', lambda: entry,
+                    lambda: saving or bool(save_button.attachments.pending) or original != {key: field.value for key, field in fields.items()})
 
             async def cancel():
                 if saving:
@@ -305,6 +309,7 @@ class SpecialEducationView(CounselingView):
             return
         self.log_offset = offset
         with self.logs:
+            pdf = list_print_tools(self, self.students.database, 'special', (self.selected.id, self.selected_case.id))
             for entry in entries[:PAGE_SIZE]:
                 open_log = lambda entry_id=entry.id: self.open_editor(entry_id)
                 with ui.row().classes(
@@ -314,6 +319,7 @@ class SpecialEducationView(CounselingView):
                     with ui.column().classes('gap-1'):
                         ui.label(self.selected_case.title).classes('font-semibold')
                         ui.label(f'{entry.starts_at.astimezone(KST):%Y.%m.%d %H:%M} · {STATUSES[entry.status]} · {entry.category} · {entry.duration_minutes}분').classes('text-sm text-slate-500')
+                    pdf.row(entry.id)
                     delete_button(self.students.database, 'special_log', lambda entry=entry: entry, self.after_log_deleted, blocked=lambda: self.editor_open, icon_only=True)
 
         self.log_message.text = f'이 페이지에 {min(len(entries), PAGE_SIZE)}건 · 한국 표준시' if entries else '등록된 특별 교육 일지가 없습니다. 새 특별 교육 일지를 작성해 보세요.'

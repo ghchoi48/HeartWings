@@ -195,7 +195,7 @@ def test_inline_editor_save_retry_and_student_switch(tmp_path):
                 assert not any(isinstance(e, ui.editor) for e in client.elements.values())
                 await view.select_student(student.id)
                 card = view.logs.default_slot.children[0]
-                buttons = [e for e in card.descendants() if isinstance(e, ui.button)]
+                buttons = [e for e in card.descendants() if isinstance(e, ui.button) and e._props.get('icon') == 'delete_outline']
                 assert len(buttons) == 1
                 assert buttons[0]._props['icon'] == 'delete_outline'
                 assert not buttons[0].text

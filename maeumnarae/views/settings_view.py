@@ -14,6 +14,7 @@ from maeumnarae.views.school_settings_view import build_school_settings
 from maeumnarae.views.about_view import build_about
 from maeumnarae.views.database_settings_view import build_database_settings
 from maeumnarae.views.settings_card import settings_card
+from maeumnarae.views.journal_print_view import invalidate_prints
 
 
 
@@ -35,6 +36,7 @@ def build_settings(display: DisplaySettings | None = None,
             ui.tab('system', label='시스템', icon='settings')
             ui.tab('db', label='DB', icon='storage')
             ui.tab('about', label='프로그램 정보', icon='info_outline')
+        tabs.on_value_change(lambda: invalidate_prints(tabs.client))
         with ui.tab_panels(tabs, value='general').props('keep-alive').classes('w-full bg-transparent'):
             with ui.tab_panel('general').classes('p-0'):
                 with settings_card('학교 정보 설정', 'school',

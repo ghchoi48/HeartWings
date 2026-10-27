@@ -7,6 +7,7 @@ from collections.abc import Awaitable, Callable
 from maeumnarae.views.journal_pagination import PAGE_SIZE, load_page
 
 from nicegui import run, ui
+from maeumnarae.views.journal_print_view import list_print_tools, editor_print_button
 
 from maeumnarae.views.attachment_view import attachment_button
 
@@ -110,6 +111,8 @@ class GroupCounselingView:
         request = self.selection_request
         self.log_request += 1
         self.selected = None
+        if hasattr(self, 'pdf_selection'):
+            self.pdf_selection.set_scope(None)
         self.details.clear()
         self.logs.clear()
         self.edit.disable()
@@ -194,6 +197,7 @@ class GroupCounselingView:
             return
         self.log_offset = offset
         with self.logs:
+            pdf = list_print_tools(self, self.repository.database, 'group', self.selected.id)
             for entry in entries[:PAGE_SIZE]:
                 open_log = lambda log_id=entry.id: self.open_editor(log=True, log_id=log_id)
                 with ui.row().classes(
@@ -203,6 +207,7 @@ class GroupCounselingView:
                     with ui.column().classes('gap-1'):
                         ui.label(entry.title).classes('font-semibold')
                         ui.label(f'{entry.starts_at.astimezone(KST):%Y.%m.%d %H:%M} · {STATUSES[entry.status]} · {entry.duration_minutes}분').classes('text-sm text-slate-500')
+                    pdf.row(entry.id)
                     delete_button(self.repository.database, 'group_log', lambda entry=entry: entry, self.after_log_deleted, blocked=lambda: self.editor_open, icon_only=True)
 
         self.log_message.text = f'이 페이지에 {min(len(entries), PAGE_SIZE)}건 · 한국 표준시' if entries else '등록된 집단 상담 일지가 없습니다.'
@@ -320,6 +325,10 @@ class GroupCounselingView:
                 return deepcopy(data)
 
             original = form_data()
+            if log:
+                with save_button.parent_slot:
+                    editor_print_button(self.repository.database, 'group', lambda: entry,
+                        lambda: saving or bool(files.pending) or original != form_data())
 
             async def cancel():
                 if saving:

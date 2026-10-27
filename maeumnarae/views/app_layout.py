@@ -24,6 +24,7 @@ from maeumnarae.views.psychological_test_view import PsychologicalTestView
 from maeumnarae.views.settings_view import build_settings
 from maeumnarae.views.display_settings import DisplaySettings
 from maeumnarae.views.auto_lock import AutoLock
+from maeumnarae.views.journal_print_view import invalidate_prints
 from maeumnarae.core.settings_store import SettingsStore
 from maeumnarae.core.models import SchoolSettings
 from maeumnarae.repositories.school_settings_repo import SchoolSettingsRepository
@@ -110,6 +111,7 @@ class AppLayout:
             ui.timer(0.5, self.refresh_students)
 
     async def lock_database(self) -> None:
+        invalidate_prints(self.panels['home'].client)
         if self.on_lock is not None:
             await self.on_lock()
         else:
@@ -170,6 +172,7 @@ class AppLayout:
 
     def navigate(self, page: str) -> None:
         """화면을 다시 만들지 않고 전환한다. 학생 화면은 최초 진입 시에만 생성한다."""
+        invalidate_prints(self.panels['home'].client)
         if page not in self.panels:
             raise ValueError(f'지원하지 않는 화면: {page}')
         if page == 'students' and self.student_view is None:
@@ -184,6 +187,7 @@ class AppLayout:
                 with ui.tabs().classes('w-full') as self.counseling_tabs:
                     ui.tab('logs', label='상담 일지', icon='edit_note')
                     ui.tab('tests', label='심리 검사', icon='psychology')
+                self.counseling_tabs.on_value_change(lambda: invalidate_prints())
                 self.psychological_test_view = PsychologicalTestView(self.students)
                 self.counseling_view = CounselingView(
                     self.students, self.counseling, self.refresh_student_timeline,

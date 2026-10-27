@@ -6,6 +6,7 @@ from datetime import date, datetime, timedelta, timezone
 from maeumnarae.views.journal_pagination import PAGE_SIZE, load_page
 
 from nicegui import run, ui
+from maeumnarae.views.journal_print_view import list_print_tools, editor_print_button
 
 from maeumnarae.views.attachment_view import attachment_button
 
@@ -180,6 +181,8 @@ class CounselingView:
         self.log_request += 1
         request = self.log_request
         self.selected = None
+        if hasattr(self, 'pdf_selection'):
+            self.pdf_selection.set_scope(None)
         self.selected_case = None
         self.case_request += 1
         self.case_options = {}
@@ -396,6 +399,7 @@ class CounselingView:
             return
         self.log_offset = offset
         with self.logs:
+            pdf = list_print_tools(self, self.students.database, 'individual', (self.selected.id, self.selected_case.id))
             for entry in entries[:PAGE_SIZE]:
                 open_log = lambda entry_id=entry.id: self.open_editor(entry_id)
                 with ui.row().classes(
@@ -405,6 +409,7 @@ class CounselingView:
                     with ui.column().classes('gap-1'):
                         ui.label(entry.counseling_area or '상담 분야 미지정').classes('font-semibold')
                         ui.label(f'{entry.starts_at.astimezone(KST):%Y.%m.%d %H:%M} · {STATUSES[entry.status]} · {entry.category} · {entry.duration_minutes}분').classes('text-sm text-slate-500')
+                    pdf.row(entry.id)
                     delete_button(self.students.database, 'counseling', lambda entry=entry: entry, self.after_log_deleted, blocked=lambda: self.editor_open, icon_only=True)
 
         self.log_message.text = f'이 페이지에 {min(len(entries), PAGE_SIZE)}건 · 한국 표준시' if entries else '등록된 상담 일지가 없습니다. 새 상담 일지를 작성해 보세요.'
@@ -481,6 +486,8 @@ class CounselingView:
                     field.enable()
 
         save_button.on_click(save)
+        with save_button.parent_slot:
+            editor_print_button(self.students.database, 'individual', lambda: entry, lambda: self.editor_open)
 
     async def open_record(self, entry_id: int) -> None:
         """캘린더에서 전달받은 일지의 학생을 선택하고 기존 편집기를 연다."""

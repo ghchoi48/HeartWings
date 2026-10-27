@@ -15,6 +15,7 @@ from maeumnarae.views.roster_import_view import RosterImportView
 from maeumnarae.views.legacy_import_view import LegacyImportView
 from maeumnarae.views.settings_card import settings_card
 from maeumnarae.views.journal_export_view import JournalExportView
+from maeumnarae.views.journal_print_view import build_year_print
 
 
 def build_database_settings(database: Database, on_roster_import=None) -> None:
@@ -140,6 +141,7 @@ def build_database_settings(database: Database, on_roster_import=None) -> None:
         dialog.on('hide', clear_restore)
         open_restore = ui.button('백업 파일에서 복원', icon='restore', on_click=dialog.open).props('outline')
     JournalExportView(database).build(collapsible=True)
+    build_year_print(database)
 
     async def imported(kind):
         if on_roster_import is not None:

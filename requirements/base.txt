@@ -8,3 +8,4 @@ certifi>=2024.8.30
 openpyxl>=3.1.5,<4
 defusedxml>=0.7.1,<1
 pyxlsb>=1.0.10,<2
+reportlab>=4.4,<5

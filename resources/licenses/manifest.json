@@ -83,6 +83,20 @@
       "source": "https://github.com/willtrnr/pyxlsb",
       "text_file": "libraries/pyxlsb.txt",
       "version": "1.0.10"
+    },
+    {
+      "name": "ReportLab",
+      "version": "4.5.1",
+      "license": "BSD-3-Clause",
+      "source": "https://www.reportlab.com/",
+      "text_file": "libraries/reportlab.txt"
+    },
+    {
+      "name": "charset-normalizer",
+      "version": "3.5.2",
+      "license": "MIT",
+      "source": "https://github.com/jawah/charset_normalizer",
+      "text_file": "libraries/charset-normalizer.txt"
     }
   ],
   "fonts": [
@@ -106,6 +120,12 @@
       "source": "https://github.com/spoqa/spoqa-han-sans",
       "license_source": "https://raw.githubusercontent.com/spoqa/spoqa-han-sans/master/LICENSE",
       "text_file": "fonts/spoqa.txt"
+    },
+    {
+      "name": "HeartWings Journal Sans (Noto Sans KR static derivative)",
+      "license": "OFL-1.1",
+      "source": "https://github.com/notofonts/noto-cjk",
+      "text_file": "fonts/noto.txt"
     }
   ]
 }

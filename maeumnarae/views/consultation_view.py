@@ -5,6 +5,7 @@ from datetime import date, datetime, timedelta, timezone
 from maeumnarae.views.journal_pagination import PAGE_SIZE, load_page
 
 from nicegui import run, ui
+from maeumnarae.views.journal_print_view import list_print_tools, editor_print_button
 
 from maeumnarae.views.attachment_view import attachment_button
 
@@ -91,6 +92,8 @@ class ConsultationView:
         self.log_offset = 0
         request = self.selection_request
         self.selected = None
+        if hasattr(self, 'pdf_selection'):
+            self.pdf_selection.set_scope(None)
         self.show_logs()
         try:
             teacher = await run.io_bound(self.teachers.get, teacher_id)
@@ -134,6 +137,8 @@ class ConsultationView:
         self.selection_request += 1
         self.log_request += 1
         self.selected = None
+        if hasattr(self, 'pdf_selection'):
+            self.pdf_selection.set_scope(None)
         self.show_logs()
         await self.reload()
 
@@ -167,6 +172,7 @@ class ConsultationView:
             return
         self.log_offset = offset
         with self.logs:
+            pdf = list_print_tools(self, self.teachers.database, 'consultation', self.selected.id)
             for entry in entries[:PAGE_SIZE]:
                 open_log = lambda entry_id=entry.id: self.open_log_editor(entry_id)
                 with ui.row().classes(
@@ -176,6 +182,7 @@ class ConsultationView:
                     with ui.column().classes('gap-1'):
                         ui.label(entry.consultation_area or '자문 분야 미지정').classes('font-semibold')
                         ui.label(f'{entry.starts_at.astimezone(KST):%Y.%m.%d %H:%M} · {STATUSES[entry.status]} · 자문 · {entry.duration_minutes}분').classes('text-sm text-slate-500')
+                    pdf.row(entry.id)
                     delete_button(self.teachers.database, 'consultation', lambda entry=entry: entry, self.after_log_deleted, blocked=lambda: self.editor_open, icon_only=True)
 
         self.log_message.text = f'이 페이지에 {min(len(entries), PAGE_SIZE)}건 · 한국 표준시' if entries else '등록된 자문 일지가 없습니다. 새 자문 일지를 작성해 보세요.'
@@ -204,6 +211,9 @@ class ConsultationView:
             with self.log_panel.client.content:
                 dialog, fields, message, save_button, cancel_button = self.build_log_editor(teacher, entry)
             original = {key: field.value for key, field in fields.items()}
+            with save_button.parent_slot:
+                editor_print_button(self.teachers.database, 'consultation', lambda: entry,
+                    lambda: saving or bool(save_button.attachments.pending) or original != {key: field.value for key, field in fields.items()})
 
             async def cancel():
                 if saving:

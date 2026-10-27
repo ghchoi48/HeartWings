@@ -4,6 +4,7 @@ from datetime import datetime
 from maeumnarae.views.journal_pagination import PAGE_SIZE, load_page
 
 from nicegui import run, ui
+from maeumnarae.views.journal_print_view import list_print_tools, editor_print_button
 
 from maeumnarae.views.attachment_view import attachment_button
 
@@ -27,6 +28,8 @@ class PsychologicalTestView:
         self.students = students
         self.repository = PsychologicalTestRepository(students.database)
         self.selected = None
+        if hasattr(self, 'pdf_selection'):
+            self.pdf_selection.set_scope(None)
         self.request = 0
         self.offset = 0
         self.editor_saving = False
@@ -100,6 +103,8 @@ class PsychologicalTestView:
         self.request += 1
         request = self.request
         self.selected = None
+        if hasattr(self, 'pdf_selection'):
+            self.pdf_selection.set_scope(None)
         self.offset = 0
         self.add.disable()
         self.logs.clear()
@@ -159,6 +164,7 @@ class PsychologicalTestView:
             return
         self.offset = offset
         with self.logs:
+            pdf = list_print_tools(self, self.repository.database, 'test', self.selected.id)
             for entry in entries[:PAGE_SIZE]:
                 open_log = lambda entry=entry: self.open_editor(entry)
                 with ui.row().classes(
@@ -171,6 +177,7 @@ class PsychologicalTestView:
                         if entry.duration_minutes is not None:
                             details.append(f'{entry.duration_minutes}분')
                         ui.label(' · '.join(details)).classes('text-sm text-slate-500')
+                    pdf.row(entry.id)
                     delete_button(self.repository.database, 'test', lambda entry=entry: entry, self.after_log_deleted, blocked=lambda: self.editor_open, icon_only=True)
 
         self.message.text = f'이 페이지에 {min(len(entries), PAGE_SIZE)}건' if entries else '등록된 심리검사 일지가 없습니다.'
@@ -257,3 +264,5 @@ class PsychologicalTestView:
                     control.enable()
 
         save_button.on_click(save)
+        with save_button.parent_slot:
+            editor_print_button(self.repository.database, 'test', lambda: entry, lambda: self.editor_open)
