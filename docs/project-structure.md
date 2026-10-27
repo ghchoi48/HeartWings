@@ -99,7 +99,7 @@
 | [`maeumnarae/views/education_event_view.py`](../maeumnarae/views/education_event_view.py) | 교육/행사 목록과 선택 항목의 상세 내용을 나란히 표시한다. |
 | [`maeumnarae/views/group_counseling_view.py`](../maeumnarae/views/group_counseling_view.py) | 집단 목록, 선택 집단의 상세 정보와 회기별 상담일지. |
 | [`maeumnarae/views/home_interactions.py`](../maeumnarae/views/home_interactions.py) | 포인터 이동 중 미리 보고, 완료 시 한 번만 배치를 저장한다. |
-| [`maeumnarae/views/home_layout.py`](../maeumnarae/views/home_layout.py) | 홈의 24열 정사각형 격자와 기존 배치 변환. |
+| [`maeumnarae/views/home_layout.py`](../maeumnarae/views/home_layout.py) | 홈의 48열 정사각형 격자와 기존 배치 변환. |
 | [`maeumnarae/views/home_view.py`](../maeumnarae/views/home_view.py) | 세밀한 홈 격자와 위젯 배치 편집. |
 | [`maeumnarae/views/journal_export_view.py`](../maeumnarae/views/journal_export_view.py) | 일지 업로드용 XLSX 생성, 누락 항목 확인 및 다운로드. |
 | [`maeumnarae/views/journal_pagination.py`](../maeumnarae/views/journal_pagination.py) | 일지 목록의 페이지 크기와 전체 페이지 계산. |

@@ -8,7 +8,7 @@ from uuid import uuid4
 from nicegui import run, ui
 
 from maeumnarae.core.database import DatabaseError
-from maeumnarae.views.home_layout import arrange, DEFAULT_SIZES, row_span
+from maeumnarae.views.home_layout import arrange, DEFAULT_SIZES, row_span, COLUMNS, GRID_VERSION
 from maeumnarae.widgets import WIDGETS
 from maeumnarae.views.home_interactions import POINTER, KEYBOARD
 
@@ -44,9 +44,9 @@ class HomeView:
 
     def build(self):
         ui.add_css('''
-            .home-grid { display: grid; grid-template-columns: repeat(24, minmax(0, 1fr));
+            .home-grid { display: grid; grid-template-columns: repeat(48, minmax(0, 1fr));
                 grid-auto-rows: var(--home-cell); gap: 8px; align-items: start;
-                --home-cell: calc((100cqw - 184px) / 24); }
+                --home-cell: calc((100cqw - 376px) / 48); }
             .home-grid-editing { min-height: 800px;
                 background-image: linear-gradient(to right, #cbd5e155 1px, transparent 1px),
                     linear-gradient(to bottom, #cbd5e155 1px, transparent 1px);
@@ -196,7 +196,7 @@ class HomeView:
                 w = self.default_sizes[kind]['width']
                 h = self.default_sizes[kind]['height']
                 if await self.commit(arrange([*self.layout, {'id': uuid4().hex, 'kind': kind,
-                                                            'width': int(w), 'height': int(h)}])):
+                                                            'width': int(w), 'height': int(h), 'grid': GRID_VERSION}])):
                     dialog.close()
             with ui.column().classes('w-full gap-2'):
                 for kind, widget in WIDGETS.items():
@@ -216,12 +216,12 @@ class HomeView:
             changes = {key: value for key, value in size.items() if key in ('x', 'y', 'width', 'height')}
             candidate = {**item, **changes}
             if (any(type(value) is not int for value in changes.values())
-                    or not 1 <= candidate['width'] <= 24 or not 160 <= candidate['height'] <= 1600
-                    or not 0 <= candidate['x'] <= 23 or candidate['y'] < 0):
+                    or not 1 <= candidate['width'] <= COLUMNS or not 160 <= candidate['height'] <= 1600
+                    or not 0 <= candidate['x'] < COLUMNS or candidate['y'] < 0):
                 self.render()
                 return
             item.update(changes)
-            item['x'] = min(item['x'], 24 - item['width'])
+            item['x'] = min(item['x'], COLUMNS - item['width'])
             await self.commit(arrange(layout, priority=instance_id))
             return
 

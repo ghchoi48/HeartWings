@@ -25,7 +25,7 @@ def test_month_boundaries_and_midnight():
     assert days[0].weekday() == 6 and days[-1].weekday() == 5
     entry = SimpleNamespace(starts_at=datetime(2026, 10, 1, 0, tzinfo=KST), duration_minutes=2880)
     assert list(events_by_date([entry], days)) == [date(2026, 10, 1), date(2026, 10, 2)]
-    assert DEFAULT_SIZES['calendar'] == (8, 520)
+    assert DEFAULT_SIZES['calendar'] == (16, 520)
     assert HomeRepository.normalize_layout([{'kind': 'calendar', 'span': 1}])[0]['kind'] == 'calendar'
 
 

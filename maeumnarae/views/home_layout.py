@@ -1,20 +1,23 @@
-"""홈의 24열 정사각형 격자와 기존 배치 변환."""
+"""홈의 48열 정사각형 격자와 기존 배치 변환."""
 
 from copy import deepcopy
 from math import ceil
 
-COLUMNS = 24
+COLUMNS = 48
+GRID_VERSION = 'square48'
 MIN_HEIGHT = 160
 MAX_HEIGHT = 1600
 DEFAULT_SIZES = {
-    'clock': (8, 290), 'todo': (8, 390), 'teacher_search': (8, 390),
-    'meal': (8, 520), 'memo': (8, 430), 'weather': (8, 440),
-    'scheduled_journals': (8, 340), 'school_timetable': (8, 520), 'calendar': (8, 520),
+    'clock': (16, 320), 'todo': (16, 400), 'teacher_search': (16, 400),
+    'meal': (16, 520), 'memo': (16, 440), 'weather': (16, 440),
+    'scheduled_journals': (16, 360), 'school_timetable': (16, 520), 'calendar': (16, 520),
 }
 
 
 def row_span(item):
-    """기존 높이 저장값을 유지하며 40 단위당 정사각형 한 행으로 표시한다."""
+    """새 격자는 높이 20 단위당 한 행을 사용한다."""
+    if item.get('grid') == GRID_VERSION:
+        return ceil(item['height'] / 20)
     return ceil(item['height'] / 40) if item.get('grid') == 'square' else ceil(item['height'] / 10) + 1
 
 
@@ -32,10 +35,17 @@ def arrange(layout, priority=None):
     for item in ordered:
         item.setdefault('width', item.get('span', 1) * 8)
         item.setdefault('height', 290)
-        if item.get('grid') != 'square':
+        if item.get('grid') not in ('square', GRID_VERSION):
             if 'y' in item:
                 item['y'] = ceil(item['y'] / 4)
             item['grid'] = 'square'
+        if item.get('grid') != GRID_VERSION:
+            item['width'] *= 2
+            for coordinate in ('x', 'y'):
+                if coordinate in item:
+                    item[coordinate] *= 2
+            item['height'] = ceil(item['height'] / 40) * 40
+            item['grid'] = GRID_VERSION
         if 'x' not in item or 'y' not in item:
             item['y'] = 0
             while True:

@@ -157,8 +157,8 @@ class HomeViewTests(unittest.IsolatedAsyncioTestCase):
                 assert (todo['width'], todo['height'], todo['x'], todo['y']) == (11, 430, 3, 40)
                 await view.change_geometry('todo', {'width': 25, 'height': 1})
                 assert next(item for item in view.layout if item['id'] == 'todo') == todo
-                await view.change_geometry('todo', {'x': 19})
-                assert next(item for item in view.layout if item['id'] == 'todo')['x'] == 13
+                await view.change_geometry('todo', {'x': 45})
+                assert next(item for item in view.layout if item['id'] == 'todo')['x'] == 37
                 await view.change_geometry('clock', {'x': 13, 'y': 40})
                 assert not any(overlaps(a, b) for i, a in enumerate(view.layout) for b in view.layout[i+1:])
                 await view.remove(1)
@@ -276,7 +276,7 @@ def test_old_layout_gets_stable_ids_without_losing_settings(tmp_path):
 def test_fine_layout_migration_and_collision_resolution():
     legacy = [{'id': str(i), 'kind': 'clock', 'span': 1} for i in range(3)]
     positioned = arrange(legacy)
-    assert [(item['x'], item['y'], item['width']) for item in positioned] == [(0, 0, 8), (8, 0, 8), (16, 0, 8)]
+    assert [(item['x'], item['y'], item['width']) for item in positioned] == [(0, 0, 16), (16, 0, 16), (32, 0, 16)]
     assert 'x' not in legacy[0]
     positioned[1].update(x=0, y=0, width=13, height=170)
     moved = arrange(positioned, priority='1')
@@ -311,11 +311,45 @@ def test_square_grid_conversion_is_stable():
     old = [{'id': 'a', 'kind': 'clock', 'width': 8, 'height': 290, 'x': 0, 'y': 40},
            {'id': 'b', 'kind': 'memo', 'width': 8, 'height': 430, 'x': 0, 'y': 70}]
     converted = arrange(old)
-    assert converted[0]['y'] == 10
-    assert all(item['grid'] == 'square' for item in converted)
+    assert converted[0]['y'] == 20
+    assert all(item['grid'] == 'square48' for item in converted)
     assert not overlaps(*converted)
     assert arrange(converted) == converted
     assert 'grid' not in old[0]
+
+
+def test_dense_grid_preserves_old_geometry_and_persists_fine_steps(tmp_path):
+    from maeumnarae.views.home_layout import row_span
+
+    old = [{'id': 'clock', 'kind': 'clock', 'grid': 'square',
+            'width': 8, 'height': 290, 'x': 16, 'y': 9}]
+    converted = arrange(old)
+    item = converted[0]
+    assert (item['x'], item['y'], item['width']) == (32, 18, 16)
+    assert row_span(item) == row_span(old[0]) * 2
+    assert arrange(converted) == converted
+    # A new cell is exactly half of the former pitch in each direction.
+    for viewport in (900, 1200, 1920):
+        old_step, new_step = (viewport + 8) / 24, (viewport + 8) / 48
+        assert item['x'] * new_step == old[0]['x'] * old_step
+        assert item['y'] * new_step == old[0]['y'] * old_step
+        assert item['width'] * new_step - 8 == old[0]['width'] * old_step - 8
+        assert row_span(item) * new_step - 8 == row_span(old[0]) * old_step - 8
+    db = Database('test-password', tmp_path / 'dense.db')
+    db.initialize()
+    repo = HomeRepository(db)
+    item.update(x=31, y=19, width=17, height=340)
+    repo.save_layout(converted)
+    assert arrange(HomeRepository(db).layout()) == converted
+    assert row_span(item) == 17
+    with pytest.raises(ValueError):
+        repo.save_layout([{**item, 'width': 49}])
+    with pytest.raises(ValueError):
+        repo.save_layout([{**item, 'x': 32}])
+    repo._update(lambda state: state.update(default_sizes={'memo': {'width': 11, 'height': 610}}))
+    assert repo.widget_sizes()['memo'] == {'width': 22, 'height': 640}
+    repo.save_widget_size('memo', 23, 620)
+    assert HomeRepository(db).widget_sizes()['memo'] == {'width': 23, 'height': 620}
 
 
 def test_widget_addition_only_while_editing():

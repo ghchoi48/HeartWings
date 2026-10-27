@@ -6,7 +6,7 @@ from datetime import date, datetime, timedelta, timezone
 
 from maeumnarae.core.database import Database, DatabaseError, NotFoundError
 from maeumnarae.core.settings_store import SettingsStore
-from maeumnarae.views.home_layout import COLUMNS, MIN_HEIGHT, MAX_HEIGHT, DEFAULT_SIZES
+from maeumnarae.views.home_layout import COLUMNS, MIN_HEIGHT, MAX_HEIGHT, DEFAULT_SIZES, GRID_VERSION, arrange
 from maeumnarae.views.counseling_content import clean_html
 from maeumnarae.services.school_timetable import normalize_timetable
 from maeumnarae.repositories._support import utc_text
@@ -160,14 +160,15 @@ class HomeRepository:
                 raise ValueError('지원하지 않는 위젯입니다.')
             if 'width' not in item and item.get('span') not in (1, 2, 3):
                 raise ValueError('위젯 너비는 1~3열이어야 합니다.')
+            columns = COLUMNS if item.get('grid') == GRID_VERSION else 24
             if type(item.get('height', 290)) is not int or not MIN_HEIGHT <= item.get('height', 290) <= MAX_HEIGHT:
                 raise ValueError('위젯 높이는 160~1600px이어야 합니다.')
-            if 'width' in item and (type(item['width']) is not int or not 1 <= item['width'] <= COLUMNS):
-                raise ValueError('위젯 너비는 1~24칸이어야 합니다.')
+            if 'width' in item and (type(item['width']) is not int or not 1 <= item['width'] <= columns):
+                raise ValueError(f'위젯 너비는 1~{columns}칸이어야 합니다.')
             if ('x' in item) != ('y' in item):
                 raise ValueError('위젯의 가로·세로 위치를 함께 지정해 주세요.')
             if 'x' in item and (type(item['x']) is not int or type(item['y']) is not int
-                                or not 0 <= item['x'] <= COLUMNS - item.get('width', item.get('span', 1) * 8)
+                                or not 0 <= item['x'] <= columns - item.get('width', item.get('span', 1) * 8)
                                 or item['y'] < 0):
                 raise ValueError('위젯 위치가 격자 범위를 벗어났습니다.')
             if 'id' not in item:
@@ -186,15 +187,18 @@ class HomeRepository:
 
     def widget_sizes(self):
         sizes = {kind: {'width': width, 'height': height} for kind, (width, height) in DEFAULT_SIZES.items()}
-        sizes.update(self._read().get('default_sizes', {}))
-        for kind, size in sizes.items():
+        for kind, size in self._read().get('default_sizes', {}).items():
             self.normalize_layout([{'kind': kind, **size}])
+            converted = arrange([{'id': kind, 'kind': kind, **size}])[0]
+            sizes[kind] = {key: converted[key] for key in ('width', 'height')}
+        for kind, size in sizes.items():
+            self.normalize_layout([{'kind': kind, **size, 'grid': GRID_VERSION}])
         return sizes
 
     def save_widget_size(self, kind, width, height):
-        self.normalize_layout([{'kind': kind, 'width': width, 'height': height}])
+        self.normalize_layout([{'kind': kind, 'width': width, 'height': height, 'grid': GRID_VERSION}])
         self._update(lambda widgets: widgets.setdefault('default_sizes', {}).update(
-            {kind: {'width': width, 'height': height}}))
+            {kind: {'width': width, 'height': height, 'grid': GRID_VERSION}}))
 
     @staticmethod
     def validate_weather_preferences(value):
