@@ -113,7 +113,7 @@ class DisplaySettings:
                         link.href = '/app-assets/' + name + '.ico';
                     });
                     document.querySelectorAll('.app-logo img').forEach(img => {
-                        img.src = '/app-assets/' + (dark ? 'icon-dark.png' : 'icon.ico');
+                        img.src = '/app-assets/' + (dark ? 'icon-dark.png' : 'icon.png');
                     });
                     if (previous !== dark) {
                         emitEvent('app_theme_changed', dark);

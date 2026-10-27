@@ -148,7 +148,7 @@ def _set_app_icon(window, dark: bool) -> None:
         from PyObjCTools import AppHelper
 
         def apply():
-            image = NSImage.alloc().initByReferencingFile_(str(path.with_suffix('.png') if dark else path))
+            image = NSImage.alloc().initByReferencingFile_(str(path.with_suffix('.icns')))
             NSApplication.sharedApplication().setApplicationIconImage_(image)
         AppHelper.callAfter(apply)
     elif sys.platform == 'win32':

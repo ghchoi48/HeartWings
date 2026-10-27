@@ -24,7 +24,7 @@ def register_page(path: Path) -> None:
     """페이지마다 비밀번호를 입력받는다. 전역으로 잠금 해제된 저장소를 공유하지 않는다."""
     register_fonts()
     update_check = StartupUpdateCheck()
-    for name in ('icon.ico', 'icon-dark.ico', 'icon-dark.png'):
+    for name in ('icon.ico', 'icon-dark.ico', 'icon.png', 'icon-dark.png'):
         app.add_static_file(url_path=f'/app-assets/{name}', local_file=ICON_PATH.with_name(name))
 
     @ui.page('/')
@@ -48,7 +48,7 @@ def register_page(path: Path) -> None:
         drawer.set_visibility(False)
         with ui.header().classes('items-center justify-between px-6') as header:
             with ui.row().classes('items-center gap-3'):
-                ui.image('/app-assets/icon.ico').classes('app-logo w-9 h-9').props('no-spinner')
+                ui.image('/app-assets/icon.png').classes('app-logo w-9 h-9').props('no-spinner')
                 school_heading = ui.label('마음나래 · Wee클래스').classes('text-lg font-bold')
         display = DisplaySettings(path.parent / 'display-settings.json')
         display.install()
