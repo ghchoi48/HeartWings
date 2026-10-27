@@ -35,7 +35,11 @@ DisableProgramGroupPage=yes
 UsePreviousTasks=no
 
 [Languages]
+#if Ver >= EncodeVer(6, 5, 0)
 Name: "korean"; MessagesFile: "languages\Korean.isl"
+#else
+Name: "korean"; MessagesFile: "languages\Korean-6.3.isl"
+#endif
 
 [Tasks]
 Name: "desktopicon"; Description: "바탕 화면 바로가기 만들기"; GroupDescription: "바로가기:"
@@ -125,11 +129,17 @@ begin
   if UninstallSilent then exit;
   Paths := '';
   for I := 0 to 4 do Paths := Paths + DataFile(I) + #13#10;
+#if Ver >= EncodeVer(6, 6, 0)
+  Form := CreateCustomForm(ScaleX(620), ScaleY(290), False, False);
+#else
   Form := CreateCustomForm;
+#endif
   try
     Form.Caption := '{#AppName} 제거';
+#if Ver < EncodeVer(6, 6, 0)
     Form.ClientWidth := ScaleX(620);
     Form.ClientHeight := ScaleY(290);
+#endif
     Info := TNewStaticText.Create(Form);
     Info.Parent := Form;
     Info.SetBounds(ScaleX(16), ScaleY(16), ScaleX(588), ScaleY(180));
@@ -156,8 +166,8 @@ begin
     CancelButton.Cancel := True;
     Result := Form.ShowModal = mrOK;
     if Result and Check.Checked then begin
-      Result := MsgBox('다음 데이터를 영구 삭제하시겠습니까?' + #13#10 + Paths +
-        #13#10 + '별도 백업과 외부 DB는 삭제하지 않습니다.', mbConfirmation,
+      Result := MsgBox('다음 데이터를 영구 삭제하시겠습니까?' + #13#10 + Paths + #13#10 +
+        '별도 백업과 외부 DB는 삭제하지 않습니다.', mbConfirmation,
         MB_YESNO or MB_DEFBUTTON2) = IDYES;
       DeleteUserData := Result;
     end;
@@ -183,6 +193,6 @@ begin
       end;
   end;
   if Failures <> '' then
-    MsgBox('일부 데이터 삭제에 실패했습니다. 앱을 종료하고 해당 파일을 확인하세요.' +
-      #13#10 + Failures + '사용자 데이터가 남아 있을 수 있습니다.', mbError, MB_OK);
+    MsgBox('일부 데이터 삭제에 실패했습니다. 앱을 종료하고 해당 파일을 확인하세요.' + #13#10 +
+      Failures + '사용자 데이터가 남아 있을 수 있습니다.', mbError, MB_OK);
 end;
