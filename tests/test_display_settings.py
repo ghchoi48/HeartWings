@@ -17,7 +17,7 @@ def test_defaults_and_saved_preferences():
     with TemporaryDirectory() as directory:
         path = Path(directory) / 'display-settings.json'
         settings = DisplaySettings(path)
-        assert settings.values == {'mode': 'auto', 'size': 16, 'font': 'SpoqaHanSansNeo', 'primary': DEFAULT_PRIMARY}
+        assert settings.values == {'mode': 'auto', 'size': 16, 'font': 'NotoSansKR-VariableFont_wght.ttf', 'primary': DEFAULT_PRIMARY}
         with patch('maeumnarae.views.display_settings.ui.run_javascript'):
             settings.change('mode', 'dark')
             settings.change('size', 19)
@@ -31,7 +31,7 @@ def test_invalid_settings_fall_back_to_defaults():
         for contents in ('broken json', 'null', json.dumps({'mode': 'bad', 'size': 900, 'font': 'bad'}),
                          json.dumps({'font': 'serif'}), json.dumps({'font': 'removed-font.ttf'})):
             path.write_text(contents)
-            assert DisplaySettings(path).values == {'mode': 'auto', 'size': 16, 'font': 'SpoqaHanSansNeo', 'primary': DEFAULT_PRIMARY}
+            assert DisplaySettings(path).values == {'mode': 'auto', 'size': 16, 'font': 'NotoSansKR-VariableFont_wght.ttf', 'primary': DEFAULT_PRIMARY}
 
 
 def test_native_icon_uses_window_process_only():
