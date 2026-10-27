@@ -25,6 +25,7 @@ ArchitecturesInstallIn64BitMode=x64os
 OutputDir={#SourceRoot}\dist\installer
 OutputBaseFilename=maeumnarae-{#AppVersion}-windows-x64-setup
 SetupIconFile={#SourceRoot}\resources\icons\icon.ico
+UninstallDisplayName={#AppName}
 UninstallDisplayIcon={app}\maeumnarae.exe
 Compression=lzma2
 SolidCompression=yes
@@ -145,8 +146,8 @@ begin
     Info.SetBounds(ScaleX(16), ScaleY(16), ScaleX(588), ScaleY(180));
     Info.AutoSize := False;
     Info.WordWrap := True;
-    Info.Caption := '앱을 종료한 후 계속하세요. 기본적으로 사용자 데이터는 보존됩니다.' + #13#10 +
-      '삭제 옵션을 선택하면 아래 파일만 삭제합니다. 삭제 후 복구할 수 없습니다.' + #13#10#13#10 + Paths;
+    Info.Caption := '앱을 종료한 후 계속하세요. 프로그램 파일과 바로가기는 제거되며, 기본적으로 사용자 데이터는 보존됩니다.' + #13#10 +
+      '삭제 옵션을 선택하면 아래 사용자 데이터 파일도 함께 삭제합니다. 삭제 후 복구할 수 없습니다.' + #13#10#13#10 + Paths;
     Check := TNewCheckBox.Create(Form);
     Check.Parent := Form;
     Check.SetBounds(ScaleX(16), ScaleY(202), ScaleX(588), ScaleY(24));
