@@ -14,3 +14,5 @@ tests/*
 !tests/test_school_calendar.py
 !tests/test_journal_pdf.py
 artifacts/
+
+!tests/test_build_desktop.py

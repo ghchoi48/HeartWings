@@ -26,10 +26,11 @@ else:
 a = Analysis([str(root / 'main.py')], pathex=[str(root)], datas=datas, binaries=binaries,
              hiddenimports=hidden, excludes=['pytest', 'playwright', 'nicegui.testing'])
 pyz = PYZ(a.pure)
-exe = EXE(pyz, a.scripts, a.binaries, a.datas, [], name='maeumnarae', console=False,
+exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name='maeumnarae', console=False,
           argv_emulation=False, target_arch=None, codesign_identity=None, icon=str(root / 'resources' / 'icons' / 'icon.ico'))
+coll = COLLECT(exe, a.binaries, a.datas, name='maeumnarae')
 if sys.platform == 'darwin':
-    app = BUNDLE(exe, name='마음나래.app', bundle_identifier='org.maeumnarae.desktop',
+    app = BUNDLE(coll, name='마음나래.app', bundle_identifier='org.maeumnarae.desktop',
                  icon=str(root / 'resources' / 'icons' / 'icon.ico'),
                  info_plist={'CFBundleName': '마음나래', 'CFBundleDisplayName': '마음나래',
                              'CFBundleShortVersionString': '0.5.0', 'CFBundleVersion': '5',
