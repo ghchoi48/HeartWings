@@ -80,6 +80,10 @@ def test_all_kinds_year_boundary_status_identity_and_private(records):
     assert '교사실명' not in repr(masked)
     content = build_pdf(snapshot, PrintRequest(school_year=2026, mask_names=True))
     reader = PdfReader(BytesIO(content))
+    fonts = [font.get_object() for page in reader.pages
+             for font in page['/Resources']['/Font'].values()]
+    ridi_fonts = [font for font in fonts if 'HeartWingsRidiBatang' in str(font.get('/BaseFont', ''))]
+    assert ridi_fonts and all('/FontFile2' in font['/FontDescriptor'] for font in ridi_fonts)
     text = '\n'.join(p.extract_text() for p in reader.pages)
     assert '동명이인' not in text and '회기 당시 이름' not in text and '출력금지비밀메모' not in text
     assert all(label in text for label in KINDS.values())

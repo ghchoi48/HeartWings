@@ -26,8 +26,11 @@ WIDTH = A4[0] - 30 * mm
 def register_fonts():
     with _font_lock:
         if 'Journal' not in pdfmetrics.getRegisteredFontNames():
-            for name, weight in [('Journal', 'Regular'), ('JournalBold', 'Bold')]:
-                pdfmetrics.registerFont(TTFont(name, str(RESOURCE_ROOT / 'fonts' / 'JournalSans' / f'JournalSans-{weight}.ttf')))
+            pdfmetrics.registerFont(TTFont('Journal', str(
+                RESOURCE_ROOT / 'fonts' / 'RIDIBatang' / 'HeartWingsRidiBatang-Regular.ttf')))
+            # 리디바탕은 Regular만 제공하므로 굵은 강조는 기존 글꼴을 사용한다.
+            pdfmetrics.registerFont(TTFont('JournalBold', str(
+                RESOURCE_ROOT / 'fonts' / 'JournalSans' / 'JournalSans-Bold.ttf')))
             pdfmetrics.registerFontFamily('Journal', normal='Journal', bold='JournalBold', italic='Journal', boldItalic='JournalBold')
 
 

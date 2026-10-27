@@ -154,8 +154,10 @@ PDF는 개인상담·집단상담·특별교육·자문·심리검사·교육/�
 이름 가리기는 대상자·참여자 필드와 책갈피에 적용하며, 본문에 직접 적은 이름은 자동으로 가리지 않습니다.
 PDF 파일을 열어 인쇄하세요. 생성에는 인터넷이나 별도 브라우저 설치가 필요하지 않습니다.
 
-ReportLab과 정적 한글 글꼴 `resources/fonts/JournalSans`를 배포에 포함합니다.
-이 글꼴은 번들 Noto Sans KR의 400/700 굵기를 정적으로 변환하고 이름을 변경한 OFL 글꼴입니다.
+PDF 기본 서체는 리디바탕입니다. ReportLab에서 사용할 수 있도록 공식 OTF를 TTF로 변환하고
+이름을 변경한 `resources/fonts/RIDIBatang/HeartWingsRidiBatang-Regular.ttf`를 배포에 포함합니다.
+제목·굵은 강조는 기존 Noto Sans KR 기반 `JournalSans-Bold.ttf`를 사용합니다.
+변환 방법과 출처는 `resources/fonts/RIDIBatang/README.md`, 라이선스는 `resources/licenses/fonts/ridibatang.txt`에 있습니다.
 폰트 생성 도구 fontTools와 PDF 검사용 pypdf/렌더러는 사용자 앱 실행에 필요하지 않습니다.
 
 ## SQLCipher 네이티브 의존성

@@ -143,6 +143,6 @@ def main() -> None:
     register_page(args.db)
     ui.run(title='마음나래', favicon=str(ICON_PATH), host='127.0.0.1', port=port,
            native=args.native, window_size=(1440, 1000) if args.native else None,
-           reload=not getattr(sys, 'frozen', False), language='ko-KR',
+           reload=not args.native and not getattr(sys, 'frozen', False), language='ko-KR',
            show=not args.native and not args.no_open)
 

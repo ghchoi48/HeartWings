@@ -126,6 +126,12 @@
       "license": "OFL-1.1",
       "source": "https://github.com/notofonts/noto-cjk",
       "text_file": "fonts/noto.txt"
+    },
+    {
+      "name": "HeartWings Ridi Batang (리디바탕 PDF용 변환본)",
+      "license": "OFL-1.1",
+      "source": "https://ridicorp.com/ridibatang/",
+      "text_file": "fonts/ridibatang.txt"
     }
   ]
 }
