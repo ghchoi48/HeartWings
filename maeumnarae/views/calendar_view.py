@@ -16,6 +16,7 @@ from maeumnarae.core.models import CalendarInput, CalendarEvent
 from maeumnarae.services.reporting import KST, STATUS_LABELS
 from maeumnarae.repositories.calendar_repo import CalendarRepository
 from maeumnarae.repositories.reporting_repo import ReportingRepository
+from maeumnarae.services.school_calendar import load_school_events, SOURCE_URL
 
 
 JOURNAL_ICONS = {
@@ -57,6 +58,17 @@ def week_event_segments(days, events_by_day):
     return segments
 
 
+def show_school_event(entry):
+    with ui.dialog() as dialog, ui.card().classes('w-full max-w-lg p-6'):
+        ui.label(entry.title).classes('text-xl font-bold')
+        ui.label(f'{entry.starts_at.astimezone(KST):%Y.%m.%d} · 학사일정 (NEIS)')
+        ui.label(entry.content).classes('whitespace-pre-wrap break-words')
+        ui.label('나이스에서 제공하는 읽기 전용 일정입니다. 학교 사정에 따라 변경될 수 있습니다.').classes('text-sm text-slate-500')
+        ui.link('출처: 나이스 교육정보 개방 포털', SOURCE_URL, new_tab=True)
+        ui.button('닫기', on_click=dialog.close).props('flat')
+    dialog.open()
+
+
 class CalendarView:
     def __init__(self, repository: ReportingRepository, on_open: Callable[[int], Awaitable[None]],
                  on_open_linked: Callable[[CalendarEvent], Awaitable[None]] | None = None):
@@ -81,6 +93,7 @@ class CalendarView:
                     self.heading = ui.label().classes('text-xl font-bold')
                     self.next_button = ui.button('다음 달', icon='chevron_right', on_click=lambda: self.shift(1)).props('flat dense')
                     ui.button('오늘', on_click=self.today).props('outline')
+                    ui.button('새로고침', icon='refresh', on_click=self.reload).props('flat')
                     ui.space()
                     with ui.button('캘린더 목록', icon='calendar_month').props('outline icon-right=expand_more'):
                         self.calendar_menu = ui.menu().props('anchor="bottom right" self="top right"').classes('rounded-xl shadow-lg')
@@ -117,7 +130,7 @@ class CalendarView:
                             'flat round dense aria-label="캘린더 수정"').tooltip('캘린더 수정')
                         ui.button(icon='delete_outline', on_click=lambda item=item: self.delete_calendar(item)).props(
                             'flat round dense color=negative aria-label="캘린더 삭제"').tooltip('캘린더 삭제')
-                    if item.source in ('counseling', 'holidays'):
+                    if item.source in ('counseling', 'holidays', 'neis'):
                         ui.badge('연동').props('outline').classes('shrink-0')
         self.list_message.text = '체크한 캘린더의 일정만 표시합니다.'
         self.add_event.set_enabled(any(item.source == 'custom' for item in self.calendars))
@@ -190,6 +203,9 @@ class CalendarView:
             event_calendar_ids = [item.id for item in calendars if item.visible and item.source != 'holidays']
             events = await run.io_bound(self.repository.events, days[0], days[-1], event_calendar_ids)
             holiday_days = await run.io_bound(korean_holidays, days[0], days[-1])
+            school_events, school_message = await run.io_bound(
+                load_school_events, self.repository.database, calendars, days[0], days[-1])
+            events.extend(school_events)
         except DatabaseError as error:
             if request == self.count_request:
                 self.message.text = str(error)
@@ -204,6 +220,8 @@ class CalendarView:
         self.events_by_day = events_by_date(events, days)
         self.render_grid()
         self.message.text = f'선택한 캘린더 {len(selected_ids)}개 · 표시 기간 일정 {len(events)}건' if selected_ids else '캘린더 목록 버튼에서 표시할 캘린더를 선택해 주세요.'
+        if school_message:
+            self.message.text += ' · ' + school_message
 
     def render_grid(self):
         self.grid.clear()
@@ -278,7 +296,9 @@ class CalendarView:
         self.render_grid()
 
     async def open_event(self, entry):
-        if entry.source == 'counseling':
+        if entry.source == 'neis':
+            show_school_event(entry)
+        elif entry.source == 'counseling':
             await self.on_open(entry.id)
         elif entry.source in ('group', 'consultation', 'special_education'):
             if self.on_open_linked is not None:

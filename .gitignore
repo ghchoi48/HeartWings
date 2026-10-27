@@ -11,5 +11,6 @@ dist/
 .DS_Store
 tests/*
 !tests/test_calendar_widget.py
+!tests/test_school_calendar.py
 !tests/test_journal_pdf.py
 artifacts/

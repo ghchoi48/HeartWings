@@ -84,3 +84,28 @@ def text_lines(value: str) -> list[str]:
     text = re.sub(r'<br\s*/?>', '\n', value or '', flags=re.I)
     text = unescape(re.sub(r'<[^>]*>', '', text))
     return [line.strip() for line in text.splitlines() if line.strip()]
+
+
+def fetch_school_schedule(office: str, school_code: str, start: date, end: date,
+                          api_key: str = '') -> list[dict]:
+    """표시 기간의 학사일정을 페이지 누락 없이 조회한다."""
+    if office not in OFFICES or not re.fullmatch(r'[0-9]{7}', school_code):
+        raise NeisError('설정 → 일반 → 나이스 연동에서 시도교육청과 학교 코드를 확인해 주세요.')
+    if not api_key.strip():
+        raise NeisError('설정 → 일반 → 나이스 연동에 NEIS API 인증키를 입력해 주세요.')
+    if start > end:
+        raise NeisError('학사일정 조회 기간을 확인해 주세요.')
+    rows = []
+    for page in range(1, 101):
+        batch = request_rows('SchoolSchedule', {
+            'ATPT_OFCDC_SC_CODE': office, 'SD_SCHUL_CODE': school_code,
+            'AA_FROM_YMD': start.strftime('%Y%m%d'), 'AA_TO_YMD': end.strftime('%Y%m%d'),
+            'pIndex': page, 'pSize': 100,
+        }, api_key)
+        rows.extend(row for row in batch
+                    if row.get('ATPT_OFCDC_SC_CODE') == office
+                    and str(row.get('SD_SCHUL_CODE')) == school_code
+                    and start.strftime('%Y%m%d') <= str(row.get('AA_YMD', '')) <= end.strftime('%Y%m%d'))
+        if len(batch) < 100:
+            return rows
+    raise NeisError('학사일정 조회량이 너무 많습니다. 주간 보기로 다시 조회해 주세요.')

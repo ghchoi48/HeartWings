@@ -6,6 +6,7 @@ from maeumnarae.services.calendar_holidays import HOLIDAY_CALENDAR_ID, HOLIDAY_C
 from maeumnarae.core.models import Calendar, CalendarInput, CalendarEvent, CalendarEventInput
 from maeumnarae.repositories._support import now_text, values
 from maeumnarae.repositories.reporting_repo import ReportingRepository
+from maeumnarae.services.school_calendar import NEIS_CALENDAR_ID, NEIS_COLOR, NEIS_NAME
 
 
 class CalendarRepository:
@@ -19,8 +20,11 @@ class CalendarRepository:
             calendars = [item.model_copy(update={'name': '상담 일정'}) if item.source == 'counseling' else item
                          for item in calendars]
             visible = connection.execute("SELECT visible FROM calendar_preferences WHERE name='holidays'").fetchone()['visible']
+            neis = connection.execute("SELECT visible FROM calendar_preferences WHERE name='neis'").fetchone()
             return calendars + [Calendar(id=HOLIDAY_CALENDAR_ID, name='대한민국 공휴일', color=HOLIDAY_COLOR,
-                                         source='holidays', visible=bool(visible))]
+                                         source='holidays', visible=bool(visible)),
+                                Calendar(id=NEIS_CALENDAR_ID, name=NEIS_NAME, color=NEIS_COLOR,
+                                         source='neis', visible=bool(neis['visible']) if neis else False)]
 
     def create(self, value: CalendarInput) -> Calendar:
         data = values(CalendarInput.model_validate(value.model_dump()))
@@ -49,6 +53,10 @@ class CalendarRepository:
 
     def set_visible(self, calendar_id: int, visible: bool):
         with self.database.session(write=True) as connection:
+            if calendar_id == NEIS_CALENDAR_ID:
+                connection.execute("INSERT INTO calendar_preferences (name, visible) VALUES ('neis', ?) "
+                                   "ON CONFLICT(name) DO UPDATE SET visible=excluded.visible", (int(visible),))
+                return
             if calendar_id == HOLIDAY_CALENDAR_ID:
                 connection.execute("UPDATE calendar_preferences SET visible=? WHERE name='holidays'", (int(visible),))
                 return

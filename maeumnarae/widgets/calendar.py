@@ -8,8 +8,9 @@ from maeumnarae.repositories.calendar_repo import CalendarRepository
 from maeumnarae.services.calendar_dates import visible_days, events_by_date, shift_month
 from maeumnarae.services.calendar_holidays import korean_holidays
 from maeumnarae.services.reporting import KST
+from maeumnarae.services.school_calendar import load_school_events
 from maeumnarae.views.calendar_event_editor import open_event_editor
-from maeumnarae.views.calendar_view import render_event_icons
+from maeumnarae.views.calendar_view import render_event_icons, show_school_event
 
 
 class CalendarWidget:
@@ -92,9 +93,11 @@ class CalendarWidget:
                 events = self.repository.events(days[0], days[-1], ids)
                 holidays = korean_holidays(days[0], days[-1]) if any(
                     item.visible and item.source == 'holidays' for item in calendars) else {}
-                return calendars, events, holidays
+                school_events, school_message = load_school_events(self.repository.database, calendars, days[0], days[-1])
+                events.extend(school_events)
+                return calendars, events, holidays, school_message
 
-            calendars, events, holidays = await run.io_bound(load)
+            calendars, events, holidays, school_message = await run.io_bound(load)
             if request != self.request or self.body.is_deleted:
                 return
             self.calendars = calendars
@@ -107,6 +110,8 @@ class CalendarWidget:
                                  '전체 캘린더에서 표시할 캘린더를 선택해 주세요.')
             if not any(item.source == 'custom' for item in calendars):
                 self.message.text += ' 전체 캘린더에서 일정 등록용 캘린더를 추가해 주세요.'
+            if school_message:
+                self.message.text += ' ' + school_message
             self.render()
         except DatabaseError as error:
             if request == self.request and not self.body.is_deleted:
@@ -161,7 +166,9 @@ class CalendarWidget:
                         render_event_icons(entry)
 
     async def open_event(self, entry):
-        if entry.source == 'custom':
+        if entry.source == 'neis':
+            show_school_event(entry)
+        elif entry.source == 'custom':
             await self.edit(entry)
         elif entry.source == 'counseling' and self.on_open:
             await self.on_open(entry.id)

@@ -56,7 +56,7 @@ def test_calendar_storage_filtering_and_reinitialize(data):
         repo.save_event(CalendarEventInput(calendar_id=calendars[0].id, title='연동 캘린더에 직접 저장 불가',
             starts_at=datetime(2026, 10, 20, 9, tzinfo=KST)))
     db.initialize()
-    assert len(repo.list()) == 3
+    assert len(repo.list()) == 4
     assert len(repo.events(date(2026, 10, 21), date(2026, 10, 21), [custom.id])) == 1
 
 
@@ -135,11 +135,11 @@ def test_calendar_selection_navigation_and_open(data):
                 view.build()
             with patch('maeumnarae.views.calendar_view.run.io_bound', side_effect=invoke):
                 await view.reload()
-                assert len(view.calendars) == 3
+                assert len(view.calendars) == 4
                 assert len(view.events_by_day[view.selected]) == 2
                 checkboxes = [item for item in view.calendar_list.descendants() if isinstance(item, ui.checkbox)]
-                assert len(checkboxes) == 3
-                assert all(item.value for item in checkboxes)
+                assert len(checkboxes) == 4
+                assert [item.value for item in checkboxes] == [True, True, True, False]
                 await view.toggle_calendar(custom.id, False)
                 assert len(view.events_by_day[view.selected]) == 1
                 await view.open_event(view.events_by_day[view.selected][0])

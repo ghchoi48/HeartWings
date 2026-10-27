@@ -81,6 +81,9 @@ class SchoolSettingsFormTests(unittest.IsolatedAsyncioTestCase):
                     fields['학교급'].value = '초등학교'
                     fields['상담교사 이름'].value = '김교사'
                     fields['사무실 번호'].value = '02-001-002'
+                    fields['NEIS API 인증키'].value = 'new-test-key'
+                    self.assertEqual(fields['NEIS API 인증키'].props['type'], 'password')
+                    self.assertTrue(any(isinstance(e, ui.expansion) and not e.value for e in host.descendants()))
                     handler = next(e.handler for e in button._event_listeners.values() if e.type == 'click')
                     save = inspect.getclosurevars(handler).nonlocals['callback']
                     repository.save.side_effect = DatabaseError('저장 실패')
@@ -93,6 +96,7 @@ class SchoolSettingsFormTests(unittest.IsolatedAsyncioTestCase):
                     self.assertEqual(settings.school_level, '초등학교')
                     self.assertEqual(settings.office_number, '02-001-002')
                     self.assertEqual(settings.counselor_name, '김교사')
+                    self.assertEqual(settings.neis_api_key, 'new-test-key')
             finally:
                 host.delete()
 

@@ -78,7 +78,8 @@
 | [`maeumnarae/services/database_maintenance.py`](../maeumnarae/services/database_maintenance.py) | 암호화 스냅샷 백업과 검증·자동 백업을 거치는 DB 복원. |
 | [`maeumnarae/services/journal_export.py`](../maeumnarae/services/journal_export.py) | 상담관리 업로드 서식의 16개 열을 채우고 원본 XLSX 부속 요소를 보존한다. |
 | [`maeumnarae/services/legacy_import.py`](../maeumnarae/services/legacy_import.py) | 상담기록관리 XLSB의 저장된 셀 값만 읽는다. 매크로/수식은 실행하지 않는다. |
-| [`maeumnarae/services/neis.py`](../maeumnarae/services/neis.py) | 나이스 학교기본정보·급식식단정보 API. 인증키와 원문 오류는 로그에 남기지 않는다. |
+| [`maeumnarae/services/neis.py`](../maeumnarae/services/neis.py) | 나이스 학교기본정보·급식식단정보·학사일정 API. 인증키와 원문 오류는 로그에 남기지 않는다. |
+| [`maeumnarae/services/school_calendar.py`](../maeumnarae/services/school_calendar.py) | 나이스 학사일정을 읽기 전용 종일 일정으로 변환하고 조회 오류를 분리한다. |
 | [`maeumnarae/services/reporting.py`](../maeumnarae/services/reporting.py) | 한국 날짜 범위와 통계 보고서 직렬화. UI·DB에 의존하지 않는 순수 함수. |
 | [`maeumnarae/services/roster_import.py`](../maeumnarae/services/roster_import.py) | 학생·교사 XLSX 서식과 DB 쓰기 없는 행별 입력 검증. |
 | [`maeumnarae/services/updates.py`](../maeumnarae/services/updates.py) | 공개 GitHub Releases의 최신 정식 버전 조회. |
