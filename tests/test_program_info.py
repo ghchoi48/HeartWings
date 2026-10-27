@@ -51,7 +51,8 @@ def test_bundled_notices_have_license_source_and_full_text():
     assert {'ReportLab', 'charset-normalizer'} <= {entry['name'] for entry in notices['libraries']}
     assert {entry['name'] for entry in notices['fonts']} == {
         'Pretendard', 'Noto Sans KR', 'Spoqa Han Sans Neo',
-        'HeartWings Journal Sans (Noto Sans KR static derivative)'}
+        'HeartWings Journal Sans (Noto Sans KR static derivative)',
+        'HeartWings Ridi Batang (리디바탕 PDF용 변환본)'}
     for entries in notices.values():
         for entry in entries:
             assert entry['license']
