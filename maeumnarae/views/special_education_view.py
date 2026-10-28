@@ -5,7 +5,7 @@ from datetime import datetime
 from maeumnarae.views.journal_pagination import PAGE_SIZE, load_page
 
 from nicegui import run, ui
-from maeumnarae.views.journal_print_view import list_print_tools, editor_print_button
+from maeumnarae.views.journal_print_view import list_print_tools
 
 from maeumnarae.views.attachment_view import attachment_button
 
@@ -73,9 +73,6 @@ class SpecialEducationView(CounselingView):
             with ui.context.client.content:
                 dialog, fields, message, save_button, cancel_button = self.build_editor(student, entry)
             original = {key: field.value for key, field in fields.items()}
-            with save_button.parent_slot:
-                editor_print_button(self.students.database, 'special', lambda: entry,
-                    lambda: saving or bool(save_button.attachments.pending) or original != {key: field.value for key, field in fields.items()})
 
             async def cancel():
                 if saving:

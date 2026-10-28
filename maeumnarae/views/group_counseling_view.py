@@ -7,7 +7,7 @@ from collections.abc import Awaitable, Callable
 from maeumnarae.views.journal_pagination import PAGE_SIZE, load_page
 
 from nicegui import run, ui
-from maeumnarae.views.journal_print_view import list_print_tools, editor_print_button
+from maeumnarae.views.journal_print_view import list_print_tools
 
 from maeumnarae.views.attachment_view import attachment_button
 
@@ -325,10 +325,6 @@ class GroupCounselingView:
                 return deepcopy(data)
 
             original = form_data()
-            if log:
-                with save_button.parent_slot:
-                    editor_print_button(self.repository.database, 'group', lambda: entry,
-                        lambda: saving or bool(files.pending) or original != form_data())
 
             async def cancel():
                 if saving:

@@ -6,7 +6,7 @@ from datetime import date, datetime, timedelta, timezone
 from maeumnarae.views.journal_pagination import PAGE_SIZE, load_page
 
 from nicegui import run, ui
-from maeumnarae.views.journal_print_view import list_print_tools, editor_print_button
+from maeumnarae.views.journal_print_view import list_print_tools
 
 from maeumnarae.views.attachment_view import attachment_button
 
@@ -486,8 +486,6 @@ class CounselingView:
                     field.enable()
 
         save_button.on_click(save)
-        with save_button.parent_slot:
-            editor_print_button(self.students.database, 'individual', lambda: entry, lambda: self.editor_open)
 
     async def open_record(self, entry_id: int) -> None:
         """캘린더에서 전달받은 일지의 학생을 선택하고 기존 편집기를 연다."""

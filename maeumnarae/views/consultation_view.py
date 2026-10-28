@@ -5,7 +5,7 @@ from datetime import date, datetime, timedelta, timezone
 from maeumnarae.views.journal_pagination import PAGE_SIZE, load_page
 
 from nicegui import run, ui
-from maeumnarae.views.journal_print_view import list_print_tools, editor_print_button
+from maeumnarae.views.journal_print_view import list_print_tools
 
 from maeumnarae.views.attachment_view import attachment_button
 
@@ -211,9 +211,6 @@ class ConsultationView:
             with self.log_panel.client.content:
                 dialog, fields, message, save_button, cancel_button = self.build_log_editor(teacher, entry)
             original = {key: field.value for key, field in fields.items()}
-            with save_button.parent_slot:
-                editor_print_button(self.teachers.database, 'consultation', lambda: entry,
-                    lambda: saving or bool(save_button.attachments.pending) or original != {key: field.value for key, field in fields.items()})
 
             async def cancel():
                 if saving:
