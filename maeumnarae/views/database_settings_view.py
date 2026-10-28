@@ -141,6 +141,7 @@ def build_database_settings(database: Database, on_roster_import=None) -> None:
         dialog.on('hide', clear_restore)
         open_restore = ui.button('백업 파일에서 복원', icon='restore', on_click=dialog.open).props('outline')
     JournalExportView(database).build(collapsible=True)
+    JournalExportView(database, ledger=True).build(collapsible=True)
     build_year_print(database)
 
     async def imported(kind):

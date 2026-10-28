@@ -8,14 +8,15 @@ from maeumnarae.core.database import Database
 class JournalSnapshot:
     records: tuple[dict, ...]
     members: dict[int, tuple[int, ...]]
+    students: tuple[dict, ...] = ()
 
 
 class JournalExportRepository:
     def __init__(self, database: Database):
         self.database = database
 
-    def snapshot(self) -> JournalSnapshot:
-        # 이름·연락처·제목·본문·비밀 메모는 조회하지 않는다.
+    def snapshot(self, *, include_students=False) -> JournalSnapshot:
+        # 학생 명부는 상담 대장 요청에만 포함한다. 연락처·본문·비밀 메모는 조회하지 않는다.
         with self.database.session() as connection:
             records = []
             records.extend(dict(row, kind='individual') for row in connection.execute('''
@@ -41,4 +42,7 @@ class JournalExportRepository:
             members = {}
             for row in connection.execute('SELECT group_id, student_id FROM group_counseling_members ORDER BY student_id'):
                 members.setdefault(row['group_id'], []).append(row['student_id'])
-        return JournalSnapshot(tuple(records), {key: tuple(value) for key, value in members.items()})
+            students = tuple(dict(row) for row in connection.execute(
+                'SELECT id, grade, classroom, student_number, gender, name FROM students ORDER BY id'
+            )) if include_students else ()
+        return JournalSnapshot(tuple(records), {key: tuple(value) for key, value in members.items()}, students)

@@ -46,12 +46,17 @@ class PrintRecord:
     follow_up: str = ''
     details: tuple[tuple[str, str], ...] = ()
     attendance: tuple[dict, ...] = ()
+    grade: int | None = None
+    classroom: str = ''
+    student_number: str = ''
+    session_number: int | None = None
 
 
 @dataclass(frozen=True)
 class PrintSnapshot:
     school: str
     records: tuple[PrintRecord, ...]
+    school_level: str = '중학교'
 
     @property
     def counts(self):

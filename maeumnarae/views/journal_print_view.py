@@ -13,6 +13,10 @@ from maeumnarae.views.settings_card import settings_card
 JOURNAL_PDF_VISIBLE = False
 
 
+def journal_pdf_visible(kind):
+    return kind == 'individual' or JOURNAL_PDF_VISIBLE
+
+
 def invalidate_prints(client=None):
     client = client if client is not None else ui.context.client
     client._journal_print_epoch = getattr(client, '_journal_print_epoch', 0) + 1
@@ -32,7 +36,7 @@ async def print_dialog(database, request, anchor, blocked=lambda: False):
         with ui.dialog() as dialog, ui.card().classes('w-full max-w-xl p-6'):
             ui.label('일지 PDF 출력').classes('text-xl font-bold')
             mask = ui.checkbox('이름 가리기', value=request.mask_names)
-            ui.label('본문에 직접 작성한 이름은 자동으로 가려지지 않습니다. 비밀 메모와 첨부파일은 제외됩니다.').classes('text-sm text-slate-500')
+            ui.label('이름 가리기를 켜면 학생 이름 대신 학생 ID를 표시합니다. 본문에 직접 작성한 이름은 자동으로 가려지지 않습니다. 비밀 메모와 첨부파일은 제외됩니다.').classes('text-sm text-slate-500')
             message = ui.label('일지 건수를 확인하는 중입니다…')
             generate = ui.button('PDF 생성 및 다운로드', icon='picture_as_pdf')
             generate.disable()
@@ -139,7 +143,7 @@ class PrintSelection:
 
     def toolbar(self):
         self.button = ui.button(f'선택 일지 PDF ({len(self.ids)})', icon='picture_as_pdf', on_click=self.download).props('outline')
-        self.button.set_visibility(JOURNAL_PDF_VISIBLE)
+        self.button.set_visibility(journal_pdf_visible(self.kind))
 
     async def download(self):
         if not self.ids:
@@ -157,7 +161,7 @@ class PrintSelection:
             self.button.text = f'선택 일지 PDF ({len(self.ids)})'
 
     def row(self, key):
-        if not JOURNAL_PDF_VISIBLE:
+        if not journal_pdf_visible(self.kind):
             return
         with ui.row().classes('items-center').on('click.stop', lambda: None).on('keydown.stop', lambda: None):
             ui.checkbox('선택', value=key in self.ids, on_change=lambda e: self.toggle(key, e.value)).props('dense')
@@ -178,7 +182,7 @@ def list_print_tools(owner, database, kind, scope):
 
 
 def editor_print_button(database, kind, entry, blocked):
-    if not JOURNAL_PDF_VISIBLE:
+    if not journal_pdf_visible(kind):
         return None
     async def clicked():
         record = entry()
@@ -207,6 +211,7 @@ def build_year_print(database):
         statuses = ui.select(STATUSES, value=['completed'], multiple=True, label='포함 상태').props('outlined').classes('w-full')
         ui.label('상태가 없는 심리검사·교육/행사는 항상 포함됩니다.').classes('text-sm text-slate-500')
         mask = ui.checkbox('이름 가리기', value=False)
+        ui.label('학생 이름 대신 학생 ID를 표시합니다. 본문에 직접 작성한 이름은 자동으로 가려지지 않습니다.').classes('text-sm text-slate-500')
         async def prepare():
             try:
                 if year.value is None or int(year.value) != year.value:

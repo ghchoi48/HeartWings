@@ -10,7 +10,7 @@ from maeumnarae.services.journal_print_models import KINDS, PrintRequest, PrintR
 COMMON = 'r.id, r.title, r.author, r.duration_minutes'
 COUNSELING = ', r.starts_at, r.status, r.content_markdown AS content, r.content_format, r.follow_up, r.category, r.counseling_area, r.counseling_method, r.counseling_target'
 QUERIES = {
-    'individual': (COMMON + COUNSELING + ', s.id AS subject_id, s.name AS subject, c.title AS case_title',
+    'individual': (COMMON + COUNSELING + ', s.id AS subject_id, s.name AS subject, c.title AS case_title, r.case_id',
                    'counseling r JOIN students s ON s.id=r.student_id LEFT JOIN counseling_cases c ON c.id=r.case_id', 'student'),
     'special': (COMMON + COUNSELING + ', s.id AS subject_id, s.name AS subject, c.title AS case_title, c.law, c.case_number',
                 'special_education_logs r JOIN students s ON s.id=r.student_id JOIN special_educations c ON c.id=r.case_id', 'student'),
@@ -38,7 +38,9 @@ class JournalPrintRepository:
         selected = set(request.refs)
         records = []
         with self.database.session() as connection:
-            school = connection.execute('SELECT school_name FROM school_settings WHERE id=1').fetchone()
+            school = connection.execute('SELECT school_name, school_level FROM school_settings WHERE id=1').fetchone()
+            case_sessions = {}
+            enrollments = {}
             for kind, (columns, source, subject_type) in QUERIES.items():
                 ids = sorted(key for k, key in selected if k == kind)
                 if request.school_year is None and not ids:
@@ -72,13 +74,34 @@ class JournalPrintRepository:
                                 continue
                             if 'status' in data and data['status'] not in request.statuses:
                                 continue
+                        individual = {}
+                        if kind == 'individual':
+                            year = moment.year - (moment.month < 3)
+                            enrollment_key = (data['subject_id'], year)
+                            if enrollment_key not in enrollments:
+                                enrollments[enrollment_key] = connection.execute(
+                                    'SELECT grade, classroom, student_number FROM student_enrollments '
+                                    'WHERE student_id=? AND school_year=?', enrollment_key).fetchone()
+                            enrollment = enrollments[enrollment_key]
+                            if enrollment:
+                                individual.update(grade=enrollment['grade'], classroom=enrollment['classroom'],
+                                                  student_number=enrollment['student_number'] or '')
+                            case_key = (data['subject_id'], data['case_id'])
+                            if data['status'] == 'completed':
+                                if case_key not in case_sessions:
+                                    sessions = connection.execute(
+                                        "SELECT id, starts_at FROM counseling WHERE student_id=? AND case_id IS ? "
+                                        "AND status='completed'", case_key).fetchall()
+                                    sessions = sorted(sessions, key=lambda s: (datetime.fromisoformat(s['starts_at']), s['id']))
+                                    case_sessions[case_key] = {s['id']: n for n, s in enumerate(sessions, 1)}
+                                individual['session_number'] = case_sessions[case_key][data['id']]
                         records.append(PrintRecord(kind, data['id'], subject_type, data['subject_id'], data['subject'],
                             moment, data['title'], data['author'], data.get('status', ''), data['duration_minutes'],
                             data['content'], data['content_format'], data.get('follow_up', ''),
                             tuple((label, str(data[key])) for key, label in DETAILS.items() if data.get(key) not in (None, '')),
-                            tuple(json.loads(data.get('attendance', '[]')))))
+                            tuple(json.loads(data.get('attendance', '[]'))), **individual))
         if selected and {(r.kind, r.id) for r in records} != selected:
             raise DatabaseError('선택한 일지를 찾을 수 없습니다. 목록을 새로고침해 주세요.')
         order = list(KINDS)
         records.sort(key=lambda r: (order.index(r.kind), r.subject, r.subject_id, r.moment, r.id))
-        return PrintSnapshot(school[0] if school else '', tuple(records))
+        return PrintSnapshot(school[0] if school else '', tuple(records), school[1] if school else '중학교')

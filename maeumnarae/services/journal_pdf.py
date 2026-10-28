@@ -13,14 +13,17 @@ from reportlab.lib.units import mm
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.platypus import BaseDocTemplate, Paragraph, Spacer, PageBreak, LongTable, TableStyle, Flowable
+from reportlab.platypus import (BaseDocTemplate, Paragraph, Spacer, PageBreak, LongTable,
+                               TableStyle, Flowable, NextPageTemplate, KeepTogether)
 
 from maeumnarae.core.paths import RESOURCE_ROOT
 from maeumnarae.services.journal_print_models import KINDS, STATUSES, PrintSnapshot
 from maeumnarae.views.counseling_content import editor_html
+from maeumnarae.services.reporting import KST
 
 _font_lock = Lock()
 WIDTH = A4[0] - 30 * mm
+INDIVIDUAL_WIDTH = A4[0] - 60 * mm
 
 
 def register_fonts():
@@ -32,6 +35,10 @@ def register_fonts():
             pdfmetrics.registerFont(TTFont('JournalBold', str(
                 RESOURCE_ROOT / 'fonts' / 'JournalSans' / 'JournalSans-Bold.ttf')))
             pdfmetrics.registerFontFamily('Journal', normal='Journal', bold='JournalBold', italic='Journal', boldItalic='JournalBold')
+        if 'JournalTitle' not in pdfmetrics.getRegisteredFontNames():
+            # 번들 Noto Sans KR의 정적 700 인스턴스 (JournalSans/README.txt).
+            pdfmetrics.registerFont(TTFont('JournalTitle', str(
+                RESOURCE_ROOT / 'fonts' / 'JournalSans' / 'JournalSans-Bold.ttf')))
 
 
 def style(**kwargs):
@@ -164,12 +171,82 @@ def masked_snapshot(snapshot):
         ids[r.subject_type].add(r.subject_id)
         ids['student'].update(a['student_id'] for a in r.attendance)
     labels = {'student': '학생', 'teacher': '교사', 'group': '집단', 'event': '교육/행사'}
-    names = {(kind, key): f'{labels[kind]} {index}' for kind, values in ids.items()
+    names = {(kind, key): str(key) if kind == 'student' else f'{labels[kind]} {index}' for kind, values in ids.items()
              for index, key in enumerate(sorted(values), 1)}
-    return PrintSnapshot(snapshot.school, tuple(replace(r,
+    return replace(snapshot, records=tuple(replace(r,
         subject=names[(r.subject_type, r.subject_id)],
         attendance=tuple(dict(a, name=names[('student', a['student_id'])]) for a in r.attendance))
         for r in snapshot.records))
+
+
+def individual_time(record):
+    start = record.moment.astimezone(KST)
+    if record.minutes is None:
+        return start.strftime('%Y-%m-%d %H:%M')
+    end = start + timedelta(minutes=record.minutes)
+    return start.strftime('%Y-%m-%d %H:%M') + '~' + end.strftime(
+        '%H:%M' if start.date() == end.date() else '%Y-%m-%d %H:%M')
+
+
+def form_table(rows, widths, shaded=(), grid=True):
+    result = LongTable(rows, colWidths=widths, hAlign='LEFT', splitByRow=1, splitInRow=1)
+    result.setStyle(TableStyle([
+        *([('GRID', (0, 0), (-1, -1), .5, colors.black)] if grid else []),
+        ('BOX', (0, 0), (-1, -1), .9, colors.black),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 7), ('RIGHTPADDING', (0, 0), (-1, -1), 7),
+        ('TOPPADDING', (0, 0), (-1, -1), 6), ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        *[('BACKGROUND', cell, cell, colors.HexColor('#d9d9d9')) for cell in shaded],
+    ]))
+    return result
+
+
+def individual_story(record):
+    width = INDIVIDUAL_WIDTH
+    details = dict(record.details)
+
+    def cell(text, label=False):
+        return paragraph(text, alignment=TA_CENTER if label else TA_LEFT,
+                         fontSize=9 if label else 10, spaceAfter=0)
+
+    def section(text):
+        result = form_table([[paragraph(text, fontName='JournalTitle', spaceAfter=0)]], [width], [(0, 0)])
+        result.keepWithNext = True
+        return result
+
+    def row(values, ratios):
+        return form_table([[cell(v, i % 2 == 0) for i, v in enumerate(values)]],
+                          [width * r for r in ratios], [(i, 0) for i in range(0, len(values), 2)])
+
+    enrollment = ' '.join(v for v in (
+        f'{record.grade}학년' if record.grade is not None else '',
+        f'{record.classroom}반' if record.classroom else '',
+        f'{record.student_number}번' if record.student_number else '') if v)
+    info = [paragraph('개인상담 일지', fontName='JournalTitle', fontSize=16,
+                      leading=24, alignment=TA_CENTER, spaceAfter=6),
+            section('▫ 상담정보'),
+            row(['학생명', record.subject, '학년·반·번호', enrollment], [.146, .372, .159, .323]),
+            row(['상담회기', f'{record.session_number}회기' if record.session_number else '',
+                 '상담일시', individual_time(record)], [.146, .166, .139, .549]),
+            row(['상담방법', details.get('상담 방법', ''), '상담대상', details.get('상담 대상', ''),
+                 '상담분야', details.get('상담 분야', '')], [.146, .166, .139, .166, .142, .241])]
+    body = rich_blocks(record.content, record.content_format, width - width * .146 - 14)
+    content = form_table([[paragraph('▫ 상담내용', fontName='JournalTitle', spaceAfter=0), ''],
+                          [cell('내용', True), body or [cell('')]],
+                          [cell('후속조치', True), paragraph(record.follow_up, spaceAfter=0)]],
+                         [width * .146, width * .854], [(0, 0), (0, 1), (0, 2), (1, 0)], grid=False)
+    content.repeatRows = 1
+    content.setStyle(TableStyle([
+        ('SPAN', (0, 0), (-1, 0)), ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('LINEBELOW', (0, 0), (-1, 0), .12 * mm, colors.black),
+        ('LINEBEFORE', (1, 1), (1, -1), .5, colors.black),
+        ('LINEABOVE', (0, 2), (-1, 2), .5, colors.black),
+    ]))
+    signature = form_table([[cell('작성자', True), cell(f'{record.author} (인)')]],
+                           [width / 6, width / 3], [(0, 0)])
+    signature.hAlign = 'RIGHT'
+    return [KeepTogether(info), Spacer(1, 12), content,
+            Spacer(1, 14), signature]
 
 
 class Heading(Flowable):
@@ -195,6 +272,8 @@ def build_pdf(snapshot, request):
     document = BaseDocTemplate(output, pagesize=A4, leftMargin=15*mm, rightMargin=15*mm,
                                  topMargin=20*mm, bottomMargin=18*mm,
                                  title='마음나래 일지', author='마음나래')
+    first_template = 'Journal' if request.school_year is not None else (
+        'Individual' if snapshot.records[0].kind == 'individual' else 'Journal')
     story = []
     if request.school_year is not None:
         start, end = request.bounds
@@ -204,11 +283,10 @@ def build_pdf(snapshot, request):
                   paragraph('상태가 없는 심리검사·교육/행사 포함'),
                   paragraph(f'전체 {len(snapshot.records)}건')]
         story += [paragraph(f'{KINDS[k]}: {n}건') for k, n in snapshot.counts.items() if n]
-        story.append(PageBreak())
     previous_kind = previous_subject = None
     for index, record in enumerate(snapshot.records):
-        if index:
-            story.append(PageBreak())
+        if index or request.school_year is not None:
+            story += [NextPageTemplate('Individual' if record.kind == 'individual' else 'Journal'), PageBreak()]
         header = f'{KINDS[record.kind]} · {record.subject}'
         if record.kind != previous_kind:
             story.append(Heading(KINDS[record.kind], f'kind-{record.kind}', 0, header))
@@ -216,6 +294,9 @@ def build_pdf(snapshot, request):
         if subject_key != previous_subject:
             story.append(Heading(record.subject, f'subject-{record.kind}-{record.subject_id}', 1, header))
         previous_kind, previous_subject = record.kind, subject_key
+        if record.kind == 'individual':
+            story.extend(individual_story(record))
+            continue
         story += [paragraph(f'{KINDS[record.kind]} 일지', fontName='JournalBold'), paragraph(record.title)]
         pairs = [('학교', snapshot.school), ('작성자', record.author), ('대상', record.subject),
                  ('일시', record.moment.strftime('%Y-%m-%d %H:%M')),
@@ -234,18 +315,30 @@ def build_pdf(snapshot, request):
 
     def page_end(canvas, doc):
         canvas.saveState()
-        canvas.setFont('Journal', 8)
         canvas.setFillColor(colors.HexColor('#52636a'))
-        heading = getattr(canvas, '_journal_header', '마음나래 일지')
-        while pdfmetrics.stringWidth(heading, 'Journal', 8) > WIDTH:
-            heading = heading[:-2] + '…'
-        canvas.drawString(15*mm, A4[1]-12*mm, heading)
+        if doc.pageTemplate.id == 'Individual':
+            organization = 'Wee센터' if snapshot.school_level == 'Wee센터' else 'Wee클래스'
+            heading = f'{snapshot.school} {organization}'.strip()
+            # 긴 기관명도 생략하거나 축소하지 않고 9pt로 오른쪽 정렬한다.
+            header = paragraph(heading, fontSize=9, leading=11, alignment=TA_RIGHT, spaceAfter=0)
+            _, height = header.wrap(INDIVIDUAL_WIDTH, A4[1])
+            header.drawOn(canvas, 30*mm, A4[1]-12*mm-height)
+        else:
+            canvas.setFont('Journal', 8)
+            heading = getattr(canvas, '_journal_header', '마음나래 일지')
+            while pdfmetrics.stringWidth(heading, 'Journal', 8) > WIDTH:
+                heading = heading[:-2] + '…'
+            canvas.drawString(15*mm, A4[1]-12*mm, heading)
+        canvas.setFont('Journal', 8)
         canvas.drawRightString(A4[0]-15*mm, 10*mm, str(doc.page))
         canvas.restoreState()
 
     # onPageEnd를 사용해야 새 묶음의 첫 페이지 머리말도 정확하다.
     from reportlab.platypus import PageTemplate, Frame
-    document.addPageTemplates(PageTemplate(id='Journal', frames=[Frame(15*mm, 18*mm, WIDTH,
-        A4[1]-38*mm, leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)], onPageEnd=page_end))
+    templates = [PageTemplate(id='Journal', frames=[Frame(15*mm, 18*mm, WIDTH,
+        A4[1]-38*mm, leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)], onPageEnd=page_end),
+        PageTemplate(id='Individual', frames=[Frame(30*mm, 30*mm, INDIVIDUAL_WIDTH,
+        A4[1]-65*mm, leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)], onPageEnd=page_end)]
+    document.addPageTemplates(sorted(templates, key=lambda template: template.id != first_template))
     document.build(story)
     return output.getvalue()

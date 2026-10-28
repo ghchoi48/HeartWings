@@ -13,6 +13,7 @@ tests/*
 !tests/test_calendar_widget.py
 !tests/test_school_calendar.py
 !tests/test_journal_pdf.py
+!tests/test_journal_ledger.py
 artifacts/
 
 !tests/test_build_desktop.py

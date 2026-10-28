@@ -52,6 +52,12 @@ class ExportResult:
     issues: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class LedgerExportResult(ExportResult):
+    students_content: bytes
+    student_count: int
+
+
 def school_year(day: date) -> int:
     return day.year if day.month >= 3 else day.year - 1
 
@@ -63,7 +69,7 @@ def record_time(record: dict) -> datetime:
                             time.fromisoformat(record['clock'] or '00:00'), KST)
 
 
-def export_rows(snapshot: JournalSnapshot, options: ExportOptions):
+def export_rows(snapshot: JournalSnapshot, options: ExportOptions, *, include_student_ids=False):
     options.validate()
     rows, issues, counts = [], [], Counter()
     records = sorted(snapshot.records, key=lambda record: (record_time(record), record['kind'], record['id']))
@@ -126,6 +132,11 @@ def export_rows(snapshot: JournalSnapshot, options: ExportOptions):
         rows.append(('전문상담', options.wee_class, major, middle, area, headcount, year,
                      day.strftime('%Y%m%d'), '', '', summary, summary, hours, minutes,
                      '전문상담교사', method))
+        if include_student_ids:
+            student_id = record.get('student_id', '') if kind in ('individual', 'special', 'test') else ''
+            if kind == 'group':
+                student_id = ', '.join(str(key) for key in snapshot.members.get(record['group_id'], ()))
+            rows[-1] = rows[-1][:8] + (student_id,) + rows[-1][8:]
         counts[KINDS[kind]] += 1
         if problems:
             issues.append(f'엑셀 {len(rows) + 1}행 · {KINDS[kind]} #{record["id"]} · {day}: ' + '; '.join(problems))
@@ -176,3 +187,50 @@ def workbook_bytes(rows) -> bytes:
 def export_journals(database, options: ExportOptions) -> ExportResult:
     rows, issues, counts = export_rows(JournalExportRepository(database).snapshot(), options)
     return ExportResult(workbook_bytes(rows), len(rows), counts, issues)
+
+
+def ledger_workbook_bytes(title, headers, rows, widths):
+    """NEIS 업로드 서식과 분리된 일반 대장. 문자열은 수식으로 해석하지 않는다."""
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Font, PatternFill
+    from openpyxl.utils import get_column_letter
+
+    if len(rows) > 1_048_575:
+        raise ValueError('엑셀 최대 행 수를 초과했습니다. 기간을 나누어 내보내 주세요.')
+    book = Workbook()
+    sheet = book.active
+    sheet.title = title
+    sheet.append(headers)
+    for number, row in enumerate(rows, 2):
+        for column, value in enumerate(row, 1):
+            cell = sheet.cell(number, column, value)
+            if isinstance(value, str):
+                cell.data_type = 's'
+    for cell in sheet[1]:
+        cell.font = Font(bold=True, color='FFFFFF')
+        cell.fill = PatternFill('solid', fgColor='285E55')
+        cell.alignment = Alignment(vertical='center', wrap_text=True)
+    sheet.row_dimensions[1].height = 30
+    for column, width in enumerate(widths, 1):
+        sheet.column_dimensions[get_column_letter(column)].width = width
+    sheet.freeze_panes = 'A2'
+    sheet.auto_filter.ref = sheet.dimensions
+    output = BytesIO()
+    book.save(output)
+    return output.getvalue()
+
+
+def export_ledger(database, options: ExportOptions) -> LedgerExportResult:
+    snapshot = JournalExportRepository(database).snapshot(include_students=True)
+    rows, issues, counts = export_rows(snapshot, options, include_student_ids=True)
+    linked_ids = {int(key.strip()) for row in rows for key in str(row[8] or '').split(',') if key.strip()}
+    students = [(s['id'], s['grade'], s['classroom'], s['student_number'], s['gender'], s['name'])
+                for s in snapshot.students if s['id'] in linked_ids]
+    headers = ('상담분류', 'Wee클래스', '대분류', '중분류', '상담구분', '상담인원', '학년도',
+               '상담일자', '학생 ID', '학년', '성별', '상담제목', '상담내용', '상담시간(시)',
+               '상담시간(분)', '상담사소속', '상담매체구분')
+    content = ledger_workbook_bytes('상담 대장', headers, rows,
+                                   [16, 16, 12, 18, 24, 12, 12, 15, 24, 10, 10, 28, 28, 15, 15, 18, 18])
+    student_content = ledger_workbook_bytes('학생 정보', ('학생 ID', '학년', '반', '번호', '성별', '이름'),
+                                           students, [14, 10, 12, 12, 10, 22])
+    return LedgerExportResult(content, len(rows), counts, issues, student_content, len(students))

@@ -104,6 +104,24 @@ def sample_snapshot():
     return PrintSnapshot('가상학교', (r,))
 
 
+def test_masked_students_use_database_ids_independent_of_selection():
+    student = replace(sample_snapshot().records[0], subject_id=427, subject='학생실명')
+    group = replace(student, id=2, kind='group', subject_type='group', subject_id=8,
+                    subject='집단실명', attendance=(dict(student_id=427, name='학생실명',
+                                                     attended=True, attitude='참여'),))
+    snapshot = PrintSnapshot('학교', (student, group))
+    masked = masked_snapshot(snapshot)
+    assert masked.records[0].subject == '427'
+    assert masked.records[1].attendance[0]['name'] == '427'
+    assert masked.records[1].subject == '집단 1'
+    assert masked_snapshot(replace(snapshot, records=(student,))).records[0].subject == '427'
+    assert snapshot.records[0].subject == '학생실명'
+    reader = PdfReader(BytesIO(build_pdf(replace(snapshot, records=(student,)),
+                                       PrintRequest(refs=(('individual', 1),), mask_names=True))))
+    text = '\n'.join(page.extract_text() for page in reader.pages)
+    assert '427' in text and '학생실명' not in text
+
+
 def test_long_korean_rich_pdf_and_leap_year(tmp_path):
     content = build_pdf(sample_snapshot(), PrintRequest(school_year=2023))
     reader = PdfReader(BytesIO(content))
@@ -129,6 +147,71 @@ def test_long_attendance_rows_split_without_losing_text():
     assert '참여자 60' in text
     assert all(f'태도문장{n:04d}' in text for n in range(200))
     assert len(reader.pages) > 3
+
+
+def test_individual_enrollment_and_case_sessions(records):
+    from maeumnarae.core.models import StudentEnrollmentInput
+    students = StudentRepository(records)
+    students.save_enrollment(1, StudentEnrollmentInput(school_year=2025, grade=1, classroom='2', student_number='7'))
+    students.save_enrollment(1, StudentEnrollmentInput(school_year=2026, grade=2, classroom='3'))
+    with records.session(write=True) as connection:
+        connection.execute("UPDATE school_settings SET school_level='Wee센터', school_name='가상지원청' WHERE id=1")
+        # 같은 시각의 상담도 ID순으로 결정하며 다른 사례는 회기에 포함하지 않는다.
+        connection.execute("UPDATE counseling SET starts_at=(SELECT starts_at FROM counseling WHERE id=2) WHERE id=3")
+        connection.execute("INSERT INTO counseling_cases (student_id,title,created_at,updated_at) "
+                           "VALUES (1,'별도 사례','2026-01-01','2026-01-01')")
+        case_id = connection.execute('SELECT max(id) FROM counseling_cases').fetchone()[0]
+        connection.execute('UPDATE counseling SET case_id=? WHERE id=4', (case_id,))
+    repo = JournalPrintRepository(records)
+    selected = repo.snapshot(PrintRequest(refs=(('individual', 3), ('individual', 1), ('individual', 4), ('individual', 6))))
+    by_id = {r.id: r for r in selected.records}
+    assert by_id[3].session_number == 3
+    assert by_id[4].session_number == 1
+    assert by_id[6].session_number is None
+    assert (by_id[1].grade, by_id[1].classroom, by_id[1].student_number) == (1, '2', '7')
+    assert (by_id[3].grade, by_id[3].classroom, by_id[3].student_number) == (2, '3', '')
+    assert selected.school_level == masked_snapshot(selected).school_level == 'Wee센터'
+    yearly = repo.snapshot(PrintRequest(school_year=2026))
+    assert next(r for r in yearly.records if r.kind == 'individual' and r.id == 3).session_number == 3
+
+
+@pytest.mark.parametrize('hour,minutes,expected', [
+    (9, 50, '2026-05-01 09:00~09:50'),
+    (14, 50, '2026-05-01 14:00~14:50'),
+    (23, 90, '2026-05-01 23:00~2026-05-02 00:30'),
+])
+def test_individual_24_hour_time(hour, minutes, expected):
+    from maeumnarae.services.journal_pdf import individual_time
+    r = replace(sample_snapshot().records[0], moment=datetime(2026, 5, 1, hour, tzinfo=KST), minutes=minutes)
+    assert individual_time(r) == expected
+
+
+@pytest.mark.parametrize('level,suffix', [('중학교', 'Wee클래스'), ('Wee센터', 'Wee센터')])
+def test_individual_layout_headers_fonts_and_continuations(level, suffix):
+    snapshot = replace(sample_snapshot(), school_level=level)
+    reader = PdfReader(BytesIO(build_pdf(snapshot, PrintRequest(refs=(('individual', 1),)))))
+    texts = [page.extract_text() for page in reader.pages]
+    assert '긴 본문 한글 내용입니다.' in texts[0]  # 본문이 통째로 다음 장으로 밀리지 않는다.
+    assert all(f'가상학교 {suffix}' in text for text in texts)
+    assert '후속조치' in texts[-1] and '(인)' in texts[-1]
+    assert '상담 일지 출력 검증' not in ''.join(texts)
+    header_runs = []
+    for page in reader.pages:
+        page.extract_text(visitor_text=lambda text, cm, tm, font, size:
+                          header_runs.append((text, font, size)) if suffix in text else None)
+    assert header_runs and all(size == 9 and 'RidiBatang' in font['/BaseFont']
+                               for _, font, size in header_runs)
+    fonts = [f.get_object() for f in reader.pages[0]['/Resources']['/Font'].values()]
+    assert any('JournalSans' in str(f.get('/BaseFont')) and '/FontFile2' in f['/FontDescriptor'] for f in fonts)
+
+
+def test_individual_content_separator_width():
+    from reportlab.lib.units import mm
+    from maeumnarae.services.journal_pdf import individual_story, register_fonts
+    register_fonts()
+    content = individual_story(sample_snapshot().records[0])[2]
+    separators = [c for c in content._linecmds if c[0] == 'LINEBELOW' and c[1] == (0, 0)]
+    assert len(separators) == 1 and separators[0][3] == pytest.approx(.12 * mm)
 
 
 def test_selection_survives_pages_and_resets_scope():
