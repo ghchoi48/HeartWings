@@ -12,9 +12,9 @@ COUNSELING = ', r.starts_at, r.status, r.content_markdown AS content, r.content_
 QUERIES = {
     'individual': (COMMON + COUNSELING + ', s.id AS subject_id, s.name AS subject, c.title AS case_title, r.case_id',
                    'counseling r JOIN students s ON s.id=r.student_id LEFT JOIN counseling_cases c ON c.id=r.case_id', 'student'),
-    'special': (COMMON + COUNSELING + ', s.id AS subject_id, s.name AS subject, c.title AS case_title, c.law, c.case_number',
+    'special': (COMMON + COUNSELING + ', s.id AS subject_id, s.name AS subject, c.title AS case_title, c.law, c.case_number, r.case_id',
                 'special_education_logs r JOIN students s ON s.id=r.student_id JOIN special_educations c ON c.id=r.case_id', 'student'),
-    'group': (COMMON + ", r.starts_at, r.status, r.content_html AS content, 'html' AS content_format, r.follow_up, r.attendance, g.id AS subject_id, g.name AS subject, g.counseling_area",
+    'group': (COMMON + ", r.starts_at, r.status, r.content_html AS content, 'html' AS content_format, r.follow_up, r.attendance, g.id AS subject_id, g.name AS subject, g.counseling_area, g.facilitator, g.period, g.purpose",
               'group_counseling_logs r JOIN counseling_groups g ON g.id=r.group_id', 'group'),
     'consultation': (COMMON + ", r.starts_at, r.status, r.content_html AS content, 'html' AS content_format, r.follow_up, r.consultation_area, t.id AS subject_id, t.name AS subject",
                      'consultations r JOIN teachers t ON t.id=r.teacher_id', 'teacher'),
@@ -26,7 +26,15 @@ QUERIES = {
 DETAILS = {'category': '유형', 'case_title': '사례/교육명', 'counseling_area': '상담 분야',
            'counseling_method': '상담 방법', 'counseling_target': '상담 대상', 'consultation_area': '자문 분야',
            'law': '근거 법률', 'case_number': '사건 번호', 'target': '검사 대상', 'location': '장소',
-           'audience': '대상', 'participant_count': '참여 인원', 'facilitator': '담당자 / 강사'}
+           'audience': '대상', 'participant_count': '참여 인원', 'facilitator': '담당자 / 강사',
+           'period': '운영기간', 'purpose': '상담목표'}
+
+SESSION_SOURCES = {
+    'individual': ('counseling', 'student_id=? AND case_id IS ?'),
+    'special': ('special_education_logs', 'student_id=? AND case_id IS ?'),
+    'group': ('group_counseling_logs', 'group_id=?'),
+    'consultation': ('consultations', 'teacher_id=?'),
+}
 
 
 class JournalPrintRepository:
@@ -41,6 +49,7 @@ class JournalPrintRepository:
             school = connection.execute('SELECT school_name, school_level FROM school_settings WHERE id=1').fetchone()
             case_sessions = {}
             enrollments = {}
+            participants = {}
             for kind, (columns, source, subject_type) in QUERIES.items():
                 ids = sorted(key for k, key in selected if k == kind)
                 if request.school_year is None and not ids:
@@ -75,7 +84,7 @@ class JournalPrintRepository:
                             if 'status' in data and data['status'] not in request.statuses:
                                 continue
                         individual = {}
-                        if kind == 'individual':
+                        if subject_type == 'student':
                             year = moment.year - (moment.month < 3)
                             enrollment_key = (data['subject_id'], year)
                             if enrollment_key not in enrollments:
@@ -86,15 +95,25 @@ class JournalPrintRepository:
                             if enrollment:
                                 individual.update(grade=enrollment['grade'], classroom=enrollment['classroom'],
                                                   student_number=enrollment['student_number'] or '')
-                            case_key = (data['subject_id'], data['case_id'])
+                        if kind in SESSION_SOURCES:
+                            session_params = ((data['subject_id'], data['case_id']) if kind in ('individual', 'special')
+                                              else (data['subject_id'],))
+                            case_key = (kind, *session_params)
                             if data['status'] == 'completed':
                                 if case_key not in case_sessions:
+                                    session_table, session_where = SESSION_SOURCES[kind]
                                     sessions = connection.execute(
-                                        "SELECT id, starts_at FROM counseling WHERE student_id=? AND case_id IS ? "
-                                        "AND status='completed'", case_key).fetchall()
+                                        f"SELECT id, starts_at FROM {session_table} WHERE {session_where} "
+                                        "AND status='completed'", session_params).fetchall()
                                     sessions = sorted(sessions, key=lambda s: (datetime.fromisoformat(s['starts_at']), s['id']))
                                     case_sessions[case_key] = {s['id']: n for n, s in enumerate(sessions, 1)}
                                 individual['session_number'] = case_sessions[case_key][data['id']]
+                        if kind == 'group':
+                            if data['subject_id'] not in participants:
+                                participants[data['subject_id']] = tuple((s['id'], s['name']) for s in connection.execute(
+                                    'SELECT s.id, s.name FROM group_counseling_members m JOIN students s ON s.id=m.student_id '
+                                    'WHERE m.group_id=? ORDER BY s.id', (data['subject_id'],)))
+                            individual['participants'] = participants[data['subject_id']]
                         records.append(PrintRecord(kind, data['id'], subject_type, data['subject_id'], data['subject'],
                             moment, data['title'], data['author'], data.get('status', ''), data['duration_minutes'],
                             data['content'], data['content_format'], data.get('follow_up', ''),

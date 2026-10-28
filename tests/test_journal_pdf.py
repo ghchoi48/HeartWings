@@ -135,18 +135,61 @@ def test_long_korean_rich_pdf_and_leap_year(tmp_path):
         build_pdf(PrintSnapshot('', ()), PrintRequest(school_year=2026))
 
 
-def test_long_attendance_rows_split_without_losing_text():
+def test_long_group_roster_splits_without_losing_names():
     record = sample_snapshot().records[0]
     attendance = tuple(dict(student_id=i, name=f'참여자 {i}', attended=True,
                            attitude=('\n'.join(f'태도문장{n:04d}' for n in range(200)) if i == 1 else f'태도 {i}'))
-                       for i in range(1, 61))
+                       for i in range(1, 601))
     record = replace(record, kind='group', subject_type='group', content='', attendance=attendance)
     content = build_pdf(PrintSnapshot('학교', (record,)), PrintRequest(refs=(('group', 1),)))
     reader = PdfReader(BytesIO(content))
     text = '\n'.join(p.extract_text() for p in reader.pages)
-    assert '참여자 60' in text
-    assert all(f'태도문장{n:04d}' in text for n in range(200))
-    assert len(reader.pages) > 3
+    compact = ''.join(text.split())
+    assert all(f'참여자{i}' in compact for i in range(1, 601))
+    assert '태도문장' not in text  # 새 서식은 참여학생·출석학생만 출력한다.
+    assert len(reader.pages) > 1
+
+
+@pytest.mark.parametrize('kind,expected', [
+    ('special', ('특별교육명', '관련법령', '교육회기', '교육내용')),
+    ('test', ('검사정보', '검사명', '검사결과')),
+    ('consultation', ('교원 자문 일지', '교사성명', '자문회기', '자문분야')),
+    ('group', ('집단정보', '상담목표', '참여학생', '출석학생')),
+    ('education', ('교육/행사 정보', '교육/행사명', '참여인원', '상세내용')),
+])
+def test_kind_forms_long_content_headers_and_fonts(kind, expected):
+    r = replace(sample_snapshot().records[0], kind=kind,
+                subject_type={'group': 'group', 'consultation': 'teacher', 'education': 'event'}.get(kind, 'student'),
+                follow_up='후속확인', session_number=2)
+    content = build_pdf(PrintSnapshot('가상학교', (r,), 'Wee센터'), PrintRequest(refs=((kind, 1),)))
+    reader = PdfReader(BytesIO(content))
+    texts = [p.extract_text() for p in reader.pages]
+    compact = ''.join(''.join(texts).split())
+    assert all(''.join(label.split()) in compact for label in expected)
+    assert all('가상학교 Wee센터' in text for text in texts)
+    assert ''.join(texts).count('긴 본문 한글 내용입니다.') == 100
+    assert '(인)' in texts[-1]
+    assert ('후속확인' in compact) == (kind not in ('education', 'test'))
+    if kind == 'test':
+        assert '후속조치' not in compact
+
+
+def test_extended_form_metadata_and_group_masking(records):
+    with records.session(write=True) as connection:
+        connection.execute("UPDATE counseling_groups SET facilitator='진행교사', period='2026-05-01 - 2026-06-01', purpose='관계향상'")
+        connection.execute("UPDATE consultations SET status='completed'")
+    snapshot = JournalPrintRepository(records).snapshot(PrintRequest(school_year=2026))
+    group = next(r for r in snapshot.records if r.kind == 'group')
+    assert group.session_number == 1
+    assert group.participants == ((1, '동명이인'),)
+    assert dict(group.details)['상담목표'] == '관계향상'
+    assert dict(group.details)['담당자 / 강사'] == '진행교사'
+    assert next(r for r in snapshot.records if r.kind == 'consultation').session_number == 1
+    assert next(r for r in snapshot.records if r.kind == 'special').session_number == 1
+    assert next(r for r in snapshot.records if r.kind == 'test').grade == 1
+    masked_group = next(r for r in masked_snapshot(snapshot).records if r.kind == 'group')
+    assert masked_group.participants == ((1, '1'),)
+    assert masked_group.attendance[0]['name'] == '1'
 
 
 def test_individual_enrollment_and_case_sessions(records):
@@ -209,9 +252,27 @@ def test_individual_content_separator_width():
     from reportlab.lib.units import mm
     from maeumnarae.services.journal_pdf import individual_story, register_fonts
     register_fonts()
-    content = individual_story(sample_snapshot().records[0])[2]
+    content = individual_story(sample_snapshot().records[0])[2].content
     separators = [c for c in content._linecmds if c[0] == 'LINEBELOW' and c[1] == (0, 0)]
     assert len(separators) == 1 and separators[0][3] == pytest.approx(.12 * mm)
+
+
+@pytest.mark.parametrize('kind', list(KINDS))
+def test_short_form_fills_available_height_and_recalculates_spans(kind):
+    from maeumnarae.services.journal_pdf import journal_story, register_fonts, INDIVIDUAL_WIDTH
+    register_fonts()
+    record = replace(sample_snapshot().records[0], kind=kind, content='<p>짧은 본문</p>', follow_up='확인')
+    filled = journal_story(record)[-1]
+    for available in (400, 550, 400):
+        _, height = filled.wrap(INDIVIDUAL_WIDTH, available)
+        assert height == pytest.approx(available)
+        table = filled.content
+        if kind != 'education':
+            # 병합 제목의 좌표도 늘어난 행 높이에 맞춰 재계산되어야 한다.
+            assert table._spanRects[(0, 0)][1] == pytest.approx(table._height - table._rowHeights[0])
+        assert table._cellStyles[1][0].valign == 'TOP'
+    if kind == 'test':
+        assert len(filled.content._cellvalues) == 2
 
 
 def test_selection_survives_pages_and_resets_scope():

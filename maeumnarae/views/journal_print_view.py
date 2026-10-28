@@ -14,7 +14,7 @@ JOURNAL_PDF_VISIBLE = False
 
 
 def journal_pdf_visible(kind):
-    return kind == 'individual' or JOURNAL_PDF_VISIBLE
+    return kind in KINDS or JOURNAL_PDF_VISIBLE
 
 
 def invalidate_prints(client=None):

@@ -50,6 +50,7 @@ class PrintRecord:
     classroom: str = ''
     student_number: str = ''
     session_number: int | None = None
+    participants: tuple[tuple[int, str], ...] = ()
 
 
 @dataclass(frozen=True)

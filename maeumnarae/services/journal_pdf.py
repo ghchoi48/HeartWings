@@ -170,11 +170,13 @@ def masked_snapshot(snapshot):
     for r in snapshot.records:
         ids[r.subject_type].add(r.subject_id)
         ids['student'].update(a['student_id'] for a in r.attendance)
+        ids['student'].update(key for key, _ in r.participants)
     labels = {'student': '학생', 'teacher': '교사', 'group': '집단', 'event': '교육/행사'}
     names = {(kind, key): str(key) if kind == 'student' else f'{labels[kind]} {index}' for kind, values in ids.items()
              for index, key in enumerate(sorted(values), 1)}
     return replace(snapshot, records=tuple(replace(r,
         subject=names[(r.subject_type, r.subject_id)],
+        participants=tuple((key, str(key)) for key, _ in r.participants),
         attendance=tuple(dict(a, name=names[('student', a['student_id'])]) for a in r.attendance))
         for r in snapshot.records))
 
@@ -202,6 +204,50 @@ def form_table(rows, widths, shaded=(), grid=True):
 
 
 def individual_story(record):
+    return journal_story(record)
+
+
+class FilledContent(Flowable):
+    """마지막 내용 칸을 늘려 서명란을 인쇄 영역 하단에 맞춘다."""
+    def __init__(self, content, signature, body_offset):
+        super().__init__()
+        self.content, self.signature, self.body_offset = content, signature, body_offset
+        self.natural_heights = list(content._argH)
+
+    def wrap(self, available_width, available_height):
+        self.content._spanRects = {}
+        self.content._argH = list(self.natural_heights)
+        self.content._rowHeights = list(self.natural_heights)
+        width, height = self.content.wrap(available_width, available_height)
+        _, self.signature_height = self.signature.wrap(available_width, available_height)
+        self.reserve = 14 + self.signature_height
+        body_row = len(self.content._cellvalues) - self.body_offset
+        extra = available_height - height - self.reserve
+        if extra >= 0 and body_row >= self.content.repeatRows:
+            self.content._argH[body_row] = self.content._rowHeights[body_row] + extra
+            self.content._rowHeights = list(self.content._argH)
+            self.content._spanRects = {}
+            width, height = self.content.wrap(available_width, available_height)
+        self.width, self.height = width, height + self.reserve
+        return self.width, self.height
+
+    def split(self, available_width, available_height):
+        self.content._spanRects = {}
+        self.content._argH = list(self.natural_heights)
+        self.content._rowHeights = list(self.natural_heights)
+        _, height = self.content.wrap(available_width, available_height)
+        limit = available_height if height > available_height else available_height - self.reserve
+        parts = self.content.split(available_width, limit)
+        if len(parts) < 2:
+            return []
+        return [parts[0], PageBreak(), FilledContent(parts[1], self.signature, self.body_offset)]
+
+    def draw(self):
+        self.content.drawOn(self.canv, 0, self.reserve)
+        self.signature.drawOn(self.canv, self.width - self.signature._width, 0)
+
+
+def journal_story(record):
     width = INDIVIDUAL_WIDTH
     details = dict(record.details)
 
@@ -222,6 +268,7 @@ def individual_story(record):
         f'{record.grade}학년' if record.grade is not None else '',
         f'{record.classroom}반' if record.classroom else '',
         f'{record.student_number}번' if record.student_number else '') if v)
+    session = f'{record.session_number}회기' if record.session_number else ''
     info = [paragraph('개인상담 일지', fontName='JournalTitle', fontSize=16,
                       leading=24, alignment=TA_CENTER, spaceAfter=6),
             section('▫ 상담정보'),
@@ -230,23 +277,78 @@ def individual_story(record):
                  '상담일시', individual_time(record)], [.146, .166, .139, .549]),
             row(['상담방법', details.get('상담 방법', ''), '상담대상', details.get('상담 대상', ''),
                  '상담분야', details.get('상담 분야', '')], [.146, .166, .139, .166, .142, .241])]
+    content_heading, content_label = '상담내용', '내용'
+    prefix_rows = []
+    if record.kind != 'individual':
+        titles = {'special': ('특별교육 일지', '특별교육 정보'), 'test': ('심리검사 일지', '검사정보'),
+                  'consultation': ('교원 자문 일지', '자문정보'), 'group': ('집단상담 일지', '집단정보'),
+                  'education': ('교육/행사 일지', '교육/행사 정보')}
+        title, heading = titles[record.kind]
+        info = [paragraph(title, fontName='JournalTitle', fontSize=16, leading=24,
+                          alignment=TA_CENTER, spaceAfter=6), section('▫ ' + heading)]
+        four = [.146, .372, .159, .323]
+        time_row = [.146, .166, .139, .549]
+        full = [.146, .854]
+        if record.kind == 'special':
+            info += [row(['특별교육명', details.get('사례/교육명', ''), '관련법령', details.get('근거 법률', '')], four),
+                     row(['학생명', record.subject, '학년·반·번호', enrollment], four),
+                     row(['교육회기', session, '교육일시', individual_time(record)], time_row),
+                     row(['교육대상', details.get('상담 대상', ''), '-', ''], time_row)]
+            info[-1].setStyle(TableStyle([('SPAN', (2, 0), (3, 0)),
+                                         ('BACKGROUND', (2, 0), (3, 0), colors.HexColor('#d9d9d9'))]))
+            content_heading = content_label = '교육내용'
+        elif record.kind == 'test':
+            info += [row(['학생명', record.subject, '학년·반·번호', enrollment], four),
+                     row(['검사일시', individual_time(record), '검사대상', details.get('검사 대상', '')], [.146, .48, .159, .215]),
+                     row(['검사명', record.title], full)]
+            content_heading, content_label = '검사결과', '검사결과\n및\n소견'
+        elif record.kind == 'consultation':
+            info += [row(['교사성명', record.subject, '자문분야', details.get('자문 분야', '')], four),
+                     row(['자문회기', session, '자문일시', individual_time(record)], time_row)]
+        elif record.kind == 'education':
+            count = details.get('참여 인원', '')
+            info += [row(['구분', details.get('유형', ''), '교육/행사명', record.title], [.146, .166, .18, .508]),
+                     row(['일시', individual_time(record), '장소', details.get('장소', '')], [.146, .424, .14, .29]),
+                     row(['대상', details.get('대상', ''), '참여인원', f'{count}명' if count else '',
+                          '담당자/강사', details.get('담당자 / 강사', '')], [.146, .166, .139, .166, .162, .221])]
+            content_heading = '상세내용'
+        elif record.kind == 'group':
+            members = ', '.join(name for _, name in record.participants) or ', '.join(a['name'] for a in record.attendance)
+            info += [row(['집단명', record.subject, '진행자', details.get('담당자 / 강사', '')], four),
+                     row(['상담영역', details.get('상담 분야', ''), '운영기간', details.get('운영기간', '').replace(' - ', ' ~ ')], time_row),
+                     row(['상담목표', details.get('상담목표', '')], full), row(['참여학생', members], full)]
+            content_heading, content_label = session or '상담회기', '상담내용'
+            prefix_rows = [[cell('상담날짜', True), cell(individual_time(record))],
+                           [cell('출석학생', True), cell(', '.join(a['name'] for a in record.attendance if a['attended']))]]
     body = rich_blocks(record.content, record.content_format, width - width * .146 - 14)
-    content = form_table([[paragraph('▫ 상담내용', fontName='JournalTitle', spaceAfter=0), ''],
-                          [cell('내용', True), body or [cell('')]],
-                          [cell('후속조치', True), paragraph(record.follow_up, spaceAfter=0)]],
-                         [width * .146, width * .854], [(0, 0), (0, 1), (0, 2), (1, 0)], grid=False)
+    follow_rows = [] if record.kind == 'test' else [[cell('후속조치', True), paragraph(record.follow_up, spaceAfter=0)]]
+    row_count = len(prefix_rows) + 2 + len(follow_rows)
+    content = form_table([[paragraph('▫ ' + content_heading, fontName='JournalTitle', spaceAfter=0), ''],
+                          *prefix_rows, [cell(content_label, True), body or [cell('')]],
+                          *follow_rows],
+                         [width * .146, width * .854], [(0, i) for i in range(row_count)] + [(1, 0)], grid=False)
     content.repeatRows = 1
+    # 날짜·출석 행 뒤의 긴 본문을 먼저 나누어 같은 페이지에 제목이 재출력되지 않게 한다.
+    if prefix_rows:
+        content.splitByRow = 0
     content.setStyle(TableStyle([
         ('SPAN', (0, 0), (-1, 0)), ('VALIGN', (0, 0), (-1, -1), 'TOP'),
         ('LINEBELOW', (0, 0), (-1, 0), .12 * mm, colors.black),
         ('LINEBEFORE', (1, 1), (1, -1), .5, colors.black),
-        ('LINEABOVE', (0, 2), (-1, 2), .5, colors.black),
+        *[('LINEABOVE', (0, i), (-1, i), .5, colors.black) for i in range(2, row_count)],
     ]))
+    if record.kind == 'education':
+        content = form_table([[paragraph('▫ 상세내용', fontName='JournalTitle', spaceAfter=0)],
+                              [rich_blocks(record.content, record.content_format, width - 14) or [cell('')]]],
+                             [width], [(0, 0)], grid=False)
+        content.repeatRows = 1
+        content.setStyle(TableStyle([('LINEBELOW', (0, 0), (-1, 0), .12 * mm, colors.black),
+                                     ('VALIGN', (0, 0), (-1, -1), 'TOP')]))
     signature = form_table([[cell('작성자', True), cell(f'{record.author} (인)')]],
                            [width / 6, width / 3], [(0, 0)])
     signature.hAlign = 'RIGHT'
-    return [KeepTogether(info), Spacer(1, 12), content,
-            Spacer(1, 14), signature]
+    return [*(info if record.kind == 'group' else [KeepTogether(info)]), Spacer(1, 12),
+            FilledContent(content, signature, 1 if record.kind in ('test', 'education') else 2)]
 
 
 class Heading(Flowable):
@@ -272,8 +374,7 @@ def build_pdf(snapshot, request):
     document = BaseDocTemplate(output, pagesize=A4, leftMargin=15*mm, rightMargin=15*mm,
                                  topMargin=20*mm, bottomMargin=18*mm,
                                  title='마음나래 일지', author='마음나래')
-    first_template = 'Journal' if request.school_year is not None else (
-        'Individual' if snapshot.records[0].kind == 'individual' else 'Journal')
+    first_template = 'Journal' if request.school_year is not None else 'Form'
     story = []
     if request.school_year is not None:
         start, end = request.bounds
@@ -286,7 +387,7 @@ def build_pdf(snapshot, request):
     previous_kind = previous_subject = None
     for index, record in enumerate(snapshot.records):
         if index or request.school_year is not None:
-            story += [NextPageTemplate('Individual' if record.kind == 'individual' else 'Journal'), PageBreak()]
+            story += [NextPageTemplate('Form'), PageBreak()]
         header = f'{KINDS[record.kind]} · {record.subject}'
         if record.kind != previous_kind:
             story.append(Heading(KINDS[record.kind], f'kind-{record.kind}', 0, header))
@@ -294,29 +395,12 @@ def build_pdf(snapshot, request):
         if subject_key != previous_subject:
             story.append(Heading(record.subject, f'subject-{record.kind}-{record.subject_id}', 1, header))
         previous_kind, previous_subject = record.kind, subject_key
-        if record.kind == 'individual':
-            story.extend(individual_story(record))
-            continue
-        story += [paragraph(f'{KINDS[record.kind]} 일지', fontName='JournalBold'), paragraph(record.title)]
-        pairs = [('학교', snapshot.school), ('작성자', record.author), ('대상', record.subject),
-                 ('일시', record.moment.strftime('%Y-%m-%d %H:%M')),
-                 ('소요 시간', f'{record.minutes}분' if record.minutes is not None else ''),
-                 ('상태', STATUSES.get(record.status, '')), *record.details]
-        story.append(table([[paragraph(k), paragraph(v)] for k, v in pairs if v != ''], [30*mm, WIDTH-30*mm], False))
-        story += [Spacer(1, 10), paragraph('내용', fontName='JournalBold')]
-        story.extend(rich_blocks(record.content, record.content_format) or [paragraph('내용 없음')])
-        if record.follow_up:
-            story += [paragraph('추후 계획', fontName='JournalBold'), paragraph(record.follow_up)]
-        if record.attendance:
-            story += [paragraph('참여자 출석 및 참여 태도', fontName='JournalBold'),
-                      table([[paragraph(v) for v in ('참여자', '출석', '참여 태도')]] +
-                            [[paragraph(a['name']), paragraph('출석' if a['attended'] else '미출석'), paragraph(a['attitude'])]
-                             for a in record.attendance], [40*mm, 20*mm, WIDTH-60*mm])]
+        story.extend(journal_story(record))
 
     def page_end(canvas, doc):
         canvas.saveState()
         canvas.setFillColor(colors.HexColor('#52636a'))
-        if doc.pageTemplate.id == 'Individual':
+        if doc.pageTemplate.id == 'Form':
             organization = 'Wee센터' if snapshot.school_level == 'Wee센터' else 'Wee클래스'
             heading = f'{snapshot.school} {organization}'.strip()
             # 긴 기관명도 생략하거나 축소하지 않고 9pt로 오른쪽 정렬한다.
@@ -337,7 +421,7 @@ def build_pdf(snapshot, request):
     from reportlab.platypus import PageTemplate, Frame
     templates = [PageTemplate(id='Journal', frames=[Frame(15*mm, 18*mm, WIDTH,
         A4[1]-38*mm, leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)], onPageEnd=page_end),
-        PageTemplate(id='Individual', frames=[Frame(30*mm, 30*mm, INDIVIDUAL_WIDTH,
+        PageTemplate(id='Form', frames=[Frame(30*mm, 30*mm, INDIVIDUAL_WIDTH,
         A4[1]-65*mm, leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)], onPageEnd=page_end)]
     document.addPageTemplates(sorted(templates, key=lambda template: template.id != first_template))
     document.build(story)
