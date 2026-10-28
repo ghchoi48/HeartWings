@@ -83,6 +83,16 @@ macOS 앱 번들도 수집된 폴더를 기반으로 생성합니다. Windows/Li
 
 ### Windows 설치 파일 빌드
 
+Windows 배포 앱은 실행 직후 로고 스플래시를 표시하고 실제 네이티브 창의 `shown`
+이벤트에서 닫습니다. 시작 실패·시간 초과·프로세스 종료 시에도 정리합니다.
+[PyInstaller Splash](https://pyinstaller.org/en/stable/spec-files.html#splash-screen)를
+사용하므로 Windows 빌드용 Python에는 Tcl/Tk가 포함되어 있어야 합니다
+(python.org 설치 프로그램의 Tcl/Tk 옵션). 소스 실행과 macOS/Linux 빌드에는 표시하지 않습니다.
+`--browser`/`--help` 실행에서는 Python 진입 시 바로 닫습니다.
+이미지는 `resources/icons/splash.png`이며, 로고나 문구를 수정한 뒤
+`python scripts/build_splash.py`로 재생성하고 앱을 다시 빌드하세요.
+Windows에서 배포 전 실행 직후 표시, 메인 창 표시 시 사라짐, 시작 실패 시 정리를 확인하세요.
+
 1. x64 Windows에 x64 Python과 [Inno Setup 6.3 이상](https://jrsoftware.org/isdl.php)을 설치합니다.
 2. 가상환경에서 `python -m pip install -r requirements/build.txt`를 실행합니다.
 3. `python scripts/build_desktop.py`를 실행하면 onedir 빌드 후 Inno Setup 컴파일이 이어집니다.

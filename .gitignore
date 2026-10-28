@@ -17,4 +17,5 @@ artifacts/
 
 !tests/test_build_desktop.py
 !tests/test_desktop_startup.py
+!tests/test_splash.py
 .DS_Store

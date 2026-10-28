@@ -27,9 +27,17 @@ else:
 a = Analysis([str(root / 'main.py')], pathex=[str(root)], datas=datas, binaries=binaries,
              hiddenimports=hidden, excludes=['pytest', 'playwright', 'nicegui.testing'])
 pyz = PYZ(a.pure)
-exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name='maeumnarae', console=False,
+splash_targets = []
+splash_binaries = []
+if sys.platform == 'win32':
+    splash = Splash(str(root / 'resources' / 'icons' / 'splash.png'),
+                    binaries=a.binaries, datas=a.datas, text_pos=None,
+                    minify_script=True, always_on_top=False)
+    splash_targets = [splash]
+    splash_binaries = splash.binaries
+exe = EXE(pyz, a.scripts, *splash_targets, [], exclude_binaries=True, name='maeumnarae', console=False,
           argv_emulation=False, target_arch=None, codesign_identity=None, icon=str(app_icon))
-coll = COLLECT(exe, a.binaries, a.datas, name='maeumnarae')
+coll = COLLECT(exe, a.binaries, a.datas, splash_binaries, name='maeumnarae')
 if sys.platform == 'darwin':
     app = BUNDLE(coll, name='마음나래.app', bundle_identifier='org.maeumnarae.desktop',
                  icon=str(app_icon),

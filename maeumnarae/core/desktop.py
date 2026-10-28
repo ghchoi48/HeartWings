@@ -12,6 +12,7 @@ from threading import Lock, Timer
 
 from maeumnarae.core.paths import RESOURCE_ROOT
 from maeumnarae.core.startup import log_folders
+from maeumnarae.core.splash import close_splash
 
 ICON_PATH = RESOURCE_ROOT / 'icons' / 'icon.ico'
 NATIVE_START_TIMEOUT = 30.0
@@ -97,9 +98,11 @@ class NativeStartupGuard:
 
     def shown(self) -> None:
         self._cancel('shown')
+        close_splash()
 
     def stop(self) -> None:
         self._cancel('stopped')
+        close_splash()
 
     def _cancel(self, state: str) -> None:
         with self._lock:
@@ -118,6 +121,7 @@ class NativeStartupGuard:
             self._exit_timer = Timer(NATIVE_SHUTDOWN_GRACE, _force_native_exit)
             self._exit_timer.daemon = True
             self._exit_timer.start()
+        close_splash()
         logging.getLogger('nicegui').error(
             '서버 시작 후 %.0f초 동안 창이 표시되지 않아 서버를 종료합니다.', NATIVE_START_TIMEOUT)
         try:
@@ -156,7 +160,7 @@ def _set_app_icon(window, dark: bool) -> None:
         apply_icon(window.native.Handle.ToInt32(), window.title, str(path))
     elif sys.platform.startswith('linux'):
         from gi.repository import GLib
-        GLib.idle_add(window.native.set_icon_from_file, str(path.with_suffix('.png') if dark else path))
+        GLib.idle_add(window.native.set_icon_from_file, str(path.with_name(f'{path.stem}-desktop.png')))
 
 
 def update_native_icon(dark: bool) -> None:
