@@ -351,6 +351,7 @@ def test_export_period_controls_build_requests():
                 controls['end'].value = '2024-02-28'
                 await handler()
                 assert dialog.call_count == 3
+                assert all(call.args[1].statuses == ('completed',) for call in dialog.call_args_list)
                 notify.assert_called_once()
     asyncio.run(check())
 

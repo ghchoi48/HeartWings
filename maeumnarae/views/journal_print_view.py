@@ -6,7 +6,7 @@ from nicegui import run, ui
 
 from maeumnarae.core.models import current_school_year
 from maeumnarae.repositories.journal_print_repo import JournalPrintRepository
-from maeumnarae.services.journal_print_models import PrintRequest, KINDS, STATUSES
+from maeumnarae.services.journal_print_models import PrintRequest, KINDS
 from maeumnarae.services.reporting import KST
 from maeumnarae.views.settings_card import settings_card
 
@@ -190,11 +190,11 @@ def build_all_print(database):
         dates.bind_visibility_from(period, 'value', backward=lambda value: value == 'custom')
         ui.label('지정 기간은 시작일과 종료일을 포함하며, 일지 날짜는 한국 표준시 기준입니다.').bind_visibility_from(
             period, 'value', backward=lambda value: value == 'custom')
-        ui.label('예약·완료·취소 상태의 일지를 모두 포함합니다. 비밀 메모와 첨부파일은 제외됩니다.').classes('text-sm text-slate-500')
+        ui.label('완료 상태의 일지만 포함합니다. 상태 구분이 없는 심리검사·교육/행사는 포함되며, 비밀 메모와 첨부파일은 제외됩니다.').classes('text-sm text-slate-500')
 
         async def prepare():
             try:
-                options = dict(statuses=tuple(STATUSES))
+                options = dict(statuses=('completed',))
                 if period.value == 'year':
                     if year.value is None or int(year.value) != year.value:
                         raise ValueError()

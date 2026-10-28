@@ -69,11 +69,16 @@ class EducationEventView:
                         with ui.row().classes('items-center gap-2'):
                             ui.button('새 교육/행사', icon='add', on_click=lambda: self.open_editor())
                     self.table = ui.table(columns=[
-                        dict(name=k, label=v, field=k, align='left', sortable=True)
+                        dict(name=k, label=v, field=k, align='left', sortable=True,
+                             style='width: 1%; white-space: nowrap; padding: 4px 8px',
+                             headerStyle='width: 1%; white-space: nowrap; padding: 4px 8px')
                         for k, v in [('category', '구분'), ('title', '교육/행사명'), ('event_date', '날짜')]
                     ]
-                      + [dict(name='actions', label='', field='actions', align='right')],
+                      + [dict(name='actions', label='', field='actions', align='right',
+                              style='width: 1%; white-space: nowrap; padding: 4px 8px',
+                              headerStyle='width: 1%; padding: 4px 8px')],
                         rows=[], row_key='id', pagination=10).classes('w-full').props(
+                        'table-style="width: auto" '
                         ':rows-per-page-options="[10]" :pagination-label="(first, last, total) => `${Math.max(1, Math.ceil(first / 10))}페이지/${Math.max(1, Math.ceil(total / 10))}페이지`" flat no-data-label="등록된 교육/행사가 없습니다" no-results-label="검색 결과가 없습니다"')
                     with self.table.add_slot('top'):
                         ui.input('교육/행사 검색').props('outlined dense clearable debounce=300').classes('w-full').bind_value(self.table, 'filter')
