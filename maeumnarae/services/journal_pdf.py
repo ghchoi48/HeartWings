@@ -344,7 +344,7 @@ def journal_story(record):
         content.repeatRows = 1
         content.setStyle(TableStyle([('LINEBELOW', (0, 0), (-1, 0), .12 * mm, colors.black),
                                      ('VALIGN', (0, 0), (-1, -1), 'TOP')]))
-    signature = form_table([[cell('작성자', True), cell(f'{record.author} (인)')]],
+    signature = form_table([[cell('작성자', True), paragraph(f'{record.author} (인)', alignment=TA_RIGHT, spaceAfter=0)]],
                            [width / 6, width / 3], [(0, 0)])
     signature.hAlign = 'RIGHT'
     return [*(info if record.kind == 'group' else [KeepTogether(info)]), Spacer(1, 12),
