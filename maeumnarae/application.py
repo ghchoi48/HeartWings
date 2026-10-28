@@ -138,7 +138,7 @@ def main() -> None:
         parser.error('포트는 1~65535 범위여야 합니다.')
     configure_logging(args.db)
     if args.native:
-        configure_native()
+        configure_native(args.db.parent / 'window-settings.json')
     port = args.port if args.port is not None else native.find_open_port() if args.native else 8080
     register_page(args.db)
     ui.run(title='마음나래', favicon=str(ICON_PATH), host='127.0.0.1', port=port,

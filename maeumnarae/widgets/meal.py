@@ -21,6 +21,10 @@ class Meal:
         self.meal = '2'
         self.generation = 0
 
+    def build_header_actions(self):
+        ui.button(icon='refresh', on_click=self.reload).props(
+            'flat round dense aria-label="급식 새로고침"').classes('shrink-0').tooltip('새로고침')
+
     def build(self):
         with ui.row().classes('w-full items-center justify-between flex-nowrap gap-1'):
             ui.button(icon='chevron_left', on_click=lambda: self.move(-1)).props('flat round aria-label="이전 날짜 급식"')
@@ -29,7 +33,6 @@ class Meal:
         with ui.row().classes('w-full items-center gap-2'):
             ui.select(MEALS, value='2', label='식사 구분', on_change=self.select).props('outlined dense').classes('flex-1')
             ui.button('오늘', on_click=self.today).props('flat dense')
-            ui.button(icon='refresh', on_click=self.reload).props('flat round aria-label="급식 새로고침"')
         self.results = ui.column().classes('w-full gap-2')
         ui.link('출처: 나이스 교육정보 개방 포털', SOURCE_URL, new_tab=True).classes('text-xs text-slate-400')
         ui.timer(0, self.reload, once=True)

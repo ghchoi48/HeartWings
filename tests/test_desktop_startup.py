@@ -9,10 +9,51 @@ import sys
 import textwrap
 import time
 from unittest.mock import Mock
+from types import SimpleNamespace
 
 import pytest
 
 from maeumnarae.core import desktop
+
+
+@pytest.mark.parametrize('scale,area', [
+    (1, (0, 0, 1920, 1040)),
+    (1.25, (0, 0, 1920, 1030)),
+    (1.5, (0, 0, 1920, 1020)),
+    (2, (0, 0, 1920, 1000)),
+    (1.5, (-1920, 60, 1920, 1020)),
+    (1, (0, 0, 2560, 1400)),
+])
+@pytest.mark.parametrize('restore', [False, True])
+def test_initial_window_fits_work_area(monkeypatch, scale, area, restore):
+    def size(width, height):
+        return SimpleNamespace(Width=width, Height=height)
+
+    def point(x, y):
+        return SimpleNamespace(X=x, Y=y)
+
+    work_area = SimpleNamespace(X=area[0], Y=area[1], Width=area[2], Height=area[3])
+    form = SimpleNamespace(Width=int(1440 * scale), Height=int(1000 * scale),
+                           MinimumSize=size(int(960 * scale), int(700 * scale)))
+    monkeypatch.setitem(sys.modules, 'System.Drawing', SimpleNamespace(
+        Point=point, Size=size, Rectangle=lambda *args: args))
+    monkeypatch.setitem(sys.modules, 'System.Windows.Forms', SimpleNamespace(
+        FormStartPosition=SimpleNamespace(Manual='manual'),
+        Screen=SimpleNamespace(FromControl=lambda control: SimpleNamespace(WorkingArea=work_area),
+                               FromRectangle=lambda rect: SimpleNamespace(WorkingArea=work_area))))
+
+    saved = dict(x=5000, y=-3000, width=form.Width, height=form.Height) if restore else None
+    desktop._fit_window_to_work_area(SimpleNamespace(native=form), saved)
+
+    assert area[0] <= form.Location.X
+    assert area[1] <= form.Location.Y
+    assert form.Location.X + form.Size.Width <= area[0] + area[2]
+    assert form.Location.Y + form.Size.Height <= area[1] + area[3]
+    assert form.MinimumSize.Width <= form.Size.Width
+    assert form.MinimumSize.Height <= form.Size.Height
+    assert form.Size.Width == min(int(1440 * scale), area[2])
+    assert form.Size.Height == min(int(1000 * scale), area[3])
+    assert form.StartPosition == 'manual'
 
 
 @pytest.fixture

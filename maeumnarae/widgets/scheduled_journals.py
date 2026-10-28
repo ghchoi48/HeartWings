@@ -13,11 +13,12 @@ class ScheduledJournals:
         self.home = home
         self.busy = False
 
+    def build_header_actions(self):
+        self.refresh = ui.button(icon='refresh', on_click=self.reload).props(
+            'flat round dense aria-label="미작성 일지 새로고침"').classes('shrink-0').tooltip('새로고침')
+
     def build(self):
-        with ui.row().classes('w-full items-center justify-between'):
-            ui.label('오늘까지 · 상태가 예약인 일지').classes('text-xs text-slate-500')
-            self.refresh = ui.button(icon='refresh', on_click=self.reload).props(
-                'flat round aria-label="미작성 일지 새로고침"').tooltip('새로고침')
+        ui.label('오늘까지 · 상태가 예약인 일지').classes('text-xs text-slate-500')
         self.body = ui.column().classes('w-full gap-3')
         ui.timer(0, self.reload, once=True)
         ui.timer(30, self.reload)

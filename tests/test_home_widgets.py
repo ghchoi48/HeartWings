@@ -190,7 +190,9 @@ class HomeViewTests(unittest.IsolatedAsyncioTestCase):
                 header = next(iter(card))
                 buttons = [element for element in header.descendants() if isinstance(element, ui.button)]
                 expected = ['delete_outline']
-                if card.props['data-kind'] != 'scheduled_journals':
+                if card.props['data-kind'] == 'scheduled_journals':
+                    expected.insert(0, 'refresh')
+                else:
                     expected.append('edit')
                 assert [button.props['icon'] for button in buttons] == expected
             view.editing = False
@@ -464,6 +466,7 @@ def test_scheduled_widget_refresh_error_and_recovery():
         with Client(page('/scheduled-widget')), patch('maeumnarae.widgets.scheduled_journals.ui.timer'), \
                 patch('maeumnarae.widgets.scheduled_journals.run.io_bound', side_effect=inline):
             widget = ScheduledJournals(home, None)
+            widget.build_header_actions()
             widget.build()
             await widget.reload()
             labels = [e.text for e in widget.body.descendants() if isinstance(e, ui.label)]

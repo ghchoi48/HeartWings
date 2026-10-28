@@ -57,6 +57,8 @@ class HomeView:
             .home-widget-content { flex: 1 1 0%; min-width: 0; min-height: 0;
                 overflow: auto; flex-wrap: nowrap; }
             .home-widget-content > :not(.memo-editor) { flex-shrink: 0; }
+            .home-widget[data-kind="scheduled_journals"],
+            .home-widget[data-kind="scheduled_journals"] > .home-widget-content { gap: 4px; }
             .home-drag-handle { cursor: grab; touch-action: none; user-select: none; }
             .home-drag-handle:active { cursor: grabbing; }
             .home-resize-handle { position: absolute; z-index: 2; touch-action: none;

@@ -40,10 +40,50 @@ def _guarded_open_window(*args, **kwargs) -> None:
         configure_logging(None)
     try:
         original = _original_open_window or native_mode._open_window
-        original(*args, **kwargs)
+        create_window = native_mode.webview.create_window
+
+        def create_fitted_window(*window_args, **window_kwargs):
+            state_path = window_kwargs.pop('_maeumnarae_state_path', None)
+            window = create_window(*window_args, **window_kwargs)
+            if sys.platform == 'win32' and window is not None:
+                if state_path:
+                    from maeumnarae.core.window_state import install_window_state
+                    install_window_state(window, Path(state_path), _fit_window_to_work_area)
+                else:
+                    window.events.before_show += _fit_window_to_work_area
+            return window
+
+        native_mode.webview.create_window = create_fitted_window
+        try:
+            original(*args, **kwargs)
+        finally:
+            native_mode.webview.create_window = create_window
     except BaseException:
         logging.getLogger('nicegui').exception('네이티브 창 초기화에 실패했습니다. 창 프로세스를 종료합니다.')
         _exit_after_flush(1)
+
+
+def _fit_window_to_work_area(window, saved=None) -> None:
+    """DPI 적용 후의 창 외곽을 작업 표시줄을 제외한 영역 안에 배치한다."""
+    from System.Drawing import Point, Size
+    from System.Windows.Forms import FormStartPosition, Screen
+
+    form = window.native
+    area = Screen.FromControl(form).WorkingArea
+    if saved:
+        from System.Drawing import Rectangle
+        area = Screen.FromRectangle(Rectangle(saved['x'], saved['y'],
+                                              saved['width'], saved['height'])).WorkingArea
+    # 작은 화면/높은 배율에서는 최소 크기도 작업 영역보다 작아야 한다.
+    form.MinimumSize = Size(min(form.MinimumSize.Width, area.Width),
+                            min(form.MinimumSize.Height, area.Height))
+    width = min(max(saved['width'], form.MinimumSize.Width), area.Width) if saved else min(form.Width, area.Width)
+    height = min(max(saved['height'], form.MinimumSize.Height), area.Height) if saved else min(form.Height, area.Height)
+    form.Size = Size(width, height)
+    form.StartPosition = FormStartPosition.Manual
+    x = min(max(saved['x'], area.X), area.X + area.Width - width) if saved else area.X + (area.Width - width) // 2
+    y = min(max(saved['y'], area.Y), area.Y + area.Height - height) if saved else area.Y + (area.Height - height) // 2
+    form.Location = Point(x, y)
 
 
 def register_native_startup_guard() -> None:
@@ -197,7 +237,7 @@ def configure_logging(database_path: Path | None) -> Path:
     return path
 
 
-def configure_native() -> None:
+def configure_native(state_path: Path | None = None) -> None:
     """종료 확인, 로컬 다운로드, 최소 창 크기와 비공개 웹뷰 세션을 설정한다."""
     from nicegui import app
     guard = NativeStartupGuard(app.shutdown)
@@ -205,6 +245,8 @@ def configure_native() -> None:
     app.on_shutdown(guard.stop)
     app.native.on('shown', guard.shown)
     app.native.window_args.update(min_size=(960, 700), confirm_close=True)
+    if state_path is not None:
+        app.native.window_args['_maeumnarae_state_path'] = str(state_path)
     app.native.settings['ALLOW_DOWNLOADS'] = True
     app.native.start_args.update(private_mode=True, debug=False, icon=str(ICON_PATH), localization={
         'global.quitConfirmation': '마음나래를 종료할까요? 저장하지 않은 내용은 사라집니다.',
