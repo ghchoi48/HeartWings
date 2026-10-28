@@ -275,20 +275,84 @@ def test_short_form_fills_available_height_and_recalculates_spans(kind):
         assert len(filled.content._cellvalues) == 2
 
 
-def test_selection_survives_pages_and_resets_scope():
-    from maeumnarae.views.journal_print_view import PrintSelection, invalidate_prints, live
+def test_print_scope_invalidates_previous_dialog():
+    from maeumnarae.views.journal_print_view import JournalPrintButtons
     with Client(page('/pdf-selection-test')) as client:
-        selection = PrintSelection(None, 'individual')
-        selection.set_scope((1, 1))
-        selection.toolbar()
-        selection.toggle(1, True)
-        selection.set_scope((1, 1))
-        assert selection.ids == {1}
-        selection.set_scope((1, 2))
-        assert selection.ids == set()
+        buttons = JournalPrintButtons(None, 'individual')
+        buttons.set_scope((1, 1))
         epoch = getattr(client, '_journal_print_epoch', 0)
-        invalidate_prints()
-        assert not live(selection.button, epoch)
+        buttons.set_scope((1, 1))
+        assert client._journal_print_epoch == epoch
+        buttons.set_scope((1, 2))
+        assert client._journal_print_epoch == epoch + 1
+
+
+def test_all_records_export_includes_every_year_and_status(records):
+    request = PrintRequest(all_records=True, statuses=('completed', 'scheduled', 'cancelled'))
+    snapshot = JournalPrintRepository(records).snapshot(request)
+    assert snapshot.counts == dict(individual=7, group=1, special=1, consultation=1, test=1, education=1)
+    assert {r.status for r in snapshot.records if r.kind == 'individual'} == {'completed', 'scheduled', 'cancelled'}
+    assert len(PdfReader(BytesIO(build_pdf(snapshot, request))).pages) >= len(snapshot.records)
+    for invalid in (PrintRequest(), PrintRequest(all_records=True, school_year=2026),
+                    PrintRequest(all_records=True, refs=(('individual', 1),))):
+        with pytest.raises(ValueError):
+            invalid.validate()
+
+
+def test_custom_period_includes_kst_boundary_and_all_kinds(records):
+    repo = JournalPrintRepository(records)
+    request = PrintRequest(start_date=date(2026, 3, 1), end_date=date(2027, 2, 28),
+                           statuses=('completed', 'scheduled', 'cancelled'))
+    snapshot = repo.snapshot(request)
+    assert snapshot == repo.snapshot(PrintRequest(school_year=2026, statuses=request.statuses))
+    last_day = repo.snapshot(replace(request, start_date=date(2027, 2, 28)))
+    assert [(r.kind, r.id) for r in last_day.records] == [('individual', 3)]
+    assert build_pdf(snapshot, request).startswith(b'%PDF-')
+
+
+@pytest.mark.parametrize('options', [
+    dict(start_date=date(2026, 1, 1)),
+    dict(end_date=date(2026, 1, 1)),
+    dict(start_date=date(2026, 2, 1), end_date=date(2026, 1, 1)),
+    dict(start_date=date(2026, 1, 1), end_date=date(2026, 1, 1), all_records=True),
+    dict(start_date=date(2026, 1, 1), end_date=date(2026, 1, 1), school_year=2026),
+    dict(school_year=2026.5),
+])
+def test_invalid_print_period(options):
+    with pytest.raises(ValueError):
+        PrintRequest(**options).validate()
+
+
+def test_export_period_controls_build_requests():
+    from inspect import getclosurevars
+    from unittest.mock import AsyncMock
+    from maeumnarae.views.journal_print_view import build_all_print
+
+    async def check():
+        with Client(page('/pdf-period-test')) as client:
+            build_all_print(None)
+            button = next(e for e in client.elements.values() if isinstance(e, ui.button) and e.text == '모든 일지 PDF 내보내기')
+            listener = next(e.handler for e in button._event_listeners.values() if e.type == 'click')
+            handler = getclosurevars(listener).nonlocals['callback']
+            controls = getclosurevars(handler).nonlocals
+            with patch('maeumnarae.views.journal_print_view.print_dialog', new_callable=AsyncMock) as dialog, \
+                 patch('maeumnarae.views.journal_print_view.ui.notify') as notify:
+                await handler()
+                assert dialog.call_args.args[1].all_records
+                controls['period'].value = 'year'
+                controls['year'].value = 2024
+                await handler()
+                assert dialog.call_args.args[1].bounds == (date(2024, 3, 1), date(2025, 3, 1))
+                controls['period'].value = 'custom'
+                controls['start'].value = '2024-02-29'
+                controls['end'].value = '2024-02-29'
+                await handler()
+                assert dialog.call_args.args[1].bounds == (date(2024, 2, 29), date(2024, 3, 1))
+                controls['end'].value = '2024-02-28'
+                await handler()
+                assert dialog.call_count == 3
+                notify.assert_called_once()
+    asyncio.run(check())
 
 
 def test_print_ui_generates_and_blocks_after_navigation(records):

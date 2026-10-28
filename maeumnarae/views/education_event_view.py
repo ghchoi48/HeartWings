@@ -2,7 +2,8 @@
 from datetime import datetime
 
 from nicegui import run, ui
-from maeumnarae.views.journal_print_view import JOURNAL_PDF_VISIBLE, PrintSelection, editor_print_button
+from maeumnarae.views.journal_print_view import print_dialog
+from maeumnarae.services.journal_print_models import PrintRequest
 
 from maeumnarae.views.attachment_view import attachment_button
 
@@ -20,7 +21,6 @@ from maeumnarae.views.counseling_content import clean_html, editor_html
 class EducationEventView:
     def __init__(self, repository: EducationEventRepository):
         self.repository = repository
-        self.pdf_selection = PrintSelection(repository.database, 'education', lambda: self.editor_open)
         self.selected: EducationEvent | None = None
         self.selection_request = 0
         self.list_request = 0
@@ -68,19 +68,20 @@ class EducationEventView:
                         ui.label('교육/행사 목록').classes('text-xl font-bold')
                         with ui.row().classes('items-center gap-2'):
                             ui.button('새 교육/행사', icon='add', on_click=lambda: self.open_editor())
-                    self.pdf_selection.toolbar()
                     self.table = ui.table(columns=[
                         dict(name=k, label=v, field=k, align='left', sortable=True)
                         for k, v in [('category', '구분'), ('title', '교육/행사명'), ('event_date', '날짜')]
-                    ] + ([dict(name='print', label='PDF 선택', field='print', align='left')] if JOURNAL_PDF_VISIBLE else [])
+                    ]
                       + [dict(name='actions', label='', field='actions', align='right')],
                         rows=[], row_key='id', pagination=10).classes('w-full').props(
                         ':rows-per-page-options="[10]" :pagination-label="(first, last, total) => `${Math.max(1, Math.ceil(first / 10))}페이지/${Math.max(1, Math.ceil(total / 10))}페이지`" flat no-data-label="등록된 교육/행사가 없습니다" no-results-label="검색 결과가 없습니다"')
                     with self.table.add_slot('top'):
-                        ui.input('교육/행사 검색', on_change=lambda: self.clear_print_selection()).props('outlined dense clearable debounce=300').classes('w-full').bind_value(self.table, 'filter')
+                        ui.input('교육/행사 검색').props('outlined dense clearable debounce=300').classes('w-full').bind_value(self.table, 'filter')
                     self.table.on('rowClick', self.row_clicked, js_handler='(event, row) => emit(row.id)')
                     self.table.add_slot('body-cell-actions', """
-                        <q-td :props="props" auto-width>
+                        <q-td :props="props" auto-width class="whitespace-nowrap">
+                            <q-btn flat dense icon="picture_as_pdf" label="PDF"
+                                   aria-label="교육/행사 PDF 출력" @click.stop="$parent.$emit('print_event', props.row.id)" />
                             <q-btn flat round dense color="negative" icon="delete_outline"
                                    aria-label="교육/행사 삭제" @click.stop="$parent.$emit('delete_event', props.row.id)">
                                 <q-tooltip>교육/행사 삭제</q-tooltip>
@@ -88,12 +89,7 @@ class EducationEventView:
                         </q-td>
                     """)
                     self.table.on('delete_event', self.delete_event)
-                    self.table.add_slot('body-cell-print', """<q-td :props="props">
-                        <q-checkbox :model-value="props.row.pdf_selected" @click.stop
-                            @update:model-value="value => $parent.$emit('print_select', {id: props.row.id, value})" />
-                    </q-td>""")
-                    self.table.on('print_select', self.print_selected)
-                    self.table.on('update:filter', self.clear_print_selection)
+                    self.table.on('print_event', self.print_event)
                     self.list_message = ui.label().classes('text-sm text-red-700')
                 with ui.card().classes('w-full min-w-0 rounded-2xl shadow-sm p-6 gap-4'):
                     ui.label('교육/행사 일지').classes('text-xl font-bold')
@@ -101,19 +97,6 @@ class EducationEventView:
                     self.detail_message = ui.label('왼쪽 목록에서 교육/행사를 선택해 주세요.').classes('text-slate-500')
                     self.details = ui.column().classes('w-full gap-4')
         ui.timer(0.01, self.reload, once=True)
-
-    def print_selected(self, event):
-        self.pdf_selection.toggle(event.args['id'], event.args['value'])
-        for row in self.table.rows:
-            row['pdf_selected'] = row['id'] in self.pdf_selection.ids
-        self.table.update()
-
-    def clear_print_selection(self):
-        self.pdf_selection.ids.clear()
-        self.pdf_selection.toggle(0, False)
-        for row in self.table.rows:
-            row['pdf_selected'] = False
-        self.table.update()
 
     async def row_clicked(self, event):
         await self.select_event(event.args)
@@ -132,7 +115,7 @@ class EducationEventView:
                 entries.extend(batch)
                 if len(batch) < 1000:
                     break
-            self.table.rows = [dict(id=e.id, title=e.title, category=e.category, event_date=e.event_date.isoformat(), pdf_selected=e.id in self.pdf_selection.ids) for e in entries]
+            self.table.rows = [dict(id=e.id, title=e.title, category=e.category, event_date=e.event_date.isoformat()) for e in entries]
             self.table.selected = [r for r in self.table.rows if self.selected and r['id'] == self.selected.id]
             self.table.update()
         except DatabaseError as error:
@@ -167,6 +150,10 @@ class EducationEventView:
         self.detail_message.text = '' if entry else '왼쪽 목록에서 교육/행사를 선택해 주세요.'
         if entry is not None:
             self.build_editor(entry)
+
+    async def print_event(self, event):
+        await print_dialog(self.repository.database, PrintRequest(refs=(('education', event.args),)),
+                           self.table, lambda: self.editor_open)
 
     async def delete_event(self, event):
         if self.deleting:
@@ -280,5 +267,3 @@ class EducationEventView:
                     control.enable()
 
         save_button.on_click(save)
-        with save_button.parent_slot:
-            editor_print_button(self.repository.database, 'education', lambda: entry, lambda: self.editor_open)

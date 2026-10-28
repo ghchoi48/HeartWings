@@ -52,14 +52,14 @@ class JournalPrintRepository:
             participants = {}
             for kind, (columns, source, subject_type) in QUERIES.items():
                 ids = sorted(key for k, key in selected if k == kind)
-                if request.school_year is None and not ids:
+                if not request.has_period and not request.all_records and not ids:
                     continue
                 # ID를 나누어 조회해도 같은 읽기 트랜잭션을 유지한다.
                 batches = [ids[i:i + 400] for i in range(0, len(ids), 400)] if ids else [None]
                 for batch in batches:
                     where = ' WHERE r.id IN (' + ','.join('?' for _ in batch) + ')' if batch else ''
                     params = batch or ()
-                    if request.school_year is not None:
+                    if request.has_period:
                         start, stop = request.bounds
                         day_sql = ('r.test_date' if kind == 'test' else 'r.event_date' if kind == 'education'
                                    else "date(r.starts_at, '+9 hours')")
@@ -77,10 +77,11 @@ class JournalPrintRepository:
                         moment = (datetime.fromisoformat(data['starts_at']).astimezone(KST) if 'starts_at' in data else
                                   datetime.combine(datetime.fromisoformat(data['day']).date(),
                                                    time.fromisoformat(data['clock'] or '00:00'), KST))
-                        if request.school_year is not None:
+                        if request.has_period:
                             start, stop = request.bounds
                             if not start <= moment.date() < stop:
                                 continue
+                        if request.has_period or request.all_records:
                             if 'status' in data and data['status'] not in request.statuses:
                                 continue
                         individual = {}

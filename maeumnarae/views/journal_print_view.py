@@ -1,6 +1,6 @@
-"""공통 PDF 출력 대화상자와 목록 선택, 학년도 출력 UI."""
+"""공통 PDF 출력 대화상자와 개별·전체 일지 출력 UI."""
 from dataclasses import replace
-from datetime import datetime
+from datetime import date, datetime
 
 from nicegui import run, ui
 
@@ -35,6 +35,10 @@ async def print_dialog(database, request, anchor, blocked=lambda: False):
     with anchor.client.content:
         with ui.dialog() as dialog, ui.card().classes('w-full max-w-xl p-6'):
             ui.label('일지 PDF 출력').classes('text-xl font-bold')
+            if request.school_year is not None:
+                ui.label(f'{request.school_year}학년도 · {request.bounds[0]}부터 다음 해 2월 말일까지')
+            elif request.start_date is not None:
+                ui.label(f'{request.start_date} ~ {request.end_date} (시작일·종료일 포함)')
             mask = ui.checkbox('이름 가리기', value=request.mask_names)
             ui.label('이름 가리기를 켜면 학생 이름 대신 학생 ID를 표시합니다. 본문에 직접 작성한 이름은 자동으로 가려지지 않습니다. 비밀 메모와 첨부파일은 제외됩니다.').classes('text-sm text-slate-500')
             message = ui.label('일지 건수를 확인하는 중입니다…')
@@ -89,7 +93,8 @@ async def print_dialog(database, request, anchor, blocked=lambda: False):
             if not valid():
                 return
             name = (f'마음나래_{request.school_year}학년도_전체일지.pdf' if request.school_year is not None else
-                    f'마음나래_일지_{datetime.now(KST):%Y%m%d_%H%M%S}.pdf')
+                    f'마음나래_{request.start_date}_{request.end_date}_전체일지.pdf' if request.start_date is not None else
+                    f'마음나래_{"전체일지" if request.all_records else "일지"}_{datetime.now(KST):%Y%m%d_%H%M%S}.pdf')
             ui.download.content(content, name, media_type='application/pdf')
             message.text = 'PDF를 다운로드했습니다. 파일을 열어 인쇄하세요.'
         except Exception:
@@ -126,59 +131,28 @@ def counts_text(snapshot):
     return f'전체 {len(snapshot.records)}건 · ' + ' · '.join(f'{KINDS[k]} {v}건' for k, v in snapshot.counts.items() if v)
 
 
-class PrintSelection:
+class JournalPrintButtons:
     def __init__(self, database, kind, blocked=lambda: False):
         self.database, self.kind, self.blocked = database, kind, blocked
+        self.client = ui.context.client
         self.scope = None
-        self.ids = set()
-        self.button = None
 
     def set_scope(self, scope):
         if scope != self.scope:
-            self.ids.clear()
             self.scope = scope
-            invalidate_prints(self.button.client if self.button is not None else None)
-            if self.button is not None and not self.button.is_deleted:
-                self.button.text = '선택 일지 PDF (0)'
-
-    def toolbar(self):
-        self.button = ui.button(f'선택 일지 PDF ({len(self.ids)})', icon='picture_as_pdf', on_click=self.download).props('outline')
-        self.button.set_visibility(journal_pdf_visible(self.kind))
-
-    async def download(self):
-        if not self.ids:
-            ui.notify('출력할 일지를 선택하세요.', type='warning')
-            return
-        await print_dialog(self.database, PrintRequest(refs=tuple((self.kind, key) for key in sorted(self.ids))),
-                           self.button, self.blocked)
-
-    def toggle(self, key, value):
-        if value:
-            self.ids.add(key)
-        else:
-            self.ids.discard(key)
-        if self.button is not None and not self.button.is_deleted:
-            self.button.text = f'선택 일지 PDF ({len(self.ids)})'
+            invalidate_prints(self.client)
 
     def row(self, key):
-        if not journal_pdf_visible(self.kind):
-            return
         with ui.row().classes('items-center').on('click.stop', lambda: None).on('keydown.stop', lambda: None):
-            ui.checkbox('선택', value=key in self.ids, on_change=lambda e: self.toggle(key, e.value)).props('dense')
             button = ui.button('PDF', icon='picture_as_pdf', on_click=lambda: print_dialog(
                 self.database, PrintRequest(refs=((self.kind, key),)), button, self.blocked)).props('flat dense')
 
 
 def list_print_tools(owner, database, kind, scope):
-    if not hasattr(owner, 'pdf_selection'):
-        owner.pdf_selection = PrintSelection(database, kind, lambda: owner.editor_open)
-    owner.pdf_selection.set_scope(scope)
-    if owner.pdf_selection.button is None or owner.pdf_selection.button.is_deleted:
-        with owner.logs.parent_slot:
-            owner.pdf_selection.toolbar()
-            owner.pdf_selection.button.move(target_index=owner.logs.parent_slot.children.index(owner.logs))
-    owner.pdf_selection.button.text = f'선택 일지 PDF ({len(owner.pdf_selection.ids)})'
-    return owner.pdf_selection
+    if not hasattr(owner, 'pdf_tools'):
+        owner.pdf_tools = JournalPrintButtons(database, kind, lambda: owner.editor_open)
+    owner.pdf_tools.set_scope(scope)
+    return owner.pdf_tools
 
 
 def editor_print_button(database, kind, entry, blocked):
@@ -201,25 +175,38 @@ def editor_print_button(database, kind, entry, blocked):
     return button
 
 
-def build_year_print(database):
-    if not JOURNAL_PDF_VISIBLE:
-        return
-    with settings_card('학년도별 일지 PDF', 'picture_as_pdf',
-                       '모든 종류의 일지를 학생·집단·교사별로 묶어 PDF 한 개로 출력합니다.', collapsible=True):
+def build_all_print(database):
+    with settings_card('모든 일지 PDF 내보내기', 'picture_as_pdf',
+                       '선택한 기간의 개인상담·집단상담·특별교육·자문·심리검사·교육/행사 일지를 PDF 한 파일로 내보냅니다.', collapsible=True):
+        period = ui.select({'all': '전체 기간', 'year': '학년도', 'custom': '기간 지정'},
+                           value='all', label='내보낼 기간').props('outlined')
         year = ui.number('학년도', value=current_school_year(), min=1900, max=9998, step=1).props('outlined')
-        ui.label('해당 연도 3월 1일~다음 해 2월 말일의 일지 날짜 기준입니다.')
-        statuses = ui.select(STATUSES, value=['completed'], multiple=True, label='포함 상태').props('outlined').classes('w-full')
-        ui.label('상태가 없는 심리검사·교육/행사는 항상 포함됩니다.').classes('text-sm text-slate-500')
-        mask = ui.checkbox('이름 가리기', value=False)
-        ui.label('학생 이름 대신 학생 ID를 표시합니다. 본문에 직접 작성한 이름은 자동으로 가려지지 않습니다.').classes('text-sm text-slate-500')
+        year.bind_visibility_from(period, 'value', backward=lambda value: value == 'year')
+        ui.label('학년도는 3월 1일부터 다음 해 2월 말일까지입니다.').bind_visibility_from(
+            period, 'value', backward=lambda value: value == 'year')
+        with ui.row().classes('w-full items-center') as dates:
+            start = ui.date_input('시작일', value=f'{current_school_year()}-03-01').props('outlined')
+            end = ui.date_input('종료일', value=datetime.now(KST).date().isoformat()).props('outlined')
+        dates.bind_visibility_from(period, 'value', backward=lambda value: value == 'custom')
+        ui.label('지정 기간은 시작일과 종료일을 포함하며, 일지 날짜는 한국 표준시 기준입니다.').bind_visibility_from(
+            period, 'value', backward=lambda value: value == 'custom')
+        ui.label('예약·완료·취소 상태의 일지를 모두 포함합니다. 비밀 메모와 첨부파일은 제외됩니다.').classes('text-sm text-slate-500')
+
         async def prepare():
             try:
-                if year.value is None or int(year.value) != year.value:
-                    raise ValueError()
-                request = PrintRequest(school_year=int(year.value), statuses=tuple(statuses.value), mask_names=mask.value)
+                options = dict(statuses=tuple(STATUSES))
+                if period.value == 'year':
+                    if year.value is None or int(year.value) != year.value:
+                        raise ValueError()
+                    request = PrintRequest(school_year=int(year.value), **options)
+                elif period.value == 'custom':
+                    request = PrintRequest(start_date=date.fromisoformat(start.value or ''),
+                                           end_date=date.fromisoformat(end.value or ''), **options)
+                else:
+                    request = PrintRequest(all_records=True, **options)
                 request.validate()
-            except (ValueError, TypeError):
-                ui.notify('학년도와 상태를 확인하세요.', type='warning')
+            except (ValueError, TypeError, OverflowError):
+                ui.notify('학년도 또는 시작일·종료일을 확인해 주세요. 시작일은 종료일보다 늦을 수 없습니다.', type='warning')
                 return
             button.disable()
             try:
@@ -227,4 +214,5 @@ def build_year_print(database):
             finally:
                 if not button.is_deleted:
                     button.enable()
-        button = ui.button('건수 확인 및 PDF 출력', icon='picture_as_pdf', on_click=prepare)
+
+        button = ui.button('모든 일지 PDF 내보내기', icon='picture_as_pdf', on_click=prepare)

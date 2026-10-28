@@ -111,8 +111,8 @@ class GroupCounselingView:
         request = self.selection_request
         self.log_request += 1
         self.selected = None
-        if hasattr(self, 'pdf_selection'):
-            self.pdf_selection.set_scope(None)
+        if hasattr(self, 'pdf_tools'):
+            self.pdf_tools.set_scope(None)
         self.details.clear()
         self.logs.clear()
         self.edit.disable()
@@ -207,8 +207,9 @@ class GroupCounselingView:
                     with ui.column().classes('gap-1'):
                         ui.label(entry.title).classes('font-semibold')
                         ui.label(f'{entry.starts_at.astimezone(KST):%Y.%m.%d %H:%M} · {STATUSES[entry.status]} · {entry.duration_minutes}분').classes('text-sm text-slate-500')
-                    pdf.row(entry.id)
-                    delete_button(self.repository.database, 'group_log', lambda entry=entry: entry, self.after_log_deleted, blocked=lambda: self.editor_open, icon_only=True)
+                    with ui.row().classes('items-center gap-2 flex-nowrap shrink-0'):
+                        pdf.row(entry.id)
+                        delete_button(self.repository.database, 'group_log', lambda entry=entry: entry, self.after_log_deleted, blocked=lambda: self.editor_open, icon_only=True)
 
         self.log_message.text = f'이 페이지에 {min(len(entries), PAGE_SIZE)}건 · 한국 표준시' if entries else '등록된 집단 상담 일지가 없습니다.'
         self.page_label.text = f'{self.log_offset // PAGE_SIZE + 1}페이지/{pages}페이지'

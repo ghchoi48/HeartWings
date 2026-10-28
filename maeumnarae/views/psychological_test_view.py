@@ -28,8 +28,8 @@ class PsychologicalTestView:
         self.students = students
         self.repository = PsychologicalTestRepository(students.database)
         self.selected = None
-        if hasattr(self, 'pdf_selection'):
-            self.pdf_selection.set_scope(None)
+        if hasattr(self, 'pdf_tools'):
+            self.pdf_tools.set_scope(None)
         self.request = 0
         self.offset = 0
         self.editor_saving = False
@@ -103,8 +103,8 @@ class PsychologicalTestView:
         self.request += 1
         request = self.request
         self.selected = None
-        if hasattr(self, 'pdf_selection'):
-            self.pdf_selection.set_scope(None)
+        if hasattr(self, 'pdf_tools'):
+            self.pdf_tools.set_scope(None)
         self.offset = 0
         self.add.disable()
         self.logs.clear()
@@ -177,8 +177,9 @@ class PsychologicalTestView:
                         if entry.duration_minutes is not None:
                             details.append(f'{entry.duration_minutes}분')
                         ui.label(' · '.join(details)).classes('text-sm text-slate-500')
-                    pdf.row(entry.id)
-                    delete_button(self.repository.database, 'test', lambda entry=entry: entry, self.after_log_deleted, blocked=lambda: self.editor_open, icon_only=True)
+                    with ui.row().classes('items-center gap-2 flex-nowrap shrink-0'):
+                        pdf.row(entry.id)
+                        delete_button(self.repository.database, 'test', lambda entry=entry: entry, self.after_log_deleted, blocked=lambda: self.editor_open, icon_only=True)
 
         self.message.text = f'이 페이지에 {min(len(entries), PAGE_SIZE)}건' if entries else '등록된 심리검사 일지가 없습니다.'
         self.page_label.text = f'{self.offset // PAGE_SIZE + 1}페이지/{pages}페이지'
