@@ -4,7 +4,7 @@
 
 마음나래는 전문상담교사의 학교 상담 업무를 돕는 Python 기반 데스크톱 애플리케이션입니다. 학생별 상담 이력, 집단 상담, 교사 자문, 심리검사 등 다양한 기록을 모으고, 캘린더와 통계로 상담 활동을 살펴볼 수 있습니다. 상담 데이터는 사용자의 컴퓨터에 SQLCipher로 암호화하여 저장합니다.
 
-[시작하기](#시작하기) · [주요 기능](#주요-기능) · [자료 이관 안내](docs/legacy-import.md) · [개발 및 빌드](docs/building.md)
+[시작하기](#시작하기) · [주요 기능](#주요-기능) · [빌드 안내](#빌드)
 
 ## 주요 기능
 
@@ -29,7 +29,7 @@
 
 **설정 → 일반 → 나이스 연동**에서 NEIS API 인증키와 학교 코드를 저장한 뒤, **캘린더 목록 → 학사일정 (NEIS)**을 체크하면 학교의 학사일정을 월간·주간 캘린더와 홈 캘린더에서 확인할 수 있습니다. 기본적으로 표시가 꺼져 있으며, 선택 여부는 DB에 저장됩니다. 일정은 읽기 전용으로 제공하고 새로고침으로 다시 조회합니다. 인증키 입력란 아래의 **인증키 용도 및 발급 방법**을 펼치면 [나이스 인증키 신청](https://open.neis.go.kr/portal/guide/actKeyPage.do) 안내를 볼 수 있습니다.
 
-저장소를 내려받고 프로젝트 폴더에서 가상환경을 만듭니다. 기존 실행 검증 환경은 **macOS Apple Silicon, Python 3.14**이며, OS별 준비 사항은 [실행 및 빌드 안내](docs/building.md)를 참고하세요.
+저장소를 내려받고 프로젝트 폴더에서 가상환경을 만듭니다. 기존 실행 검증 환경은 **macOS Apple Silicon, Python 3.14**이며, OS별 준비 사항은 [빌드 안내](#빌드)를 참고하세요.
 
 ```bash
 git clone https://github.com/ghchoi48/HeartWings.git
@@ -58,12 +58,12 @@ python main.py
 
 `python` 명령을 찾을 수 없는 macOS/Linux 환경에서는 가상환경 생성 시 `python3`를 사용하세요.
 
-SQLCipher 드라이버 설치에는 OS·Python·CPU에 맞는 wheel 또는 네이티브 빌드 환경이 필요합니다. 설치가 실패하면 [SQLCipher 의존성 안내](docs/building.md#sqlcipher-네이티브-의존성)를 확인하세요. Windows 데스크톱 실행에는 WebView2 Runtime, Linux에는 GTK/WebKit 관련 패키지가 필요합니다.
+SQLCipher 드라이버 설치에는 OS·Python·CPU에 맞는 wheel이 필요합니다. wheel이 없으면 SQLCipher와 네이티브 컴파일 환경을 준비해야 합니다. Windows 데스크톱 실행에는 WebView2 Runtime, Linux에는 GTK/WebKit 관련 패키지가 필요합니다.
 
 ### 처음 실행할 때
 
 1. 첫 화면에서 사용할 **4글자 이상의 DB 비밀번호와 학교 정보**를 입력합니다.
-2. 학생을 등록하거나 XLSX 명부를 가져옵니다. 기존 상담기록관리 자료가 있다면 [XLSB 이관 안내](docs/legacy-import.md)를 따라 가져올 수 있습니다.
+2. 학생을 등록하거나 XLSX 명부를 가져옵니다. 기존 상담기록관리 자료는 설정의 기존 자료 가져오기 기능으로 가져올 수 있습니다.
 3. 상담 일지를 작성하고 캘린더와 통계에서 기록을 확인합니다.
 4. **설정 → DB**에서 암호화 백업을 내려받을 수 있습니다.
 
@@ -99,7 +99,7 @@ python main.py --db ./data/maeumnarae.db
 
 급식·날씨·학교 정보 조회와 새 버전 확인에는 인터넷 연결을 사용합니다. 앱 실행 파일과 사용자 데이터는 별도 위치에 보관되며, DB 백업은 **설정 → DB**에서 관리합니다.
 
-## 개발 안내
+## 빌드
 
 주요 기술은 **Python, NiceGUI, pywebview, SQLCipher**이며, 독립 실행 앱 패키징에는 **PyInstaller**를 사용합니다.
 
@@ -114,27 +114,33 @@ HeartWings/
 │   ├── views/           # 화면 구성
 │   └── widgets/         # 홈 위젯
 ├── resources/           # 아이콘, 글꼴, 서식 및 라이선스
-├── requirements/        # 실행·개발·빌드 의존성
+├── requirements/        # 실행·빌드 의존성
 ├── packaging/           # 번들 설정
-├── scripts/             # 빌드 자동화
-├── tests/               # 테스트
-└── docs/                # 상세 문서
+└── scripts/             # 앱·리소스 빌드 도구
 ```
 
-개발 의존성 설치 및 테스트:
+대상 운영체제와 CPU에 맞는 Python 환경에서 빌드합니다.
 
 ```bash
-python -m pip install -r requirements/dev.txt
-python -m pytest
+python -m pip install -r requirements/build.txt
+python scripts/build_desktop.py
 ```
 
-DB 통합 테스트에는 SQLCipher가 필요합니다. 데스크톱 빌드 방법, 플랫폼별 준비 사항과 기존 검증 범위는 [실행 및 빌드 안내](docs/building.md)에 정리되어 있습니다.
+- **Windows:** x64 Python(Tcl/Tk 포함), Inno Setup 6.3 이상이 필요합니다. `ISCC.exe`를 PATH에 추가하거나 `ISCC_PATH`에 전체 경로를 지정할 수 있습니다. 설치 프로그램은 WebView2 Runtime이 없으면 다운로드하여 설치합니다.
+- **macOS:** 대상 CPU의 macOS에서 빌드합니다. 배포 시 필요한 서명·공증은 별도로 진행합니다.
+- **Linux:** PyGObject, GTK 3, WebKit2GTK 등 배포판별 패키지와 `pywebview[gtk]`가 필요합니다.
 
-## 문서
+Windows 설치 파일은 `dist/installer/maeumnarae-<버전>-windows-x64-setup.exe`, macOS 산출물은 `dist/마음나래.app` 및 ZIP입니다. Windows/Linux에서 폴더로 배포할 때는 `_internal`을 포함한 `dist/maeumnarae` 전체를 전달합니다.
 
-- [실행 및 빌드 안내](docs/building.md): OS별 실행·패키징, SQLCipher 의존성, 업데이트 배포
-- [프로젝트 구조](docs/project-structure.md): 폴더별 역할과 파일 안내
-- [기존 자료 이관](docs/legacy-import.md): 울산형 상담기록관리 XLSB 가져오기 절차와 제한
+Windows 설치 버전은 `maeumnarae/core/program_info.py`의 `PROGRAM_VERSION`에서 읽습니다. 버전을 변경한 뒤 다시 빌드하고 새 설치 프로그램으로 업데이트합니다. 앱의 업데이트 알림을 제공하려면 같은 버전의 GitHub Release(예: `v1.1.0`)에 배포 파일을 첨부합니다.
+
+아이콘과 시작 화면은 저장소에 포함되어 있습니다. 이미지를 변경할 때는 `scripts/build_icons.py`, `scripts/build_splash.py`로 재생성할 수 있습니다. 글꼴 변환 절차와 라이선스는 `resources/fonts/`와 `resources/licenses/`에 있습니다.
+
+## 저장소 포함 범위
+
+앱 소스, 빌드 설정·도구, 실행·빌드 의존성, 리소스와 라이선스를 Git에 포함합니다. README와 Git 설정도 유지합니다.
+
+테스트, 개발 문서, 미리보기 PDF, 스크린샷, 로그, 가상환경, 사용자 DB, 빌드·배포 산출물은 로컬에 보관하고 Git에서 제외합니다. 새 최상위 경로나 빌드 도구가 필요하면 `.gitignore`의 허용 목록을 함께 갱신하세요. 설치 파일은 GitHub Releases로 배포합니다.
 
 ## 라이선스
 
