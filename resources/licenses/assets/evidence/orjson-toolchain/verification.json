@@ -1,0 +1,26 @@
+{
+  "checked_on": "2026-10-30",
+  "scope": "Installed CPython 3.14 macOS arm64 orjson and existing validation ZIP; actual bundle arm64 code checked against installed wheel via otool; no new release build",
+  "wheel": "orjson-3.12.0-cp314-cp314-macosx_15_0_arm64.whl",
+  "wheel_sha256": "8c3bb86dd10f39b3fbf434b7d5dc7cac77d6fc8ac572ae30a10731ede2c4b647",
+  "extension_sha256": "aaebbe8aad399489acc642c23615bd373192904c319f159496ea5ab0d3c3bc45",
+  "arm64_text_sha256": "c47031bf359b6c055d8eefc4dd95eb2cd1d003a453486365e7448589c381f9df",
+  "source_commit": "6737895a1a4e3e26df0569a40147893a786f9a58",
+  "workflow_run": "https://github.com/ijl/orjson/actions/runs/31816598288/attempts/1",
+  "toolchain": "nightly-2026-08-01",
+  "rustc_version": "1.99.0-nightly (ad3d0bc14 2026-07-31)",
+  "rust_commit": "ad3d0bc141a02cf446e384136d250a1f6950fed5",
+  "rustc_archive": "https://static.rust-lang.org/dist/2026-08-01/rustc-nightly-aarch64-apple-darwin.tar.xz",
+  "rustc_archive_sha256": "8712c26aa1395200da129757ee4f2ed7bf8df068da08cf72ec905cc8c96dd33a",
+  "build_std": [
+    "core",
+    "std",
+    "alloc",
+    "proc_macro",
+    "panic_abort"
+  ],
+  "provenance_verification": "PyPI HTTPS response, subject digest, certificate fields and pinned source compared; independent Sigstore signature/transparency verification not performed",
+  "limits": "Workflow-derived toolchain identification; no retained rustc -Vv job log or bit-for-bit rebuild. COPYRIGHT-library is conservative all-target coverage, not exact linker reachability.",
+  "validation_archive": "dist/validation-macos/maeumnarae-macos.zip",
+  "validation_archive_sha256": "8b944f5ec597799784a81ae3272451b95773ac6e58136e366b871348a28abdae"
+}

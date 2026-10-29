@@ -140,8 +140,14 @@ Windows 설치 버전은 `maeumnarae/core/program_info.py`의 `PROGRAM_VERSION`�
 
 앱 소스, 빌드 설정·도구, 실행·빌드 의존성, 리소스와 라이선스를 Git에 포함합니다. README와 Git 설정도 유지합니다.
 
-테스트, 개발 문서, 미리보기 PDF, 스크린샷, 로그, 가상환경, 사용자 DB, 빌드·배포 산출물은 로컬에 보관하고 Git에서 제외합니다. 새 최상위 경로나 빌드 도구가 필요하면 `.gitignore`의 허용 목록을 함께 갱신하세요. 설치 파일은 GitHub Releases로 배포합니다.
+회귀 테스트와 재빌드 안내는 Git에 포함합니다. 미리보기 PDF, 스크린샷, 로그, 가상환경, 사용자 DB, 빌드·배포 산출물은 로컬에 보관하고 Git에서 제외합니다. 새 최상위 경로나 빌드 도구가 필요하면 `.gitignore`의 허용 목록을 함께 갱신하세요. 설치 파일은 GitHub Releases로 배포합니다.
 
 ## 라이선스
 
 마음나래는 [MIT 라이선스](LICENSE)로 배포됩니다. 포함된 라이브러리와 글꼴에는 각각의 라이선스가 적용되며, [서드파티 라이선스 안내](resources/licenses/README.md)와 앱의 프로그램 정보 화면에서 확인할 수 있습니다.
+
+배포 구성요소의 고지 범위와 소스 제공 안내는 [서드파티 고지 및 소스 안내](resources/licenses/THIRD_PARTY_NOTICES.md)를 참고하세요. 실제 배포 버전과 전이 의존성은 릴리스별로 확인합니다.
+
+`maeumnarae/services/memory_xlsb.py`는 pyxlsb에서 파생된 구현으로 **LGPL-3.0-or-later**가 적용되며, 프로젝트의 MIT 적용에서 제외됩니다. [출처 및 변경 기록](resources/licenses/pyxlsb/PROVENANCE.md)을 참고하세요.
+
+수정한 pyxlsb로 앱을 재빌드하는 절차와 릴리스 소스 제공 방법은 [BUILDING.md](BUILDING.md)에 있습니다. `scripts/build_desktop.py`는 실행 파일과 대응 소스·환경 기록을 `dist/release/`에 모읍니다.

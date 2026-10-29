@@ -2,7 +2,7 @@
 
 from nicegui import ui
 
-from maeumnarae.core.program_info import AUTHOR, GITHUB_URL, PROGRAM_NAME, PROGRAM_VERSION, program_license, third_party_notices
+from maeumnarae.core.program_info import AUTHOR, GITHUB_URL, PROGRAM_NAME, PROGRAM_VERSION, program_license, third_party_notices, third_party_source
 
 
 def license_text(text: str) -> None:
@@ -29,7 +29,8 @@ def build_about() -> None:
     license_text(program_license())
     ui.separator()
     ui.label('오픈소스 라이선스').classes('text-lg font-bold text-slate-800')
-    ui.label('항목을 펼치면 저작권 고지와 라이선스 전문을 확인할 수 있습니다.').classes('text-sm text-slate-500')
+    ui.label('마음나래 자체 코드는 MIT 라이선스로 제공됩니다. pyxlsb에서 파생된 XLSB 읽기 구현은 LGPL-3.0-or-later이며, 포함된 라이브러리와 폰트에는 각각의 라이선스가 적용됩니다.').classes('text-sm text-slate-500')
+    ui.label('항목을 펼치면 저작권 고지, 라이선스 전문과 제공된 소스 링크를 확인할 수 있습니다.').classes('text-sm text-slate-500')
     notices = third_party_notices()
     for category, title in (('libraries', '라이브러리'), ('fonts', '폰트')):
         with ui.expansion(title, icon='description', value=False).classes('w-full'):
@@ -44,6 +45,24 @@ def build_about() -> None:
                         ui.label(notice['license']).classes('font-semibold text-slate-700')
                     if notice.get('source'):
                         ui.link('공식 사이트', notice['source'], new_tab=True)
+                    if notice.get('note'):
+                        ui.label(notice['note']).classes('text-sm text-slate-500')
+                    if notice.get('license_source'):
+                        ui.link('라이선스 원문 출처', notice['license_source'], new_tab=True)
+                    if notice.get('source_archive'):
+                        ui.link('고지 버전의 원본 소스 다운로드', notice['source_archive'], new_tab=True)
+                    if notice.get('source_file'):
+                        source_file = notice['source_file']
+                        ui.button('동봉된 원본 소스 저장', icon='download',
+                                  on_click=lambda path=source_file: ui.download.content(
+                                      third_party_source(path), path.rsplit('/', 1)[-1],
+                                      media_type='application/gzip'))
+                    if notice.get('modified_source_file'):
+                        modified_source = notice['modified_source_file']
+                        ui.button('사용된 라이브러리·파생 소스 저장', icon='download',
+                                  on_click=lambda path=modified_source: ui.download.content(
+                                      third_party_source(path), path.rsplit('/', 1)[-1],
+                                      media_type='application/zip'))
                     if notice['text']:
                         with ui.column().classes('w-full max-h-96 overflow-auto'):
                             license_text(notice['text'])

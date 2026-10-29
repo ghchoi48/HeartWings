@@ -1,0 +1,5445 @@
+{
+  "date": "2026-10-30",
+  "artifact": "maeumnarae-macos.zip",
+  "artifact_sha256": "8b944f5ec597799784a81ae3272451b95773ac6e58136e366b871348a28abdae",
+  "scope": "macOS arm64 validation build; notice coverage/material integrity, not release approval",
+  "assets": {
+    "Frameworks/AppKit/_AppKit.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "fd19d9e626b9c11866a04792cbcd97ce539c784bd134ca8c672d0f3385ae38f0",
+      "notices": [
+        "pyobjc-framework-Cocoa"
+      ]
+    },
+    "Frameworks/AppKit/_inlines.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "12d960c5e77bf3ee9ff0efc476d269f761f1c5c02d5f559e9f1868e0319221de",
+      "notices": [
+        "pyobjc-framework-Cocoa"
+      ]
+    },
+    "Frameworks/CoreFoundation/_CoreFoundation.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "08d5d1b8adfd5aa924bc9c7db0c63538080fa8b8566147e32f531bcb424e3ef7",
+      "notices": [
+        "pyobjc-framework-Cocoa"
+      ]
+    },
+    "Frameworks/CoreFoundation/_inlines.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "3f3adf4c947121894728a7889dc99d9019c78013f306f86ed046fa5a9fa839a8",
+      "notices": [
+        "pyobjc-framework-Cocoa"
+      ]
+    },
+    "Frameworks/Foundation/_Foundation.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "c6daf2865728dbcef1d6feaff3a845c81859a469bbf8f347168f4e0b231052b9",
+      "notices": [
+        "pyobjc-framework-Cocoa"
+      ]
+    },
+    "Frameworks/Foundation/_inlines.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "0e236c6e948b9ae17f4e287709b94e1fa6fd37e8618d63a08d2372da8d9e4130",
+      "notices": [
+        "pyobjc-framework-Cocoa"
+      ]
+    },
+    "Frameworks/PIL/__dot__dylibs/libXau.6.dylib": {
+      "kind": "native",
+      "sha256": "ab5fdc161b2302eb62d8e5f980721eb4ee919f366ac0bf446dd3e070ea65316d",
+      "notices": [
+        "pillow"
+      ]
+    },
+    "Frameworks/PIL/__dot__dylibs/libavif.16.4.2.dylib": {
+      "kind": "native",
+      "sha256": "0b7aacdff68c1b2a25609ce2f9ca87d6ec3527c55dc44b98b12a9e054bae0dbd",
+      "notices": [
+        "pillow"
+      ]
+    },
+    "Frameworks/PIL/__dot__dylibs/libbrotlicommon.1.2.0.dylib": {
+      "kind": "native",
+      "sha256": "d9bff700c2b05dd6acf2bc649463a40fd293ae4f2983ab4575a3a48ac6311991",
+      "notices": [
+        "pillow"
+      ]
+    },
+    "Frameworks/PIL/__dot__dylibs/libbrotlidec.1.2.0.dylib": {
+      "kind": "native",
+      "sha256": "cf8625968bf5a9be3ef00b80da192841074fd93ae0c82b4c742b03f6a0cf830f",
+      "notices": [
+        "pillow"
+      ]
+    },
+    "Frameworks/PIL/__dot__dylibs/libfreetype.6.dylib": {
+      "kind": "native",
+      "sha256": "79199eb08cc6fc7a8dc115291ba6b98f814cc057c4bbe9201b88e7d5b1140b8f",
+      "notices": [
+        "pillow"
+      ]
+    },
+    "Frameworks/PIL/__dot__dylibs/libharfbuzz.0.dylib": {
+      "kind": "native",
+      "sha256": "685636d067bd1aa2d2902526956a5ac48db0d31026d4ef577389f90f8cc52d17",
+      "notices": [
+        "pillow"
+      ]
+    },
+    "Frameworks/PIL/__dot__dylibs/libjpeg.62.4.0.dylib": {
+      "kind": "native",
+      "sha256": "83b3cb05a18a6c311f96b215e36fdc06194ead5c75cee3a8dff66a88fae1bbe7",
+      "notices": [
+        "pillow"
+      ]
+    },
+    "Frameworks/PIL/__dot__dylibs/liblcms2.2.dylib": {
+      "kind": "native",
+      "sha256": "5e7fe2b82a9c4065fd1bad44f45ef14c417a43d9f0d33b73571e6ff7d70a4a1d",
+      "notices": [
+        "pillow"
+      ]
+    },
+    "Frameworks/PIL/__dot__dylibs/liblzma.5.dylib": {
+      "kind": "native",
+      "sha256": "0b6e47ec238da79191d6a780b7e7957dd251e7a337ae751e9bf90164f778b1ff",
+      "notices": [
+        "pillow"
+      ]
+    },
+    "Frameworks/PIL/__dot__dylibs/libopenjp2.2.5.4.dylib": {
+      "kind": "native",
+      "sha256": "799d3b2df04744f092378c0411510c51829cecc3420e78339d5b384d3e5cb845",
+      "notices": [
+        "pillow"
+      ]
+    },
+    "Frameworks/PIL/__dot__dylibs/libpng16.16.dylib": {
+      "kind": "native",
+      "sha256": "60dc87eaf48f1b1b2d4a956005b3e8d8b4e258ec9de623afd0d28979ff821225",
+      "notices": [
+        "pillow"
+      ]
+    },
+    "Frameworks/PIL/__dot__dylibs/libsharpyuv.0.dylib": {
+      "kind": "native",
+      "sha256": "04f424cee191ed92a2675edd060efb667a0e9f0ee21db156f14b2066a8794afd",
+      "notices": [
+        "pillow"
+      ]
+    },
+    "Frameworks/PIL/__dot__dylibs/libtiff.6.dylib": {
+      "kind": "native",
+      "sha256": "75fefe3a32a3ce3736b5599c68a27f740489aa157fe2454ad63e346a3d1a3d49",
+      "notices": [
+        "pillow"
+      ]
+    },
+    "Frameworks/PIL/__dot__dylibs/libwebp.7.dylib": {
+      "kind": "native",
+      "sha256": "7eb21d47e03ebd47986a547c1731a70db51f06d0b7af4fa659f6f3ac1eb8828d",
+      "notices": [
+        "pillow"
+      ]
+    },
+    "Frameworks/PIL/__dot__dylibs/libwebpdemux.2.dylib": {
+      "kind": "native",
+      "sha256": "c39b6fbe5794e9c9f7f935057ccaad6ee2c75a0fdfe24313ef1195e5c44f3333",
+      "notices": [
+        "pillow"
+      ]
+    },
+    "Frameworks/PIL/__dot__dylibs/libwebpmux.3.dylib": {
+      "kind": "native",
+      "sha256": "5d657600da37437995c76c61cc37105d12f7f3cfe8d3faeb8926d676b46de32b",
+      "notices": [
+        "pillow"
+      ]
+    },
+    "Frameworks/PIL/__dot__dylibs/libxcb.1.1.0.dylib": {
+      "kind": "native",
+      "sha256": "80105b8f1211a964c53e8294c8ed4295ff4f2074cc0a583e77568000aaf48bd2",
+      "notices": [
+        "pillow"
+      ]
+    },
+    "Frameworks/PIL/__dot__dylibs/libz.1.3.1.zlib-ng.dylib": {
+      "kind": "native",
+      "sha256": "da218f81bc0abd4f199c8a94d605c1b17c3cf442321d9725f27afd52ebd938d1",
+      "notices": [
+        "pillow"
+      ]
+    },
+    "Frameworks/PIL/_avif.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "85e87f340bf627017a3256dd2e2dc956b35796fbce5e7696146153c4d22b8ea5",
+      "notices": [
+        "pillow"
+      ]
+    },
+    "Frameworks/PIL/_imaging.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "e4fad6e7710c9eb73ce95d76fb33b2f9d3289bb59f981cbb258935efde23cc58",
+      "notices": [
+        "pillow"
+      ]
+    },
+    "Frameworks/PIL/_imagingcms.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "eb0f5ade55c5e49db3e6ccab5a52b55c4ab5eff2f5045a8a189cf71fdcec4f92",
+      "notices": [
+        "pillow"
+      ]
+    },
+    "Frameworks/PIL/_imagingft.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "adf769069b9c5686c36701b6fe03d526871c4b0d7a5b37ded852abfac9790011",
+      "notices": [
+        "pillow"
+      ]
+    },
+    "Frameworks/PIL/_imagingmath.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "10bc5caa23afa4d87c78cd9a69c00dbc68b715cecd9701dfaf49d064ea5a7c9a",
+      "notices": [
+        "pillow"
+      ]
+    },
+    "Frameworks/PIL/_imagingtk.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "7c3a78988c809ebda66f3b99c96347e68ab7a8a984fc350dc47ebb2c5f2a9000",
+      "notices": [
+        "pillow"
+      ]
+    },
+    "Frameworks/PIL/_webp.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "cbbea670d19984f1fe77c9078bb7d3b7fc9b8c59b44f1461743dba7d18997343",
+      "notices": [
+        "pillow"
+      ]
+    },
+    "Frameworks/Python.framework/Versions/3.14/Python": {
+      "kind": "native",
+      "sha256": "098da050f81dd1be88e97c3cec182f20d05074fa6f52fbe54dde2652ed05865f",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/Quartz/CoreGraphics/_callbacks.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "6b0db96c54bd799e4252cabeaba07e6d462062e7a638f315a65fdaeabd529ee1",
+      "notices": [
+        "pyobjc-framework-Quartz"
+      ]
+    },
+    "Frameworks/Quartz/CoreGraphics/_coregraphics.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "b693c6f6965284b9cc9aaa92826b87d95160b58cb8e56dec55c094c16a672704",
+      "notices": [
+        "pyobjc-framework-Quartz"
+      ]
+    },
+    "Frameworks/Quartz/CoreGraphics/_doubleindirect.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "7b106a1acd98d5b69f703e596538149592bf7277ab0765d735e6c746786b2e63",
+      "notices": [
+        "pyobjc-framework-Quartz"
+      ]
+    },
+    "Frameworks/Quartz/CoreGraphics/_inlines.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "69470433906f1403ad8b7caede6a1ebee36fdb577f0cad054ee82b902a08efd6",
+      "notices": [
+        "pyobjc-framework-Quartz"
+      ]
+    },
+    "Frameworks/Quartz/CoreGraphics/_sortandmap.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "ac02900f01af728d1595752a277d7e7e0a42ffe595c4b57a47dde26bd210ae43",
+      "notices": [
+        "pyobjc-framework-Quartz"
+      ]
+    },
+    "Frameworks/Quartz/CoreVideo/_CVPixelBuffer.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "bcfe295c10b79dbfe6c70e53e928d314ceef835b6a0e174d58b4de0d03e9e7e2",
+      "notices": [
+        "pyobjc-framework-Quartz"
+      ]
+    },
+    "Frameworks/Quartz/ImageKit/_imagekit.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "7fa0395a94ccbf27615d311ec36460147d6862bdc50adf8b92914a2eca5513ca",
+      "notices": [
+        "pyobjc-framework-Quartz"
+      ]
+    },
+    "Frameworks/Quartz/PDFKit/_PDFKit.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "2d9042fc4d00e746c66ba1a6d0a8e6f422c440d46640b1830c9d226b2c4dd2a3",
+      "notices": [
+        "pyobjc-framework-Quartz"
+      ]
+    },
+    "Frameworks/Quartz/QuartzCore/_quartzcore.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "ea401ca359f5cf64081cf0b8703e01e9e44ff413ddab9216436d0e74733009e2",
+      "notices": [
+        "pyobjc-framework-Quartz"
+      ]
+    },
+    "Frameworks/Quartz/QuickLookUI/_QuickLookUI.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "a50464e5277f0200536e67e6db93a55ae770661bb4e733dc96249bf229e24893",
+      "notices": [
+        "pyobjc-framework-Quartz"
+      ]
+    },
+    "Frameworks/Security/_Security.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "50be34911c8bf6023c39810f90cc2fb5e43c12aa7192e4c11806483e3fe8e3a6",
+      "notices": [
+        "pyobjc-framework-Security"
+      ]
+    },
+    "Frameworks/WebKit/_WebKit.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "fc2eb29337e661bd3e84c3fb90f74b2e46a26bc8d591a6a1086bd842038991ed",
+      "notices": [
+        "pyobjc-framework-WebKit"
+      ]
+    },
+    "Frameworks/aiohttp/_http_parser.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "c34c5a4251ece33cf3904c2bc65b1b78c59716dc328b616d8c6b6a269ce9aaae",
+      "notices": [
+        "aiohttp"
+      ]
+    },
+    "Frameworks/aiohttp/_http_writer.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "b3c3f6e3f7d1ee47ec5e670426449c8cca5b291c1e28de3daff4d96513e8d2bc",
+      "notices": [
+        "aiohttp"
+      ]
+    },
+    "Frameworks/aiohttp/_websocket/mask.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "fd7034ad136c06876b2946be69e819023d464b93af7989fd15f02617b2f61ddb",
+      "notices": [
+        "aiohttp"
+      ]
+    },
+    "Frameworks/aiohttp/_websocket/reader_c.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "bb5e6fe888cccc09ba430c43720526a6cb747968447fa4eeccff00ff72ee6254",
+      "notices": [
+        "aiohttp"
+      ]
+    },
+    "Frameworks/frozenlist/_frozenlist.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "2edb5b87a931d1ce8f4049a242e758fa967028c6e7d6abbf5d664f4260ea0dc8",
+      "notices": [
+        "frozenlist"
+      ]
+    },
+    "Frameworks/httptools/parser/parser.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "837c35e7bb6d79e79a73130fcda6971c6827a397e03c4a69f6d365d5493b17ad",
+      "notices": [
+        "httptools"
+      ]
+    },
+    "Frameworks/httptools/parser/url_parser.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "cfbc38b0c3263279e71371b3d3732def96f08859953d4ed7496d5c204f11b2c2",
+      "notices": [
+        "httptools"
+      ]
+    },
+    "Frameworks/libcrypto.3.dylib": {
+      "kind": "native",
+      "sha256": "4a5f474d5866674e0b95e71cdd2d5999e115806472f8994df2f856c1cd3d529d",
+      "notices": [
+        "OpenSSL 3.5.7"
+      ]
+    },
+    "Frameworks/libssl.3.dylib": {
+      "kind": "native",
+      "sha256": "0c2f57f66f23ba0cf393b803d00309dfd54742dbe8cab18e4d28742577546891",
+      "notices": [
+        "OpenSSL 3.5.7"
+      ]
+    },
+    "Frameworks/libzstd.1.dylib": {
+      "kind": "native",
+      "sha256": "0748665f1a1fe46e7eb062cef0095bc7a1ff1055bfbc38a0bbdfb82464893e2a",
+      "notices": [
+        "Zstandard native library"
+      ]
+    },
+    "Frameworks/markupsafe/_speedups.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "2592a67f8c76ad08a8cd6ab96b910a825b1ff97b43b9f68ea5e4c022be3ab389",
+      "notices": [
+        "MarkupSafe"
+      ]
+    },
+    "Frameworks/multidict/_multidict.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "469d746949d91807f4cb450aa2f4d1410e1af812313bafb9c75346012edd9fcc",
+      "notices": [
+        "multidict"
+      ]
+    },
+    "Frameworks/nh3/nh3.abi3.so": {
+      "kind": "native",
+      "sha256": "34a992f3049a980f01155dcded685e776b828bbc523dc6c71e19fed30b58b410",
+      "notices": [
+        "nh3",
+        "nh3 Rust dependency notices",
+        "Rust standard library notices"
+      ]
+    },
+    "Frameworks/objc/_machsignals.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "042dd05c257b1711d5a3b2f3cc84a28075df7728830d40e3180698c421c4a54d",
+      "notices": [
+        "pyobjc-core"
+      ]
+    },
+    "Frameworks/objc/_objc.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "46f92c2e0c034b8c32eb9d6a4f64b850074a98344d9e05a44c8d8146a07a1a23",
+      "notices": [
+        "pyobjc-core"
+      ]
+    },
+    "Frameworks/orjson/orjson.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "16db80f451ee1b0500eb775654176a23d694bafaed65617660f22d21f819703e",
+      "notices": [
+        "orjson",
+        "orjson Rust dependency notices",
+        "orjson vendored source notices",
+        "Rust standard library notices",
+        "orjson Rust runtime notices"
+      ]
+    },
+    "Frameworks/propcache/_helpers_c.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "0855ab219ad68f159a6ebaea820bc4877fbef72ae85d1443e5ee758b3d394ed4",
+      "notices": [
+        "propcache"
+      ]
+    },
+    "Frameworks/pydantic_core/_pydantic_core.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "203e697813f9af9c954a5eb61d0d2bff2dee4cb2e8db2085277b03debe6c1b7b",
+      "notices": [
+        "pydantic_core",
+        "pydantic_core Rust dependency notices",
+        "Rust standard library notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_asyncio.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "9c7db78dde2bf25948a9926efa3d13dbb5ec9198fbc75a23ebc500027359474d",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_bisect.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "f5c783b554cb04e8a0116adc658a0bd45cfd93cb302cc6c117735abd397715a7",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_blake2.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "044698e3a6f34d3bed4f73faab705ceefdf8173456d8dc6d0cdfc7d7b651411c",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_bz2.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "0dae62669105b9124c38c8e64916f05efa190869a14c7b89c36f0f8dc6f3330f",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_codecs_cn.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "8a0f49e1fe5a2f353dc10f2319172e45c9847204e71a8cb8dcc421a67c4f3195",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_codecs_hk.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "3d1cb7a2f8a7afeccfc54644f161efe63c37a975418ce9061b1d58fe173ca28f",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_codecs_iso2022.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "fddd040672aea8eb632ae9d218c7abdda0ad95fb80f243d4d7dabbc997d871b8",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_codecs_jp.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "5d2d11fe63e1d669ee445a116d2bc286beb84d032fd2bce4b3b6c55bd3da68fa",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_codecs_kr.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "ec446843cdd6132012c573eff7ac9aa510df2d9bbb3b27119236183f028da5df",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_codecs_tw.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "3dfcbfa8871ce76357cc946f5f60746d6f9c6f1062c909720789213e3b7a2a8e",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_csv.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "ea76d18922fbeb8fd5e7aac20d6628593bc33a95774061f8c01d6d3f7f8872e9",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_ctypes.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "723df4d585020e6a224223286e228e3b05b778eee38fe53fbf033320d3ceff57",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_decimal.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "a88599c41e063a1cf51665e85753b9ef372c8e747172869ee0cccb4283ebdcec",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_elementtree.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "39fa6dc71582790f80d4fc2f63de854f0179eb8dabd13ef4aec3c3ce2add9dfc",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_hashlib.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "51bf69772078221ae14cd33af574e0dcd932c1b7023e951b3600ccf673a06836",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_heapq.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "120810753bbbda3f04444e4b58786df073bff8a42748c0b082e981631a8900ca",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_hmac.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "21528a7a77d5c859b8e30567dc44ae4c5a193839ccdb9f242950cd6148bc8ccc",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_interpqueues.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "880fdd28cd0a60ad74ef03644980919aa5e22e0f7f7b298f2f2f59207a7e576b",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_interpreters.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "077b8a2091be50b4edb92b3a84bc7c2bd61d791f8d341dd401c7d66876e1eb8a",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_json.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "f299300e0989c5a07343f55585580b4ff14c7a0291b31da927345e827a68487f",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_lzma.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "b64290884c3b8dd87e3f81cd8b39f7f11c700775994e5631def5a227349d4c00",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_md5.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "227c7701ca03dac0196f2bf899ca7fee2fd1baa4b8441d92b03a66a98b9aaa37",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_multibytecodec.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "7f4c2b73df4712ae8b1aee4cfcf93345bbb5d3ea3b7ae914c49f7d200e958fa0",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_multiprocessing.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "605f0e17be7927521ad8ec6a4b708966f263516cbabce70414ca6efbb0ee1a44",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_pickle.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "c6067d6db8e9f118a72181533351dc90305fdb2a5db7071e1edcd9ca4e6e92a2",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_posixshmem.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "c8571fcb3c3944e7545746a6ea3c17a952e5a02dfcd22f5f20b3fc471b134edb",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_posixsubprocess.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "24607b86e4a6a7d81eb88654f54c01c6f187ae288769bb865c2df35ac4980947",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_queue.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "17d8fdacd4060ee2ff673e0c4ab43b4dfbd6c36c85c7253c60e64554a22da027",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_random.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "3afd7fe735b50cc6f6bbeea185ed9aae6f7da1edc189ea2c78362e95453b4361",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_scproxy.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "4d4c0aad594d399f0d87f99d09b210077bee57245fc20ef2954e04a36d48842f",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_sha1.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "8c3cd217b06900c83a55d15582fa95915143916c6cd877068c2c0186df10b7e0",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_sha2.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "bcb7e0af0077138e590f90ca4fe74ea6d825666c3b365488468d87aceeb2c6d4",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_sha3.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "751f247082fcd6dfefcc8624043aab889a4be2b04d33662d9b7ed6e41e79df67",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_socket.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "e9db507e341f89c8f236763e907a55c194e73181145ed82b504c70184365d49c",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_ssl.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "98f7152e1c5b2f1bf6f1d9485a4e4f4e10fe6899ccf356fac590a17427071e07",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_statistics.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "b7718c9cca37e0bd25d528c849a693520f4ec68906806ef9ba83e819595955b5",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_struct.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "58f71aa3ce53c20932308d571f22200f9236639b730d74662a3d0ad661d22de8",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_uuid.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "d080d124617301105871a3ed7cedc513be565ea63a938281156c368a0e251954",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_zoneinfo.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "4f283120826459f140430b3fec30daed6657452c23deec932a42daab593ba7e3",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/_zstd.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "1e8a259b1a338edd4ca879151bab5d14e9d151313bfbbdb906b2e926e12a7664",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/array.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "27e04fb1d30aae19a4e380cc1b70789c7bb9db26aca99c1683b5b497a48c0c02",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/binascii.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "f4f9d4efb2374a0e13a2ef7af7120e6d45e221c21ecf9a81753e58e862f04d5c",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/fcntl.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "4c52468bfd6e78d432cc3d901dafe6a4a439ec221154162e529c49f4d85145c8",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/grp.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "b24393952182c6f74bdce0a56de9534757276d3914791a09b8983fa67d0424b5",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/math.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "6b657b2e24bf27f6e237612416040784d13b3a5aa97c4ac9d292c2faeb0cc882",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/mmap.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "63f39d198d4723e854873adc0a48c857f33613b1aa4bce5de935e608a397e1c3",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/pyexpat.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "fc90e69fac90598935037540d79aabddbc9e08d954551f14e0343be648ea6155",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/readline.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "3ee6f40c86b3a307f87fb25ef4bd45315cc93a261fb087373048231783fd5650",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/resource.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "dd14d48f313aaf725c9d106f5118acc7cc87eb45b093650ef197cba0efa48dc1",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/select.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "9548bdc19fd3e3ce096cd97e3b4a903a9424b9775ca8b2108cbf92146ec983c9",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/syslog.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "d3a535ee821638f21556a4146800a3f2f305b3dcc3ed8b54567d582dd30c8223",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/termios.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "2b68364cd57a2f820271ec2dd38a7f204d25380c71f674cc330476eddfa14361",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/unicodedata.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "a1a73f99e4a80ee7b74d60f1c6448eb0cce6bf1a07436a08b2f561744dea0543",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/python3__dot__14/lib-dynload/zlib.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "9377adc25d76d39f9b6d7906b40ee6a5bc3e88f3e11b691b2aa2ae51de618bca",
+      "notices": [
+        "CPython runtime and included third-party notices"
+      ]
+    },
+    "Frameworks/sqlcipher3/_sqlite3.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "35ab53d4a975f425d016c0287cb35fc03fba2ee02608a91f02b1ccc0ea46eb34",
+      "notices": [
+        "sqlcipher3",
+        "SQLCipher Community Edition",
+        "OpenSSL 3.6.0"
+      ]
+    },
+    "Frameworks/uvloop/loop.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "eff368bb5f4d0d9993dabf3ed3220b4245494e3f52b40d9764c8e8242dfcc90c",
+      "notices": [
+        "uvloop",
+        "libuv in uvloop"
+      ]
+    },
+    "Frameworks/watchfiles/_rust_notify.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "c76e2e57d6245bf56b27984d17459a67b5e3f10d5f90cd0856fa6ed152ce9b7b",
+      "notices": [
+        "watchfiles",
+        "watchfiles Rust dependency notices",
+        "Rust standard library notices"
+      ]
+    },
+    "Frameworks/websockets/speedups.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "04e8456adb10c7816303bece72a9cdc8c21c83632b4ded05528c9b95a720d96f",
+      "notices": [
+        "websockets"
+      ]
+    },
+    "Frameworks/yaml/_yaml.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "7fd30b93be539b38ff273e62b157e0e573a77fa235799780f563c29adbd9aee8",
+      "notices": [
+        "PyYAML",
+        "LibYAML"
+      ]
+    },
+    "Frameworks/yarl/_quoting_c.cpython-314-darwin.so": {
+      "kind": "native",
+      "sha256": "a0eaae15111cbce60740e51c3c0fe22d467c22cc7c5839e75dd417de88a4a213",
+      "notices": [
+        "yarl"
+      ]
+    },
+    "MacOS/maeumnarae": {
+      "kind": "native",
+      "sha256": "1635b0c65f2bfd05c82c540654aae2b53c2f1ba1e597b978ce8028d167d09c47",
+      "notices": [
+        "pyinstaller"
+      ]
+    },
+    "Resources/nicegui/elements/aggrid/aggrid.js": {
+      "kind": "web",
+      "sha256": "6e7d8408d0e144693c35bb2ee0493262b3e782e29bb3cec371e8f5a9fa6e96fd",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web aggrid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/aggrid/dist/index.js": {
+      "kind": "web",
+      "sha256": "8b10236e360bdfe5daea998bcda1b5a0aafb1fd860a4150c85e68be4ae21ba9f",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web aggrid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/aggrid/package-lock.json": {
+      "kind": "web",
+      "sha256": "d1a7fa8ff6eccbc7766920288ac03d6c0dd65323b3174fdbf3a7886ec6ceff1f",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web aggrid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/aggrid/package.json": {
+      "kind": "web",
+      "sha256": "bc06a8f58bdc4d390d781371a369fac23e01ded104190474d7ae1d97bf8e0e0b",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web aggrid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/aggrid/rollup.config.mjs": {
+      "kind": "web",
+      "sha256": "b4992f0db18425d23c97035026c44d5085d27bd6aa91e4ee07460a18d13b5fc6",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web aggrid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/aggrid/src/index.mjs": {
+      "kind": "web",
+      "sha256": "6bf8241de5eb3a19c12470c4e9946a81cb773399c47844426b14e09986b9170c",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web aggrid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/anywidget/anywidget.js": {
+      "kind": "web",
+      "sha256": "05aa049b51ae87f0bdcd0ab101f80bae37a44f0bbf411ccd5ee28e3a6bfec6db",
+      "notices": [
+        "NiceGUI"
+      ]
+    },
+    "Resources/nicegui/elements/anywidget/lib/widget.js": {
+      "kind": "web",
+      "sha256": "f50e71de6d56fe038d26b6ecc010e23029dd76fbfb1ac421889c208e1c3ab460",
+      "notices": [
+        "NiceGUI",
+        "anywidget derived web helper"
+      ]
+    },
+    "Resources/nicegui/elements/audio.js": {
+      "kind": "web",
+      "sha256": "cb15d625e6618c6b88814bbec02ec7c77bf231c037ed11485298c65c776be4c7",
+      "notices": [
+        "NiceGUI"
+      ]
+    },
+    "Resources/nicegui/elements/code.js": {
+      "kind": "web",
+      "sha256": "629f610bdf6371599b6a91730e7301084b7b6a1ff6316124327ffc9526d2e440",
+      "notices": [
+        "NiceGUI"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/codemirror.js": {
+      "kind": "web",
+      "sha256": "032c267444e010ff77c6f8b224971eba430e4f68d87d0eb51b27b1c02c366e2e",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/apl-CXdQSnD-.js": {
+      "kind": "web",
+      "sha256": "5eeab5f6a677d9df2123cfb6cfab664b58406926cb805987a5e009ec9bc19d4f",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/asciiarmor-D5V0T9Cu.js": {
+      "kind": "web",
+      "sha256": "6a91e594db6fd583aa14623c6aed2c49ceaf7bfe9eebfa8c08c2c21bb10994ca",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/asn1-DWPaVWf6.js": {
+      "kind": "web",
+      "sha256": "c6e82e403089b7059bdeb51a17bf93ac9ef6480567116bcc00404c7720133464",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/asterisk-B46aRdXb.js": {
+      "kind": "web",
+      "sha256": "074285222d996251221dc4c59ce97004870240cd5d2eb2382de934dd18f848dc",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/brainfuck-CtZaYBKt.js": {
+      "kind": "web",
+      "sha256": "81d47964892eb8a8639e1bf23381a9ea798daf9f7d3f0c935b6c4b1b74a68d40",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/clike-hUAFEsGo.js": {
+      "kind": "web",
+      "sha256": "36d1011496e90cd47626acc3689e1ffd27a3cb2f3c53233e1a7d5fcb4fe88e56",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/clojure-DiuoqK-z.js": {
+      "kind": "web",
+      "sha256": "f07b11a9dc4e2be9d89f8bc59d67d8b49a05b2139aca260d59bf4547f70da442",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/cmake-DXn5xaP-.js": {
+      "kind": "web",
+      "sha256": "38fc09754e84b676027d2b03a4e11397d8f4f588526590fa75efb26199eebaf8",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/cobol-stawOqaz.js": {
+      "kind": "web",
+      "sha256": "3a20a97b735d83e232f295c6d1c1c62fdc181b1f110a0bf8dc15470ba8079908",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/coffeescript-BTDxI-eT.js": {
+      "kind": "web",
+      "sha256": "08dd5b7ea55c5df96d3f25f4dcce3991bcfc062772e133a9e072b766b25a54e4",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/commonlisp-vq6DHwts.js": {
+      "kind": "web",
+      "sha256": "b60a7015b477448bbc2ff7b17cc45452b9b6e0e383ff79dff3e0687794b2bd14",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/crystal-CRzZ78HM.js": {
+      "kind": "web",
+      "sha256": "a851d090080a068881226cc8788b2e01ba02bd1cc6459c67b714d723f03e4f56",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/css-C4GSMmGA.js": {
+      "kind": "web",
+      "sha256": "910d13747165a4850c5ca01841ae33f6893d61a2d4c58639777cc2f03f8a12ef",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/cypher-gJDei3ni.js": {
+      "kind": "web",
+      "sha256": "3cc0f849ab28991f95e3e23fd31a8269cdac7ce22e4359fed7159f2185e5bb6f",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/d-BShv7fp-.js": {
+      "kind": "web",
+      "sha256": "00fcb97a1b2070e88249935e4abecfe9f487f2b8ba9924a1428b7345a36dc992",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/diff-UJJ5BM9S.js": {
+      "kind": "web",
+      "sha256": "cd9b2f76071d746eaacd5e108ca5f73a5b8521eba6c203f69b609a54076cba50",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/dockerfile-knGOOxt4.js": {
+      "kind": "web",
+      "sha256": "706bd26b2c06b0e5751ae974d006459450b0b933a801d9f4a9df303c24b76c99",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/dtd-DI9Herc-.js": {
+      "kind": "web",
+      "sha256": "d5e0638779a7ecbabfe3c266bfbebf2aa13ed70276a1b3e4b37ab3a37193bf81",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/dylan-DkEP81N9.js": {
+      "kind": "web",
+      "sha256": "e625065c23796d08255405d7bc2a5c794ab5f2fc2657e66590c3b50b1968d9b2",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/ebnf-B-Df8AvO.js": {
+      "kind": "web",
+      "sha256": "19fdd1a25bf397c73ab8a7a08460f11409cb777e71d6cf7764041066eafc09aa",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/ecl-DPFc0Uaf.js": {
+      "kind": "web",
+      "sha256": "6b2888a208a47a20466d5c9242b6b9de8f69a89c800f263e3b83c4c05ea67bc7",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/eiffel-DR5c0IrL.js": {
+      "kind": "web",
+      "sha256": "47d2581adb14de8448f54a6d10d16d2679f0066b5846905e86bc6942c2f99efa",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/elm-DompmV0j.js": {
+      "kind": "web",
+      "sha256": "d9a4b5fd68189825d6b20dddfd45f2d1ca201195892cbbb9e6184c106296ecab",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/erlang-BuqgqA5h.js": {
+      "kind": "web",
+      "sha256": "f37254ba90647b2f1a38c51de05f12df5aa8070c149d191fb43a7166e378c4ed",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/factor-CFXhaUWb.js": {
+      "kind": "web",
+      "sha256": "fdeda6c4421af89617ab4f1200febc56a85dc9318aa11558f7db9c00554df0cb",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/fcl-CVaBTCzQ.js": {
+      "kind": "web",
+      "sha256": "715223ae31bb1d154f898160a6fac9f81160524c8d0bfb925fc9b31b00e27219",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/forth-POgR1ypr.js": {
+      "kind": "web",
+      "sha256": "2ab4f8d9bf4ab55a4798967f639bd97cccb458f96eead827abc17eac540cc6c0",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/fortran-DL7KluxX.js": {
+      "kind": "web",
+      "sha256": "29775fcf5474c1fbb0c3f1717c6ceb6ab9c5a6afddd9cfd66c4758f99e0f2ce2",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/gas-8mz5Q3qN.js": {
+      "kind": "web",
+      "sha256": "ecaf1d930afb890b1162c3b8ddd2338453b661bf693e9b31a6363e5c38aecc9b",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/gherkin-B6X1vGSW.js": {
+      "kind": "web",
+      "sha256": "d7636a366ab1a6e988e08b4c025722ef5852445018f37e8b50c3674a1a0dc533",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/groovy-DnIzCrpZ.js": {
+      "kind": "web",
+      "sha256": "dc07af620ac66f1406fdceacfc579abc9293fbf583c3090a05e8fca7817682d2",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/haskell-CLQs6EAM.js": {
+      "kind": "web",
+      "sha256": "6f5725ef7fee7882891bb31d728a4b2861110045030ab60fc56efeca6475562a",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/haxe-D25e-2l-.js": {
+      "kind": "web",
+      "sha256": "900350b306e4940f0816190cafc1892465b159993d99749c097c7459b968e0a8",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/http-BKJkqRj4.js": {
+      "kind": "web",
+      "sha256": "dd5f6dda71ada8c769ab4592a1c43c4d67e043a2af9637787b9adab22ddfd614",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/idl-pcmmZuaN.js": {
+      "kind": "web",
+      "sha256": "c4681e8240d157c03be9aa6f4e0c3cf573da917e4f88a7e2bb0c85ef11273150",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/index--qNV_jaW.js": {
+      "kind": "web",
+      "sha256": "f02e2cb93c5a91219e7d3196b6bdc9cfe0f29773ba3200f9d91fafac24e7278c",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/index-BJQGrxIa.js": {
+      "kind": "web",
+      "sha256": "1683ecabf91fdc9143306771f822b15548413baa3dbbb0b48ba479b525e6d937",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/index-BhrTTQgH.js": {
+      "kind": "web",
+      "sha256": "f315f3b49e238866c467d65eb4862a0c65f1c46a9d84e9d659956c1f895f0c41",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/index-BokK7WhV.js": {
+      "kind": "web",
+      "sha256": "0bf13f621b66f3c64638305b329a719a974860cfc51c9d4fb9a94b8341aaead9",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/index-BtSOn-Ix.js": {
+      "kind": "web",
+      "sha256": "91f852c9b40606f407a5e9edcda8b2d04d23b81b7b6be04901b15abdf570d56b",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/index-C4qtQbT_.js": {
+      "kind": "web",
+      "sha256": "f8ad7e1abe359b11665b7f5d565ff184b26f1613e34bd413e2cb33669ff4220b",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/index-C7DC-kta.js": {
+      "kind": "web",
+      "sha256": "377eb3872b46e75415a604de2ecc6e49735d6377f73c6fad05c76688e5d4ee33",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/index-C83tnP_C.js": {
+      "kind": "web",
+      "sha256": "f0968a6f13b4d5f36e98848fbe43cb8436a6c78c74d8a492a0f6b7cd6af799c4",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/index-CGEMhyvn.js": {
+      "kind": "web",
+      "sha256": "3ae06dc5b584a56b093fa5301cce084d9adb958c8139ea353c5aadcf15d3f7f5",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/index-CYFbjDeY.js": {
+      "kind": "web",
+      "sha256": "cf0c05f5148351719b909b02da47845666875c02c18c896cabbc0e2d5f2d7698",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/index-CZISjXTm.js": {
+      "kind": "web",
+      "sha256": "adfe4175a7b93b8698d4919a93df4a56e20d4a11837b69ebc632526ffc80ea7b",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/index-CbZUruS2.js": {
+      "kind": "web",
+      "sha256": "e0a4ce74a3b36a80bdcf75cb82bb0df8edea0cd8a0d98bdd177262cdc85c3c55",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/index-CxWTS6xA.js": {
+      "kind": "web",
+      "sha256": "aaab26bdb0204675bc73747732f1318dbd5ce73ab11c58835d9e08d077a97970",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/index-D1B5tykE.js": {
+      "kind": "web",
+      "sha256": "2aa55204e26ca5b7a1efc777c8ad9106386fbf797944fd96648e51367d860a56",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/index-DLeGQxSn.js": {
+      "kind": "web",
+      "sha256": "2792351cc39390294ec61388a33b2183fed2e9d6f7528d42faeb9efb0831aa62",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/index-DNBTB2TY.js": {
+      "kind": "web",
+      "sha256": "d1a7f694398ba4ef9737f67aa803ca5ea76a9256d517ab4dc264b0b9d7d53e72",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/index-DdDeLsjr.js": {
+      "kind": "web",
+      "sha256": "c0cb9da6ddf3abe658b6f689d7be05490b9a848fad5cff62d6d0d257b26f4452",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/index-DoamnB4e.js": {
+      "kind": "web",
+      "sha256": "b76abfabedc8bf2d6641ed088bb277df19eedfeb1114d813cfdae284d8290cb4",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/index-DxYzuUsy.js": {
+      "kind": "web",
+      "sha256": "f8cba009cd197df5cd92d96dae24563e91bd78e0d20f1953db2d03b27a9bda93",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/index-Nq7t1WDl.js": {
+      "kind": "web",
+      "sha256": "baf232edaa1f47c035bb973ac105cd50a6764d00e42f3c13d88d1a3a8adb8d5f",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/index-ciMdZ5pn.js": {
+      "kind": "web",
+      "sha256": "efe9aa853ac3846e6cd6884747bf8615e40b3e6e415bb14f77a087f4e327f4a2",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/index-fNO8kRX1.js": {
+      "kind": "web",
+      "sha256": "dcdb346fc94247b1f387e221d2b758a70d4ddb21f90a9a4287f54fbf5f344058",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/index.js": {
+      "kind": "web",
+      "sha256": "c3f2db6a528ea15847f54487e423b7ecf369cfc092e6911265ae9201c828a3ba",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/javascript-BVaBnk3P.js": {
+      "kind": "web",
+      "sha256": "26601853b9f44048c2629044e76fde9e99dac03e5c0d97d48a4d19d32d433096",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/jinja2-DhgKlfW7.js": {
+      "kind": "web",
+      "sha256": "d753994011bc9459b7e66b6a01ca7d5f23255c3c53014a49d89b5cfae60d327f",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/julia-DjdwvFuI.js": {
+      "kind": "web",
+      "sha256": "4a457eb4157b4a4b1ca80be8524691727d805380636b7bde24209eb00bce291a",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/livescript-HO6ttBFx.js": {
+      "kind": "web",
+      "sha256": "59727ef1b28ce662e9d5d6e683f613b29b52fcebd5d3a72cbce8bba63a60dab7",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/lua-8DXOpKDz.js": {
+      "kind": "web",
+      "sha256": "e46fc939b3a317c3102a08e3f04f45b69e44f8704d7a50ac837675c274d261df",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/mathematica-IIbmv7SK.js": {
+      "kind": "web",
+      "sha256": "71dbe5fef072373f3009d588b937f86c39ffed963562c41f4f36558d643d353e",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/mbox-z_N2Mo3d.js": {
+      "kind": "web",
+      "sha256": "be3b0db35fe48953657b773d918210bc3ba1bb2e2922efddc5fb90d40e0dc443",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/mirc-DkvFAiy5.js": {
+      "kind": "web",
+      "sha256": "9117cb41099859ce14e631c037a24252428a99ffb44e6434212f71c3a2a38992",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/mllike-3c2dg9RT.js": {
+      "kind": "web",
+      "sha256": "d60b813d7002e276bc6cb5d223eb094ca6e01ed43b9667432515cefded168c28",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/modelica-DSrSSXCg.js": {
+      "kind": "web",
+      "sha256": "7d14010c215aada2600388e802ea515833538c5d93ea7656d27b430dcbc038f1",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/mscgen-B2igx18G.js": {
+      "kind": "web",
+      "sha256": "f43ccc4cb37f8803aa3c8247eefe77d0f2082f07afd77a722dfe22e0bd53bd15",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/mumps-zvxmGV4l.js": {
+      "kind": "web",
+      "sha256": "65b283b854a73cc6060d8f2bd09b4af0359a8164cd00cfd57f675180178455f4",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/nginx-B4hAVlXN.js": {
+      "kind": "web",
+      "sha256": "cc6cecb8ef2b8be7e88c4a4bdadcfa45c9d552f6124fc4f41815247d6f3b8388",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/nsis-BvKfQ9lQ.js": {
+      "kind": "web",
+      "sha256": "488d98b910c91887dda4e155a5b0b684193475ca37fbfa92a86ee839263b1f69",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/ntriples-BSwWqoLa.js": {
+      "kind": "web",
+      "sha256": "ea82934eeabd51beb4b0486eafaac1e1eda2d5b26ad884ff501a3220bc7c882d",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/octave-C4hdQ5Hf.js": {
+      "kind": "web",
+      "sha256": "61e91438fc593fa6a91dd91d3ac35c3bfa3fd4253710b6d216d4355ad36126e0",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/oz-qQq7irPq.js": {
+      "kind": "web",
+      "sha256": "114a620bc7028fa5b56cf44e33a741b18d773ceb44b450de654f201f7319707e",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/pascal-CafrKXZF.js": {
+      "kind": "web",
+      "sha256": "a107eb97287f97f4bdc56c91b68a61bdbb5a7402f13c0802076a18df88c83e87",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/perl-tdMlh9QA.js": {
+      "kind": "web",
+      "sha256": "cf4a93bb0202647f0b5026f9dea3c92c81341afdea45ebb9dfcff4f4afffb1b0",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/pig-CwGJVRC4.js": {
+      "kind": "web",
+      "sha256": "1b754ab7656716a02c1aeb848042060fbbf8ed435ec181a2b547881eeaf3de0d",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/powershell-D1ly3AHC.js": {
+      "kind": "web",
+      "sha256": "93d43125ac48066c35aa864aa9c1c9b7e315d7dc959f3a2373253e7d97edd362",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/properties-_nPj978X.js": {
+      "kind": "web",
+      "sha256": "8ec1ed6f3d0a05d40295dbaad1178f72b243f3a60a0bba9055aa9a478bf487ae",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/protobuf-B4y9do6W.js": {
+      "kind": "web",
+      "sha256": "f40e58207df5fb491a78fa20d31fdfbc28d55e28dc5ac065027d44bbc13e83f4",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/pug-Dlfivyh-.js": {
+      "kind": "web",
+      "sha256": "ce25fea96e8f47e7d07e9441847447613eaf88135007470f50e8d67319e0a4b1",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/puppet-Bc-yJKzi.js": {
+      "kind": "web",
+      "sha256": "542f44990d10729bd31ec175237a550ba46e2b4941dd02b4e3493c69ac3f159f",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/python-On6Xi21R.js": {
+      "kind": "web",
+      "sha256": "cdac07a15021248f933ad99e1456549a56bc22ee1f6ddfee7de0379345c1fe03",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/q-B0kTJ4cI.js": {
+      "kind": "web",
+      "sha256": "ecd640ba1cc4801e623c1f36470fb127bf48088d8fc3fa60d91e086bf38f865e",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/r-BA4EbLKE.js": {
+      "kind": "web",
+      "sha256": "665b504df3cf9cf3f576cf23074e7e4d4a6966a4d79832ea3111dfb554215845",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/rpm-DI_rRufH.js": {
+      "kind": "web",
+      "sha256": "12a0304cb794cfc7a2d9aef68811740f8d5823c92a55799f17595ae9a1088c7e",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/ruby-CR-u2WLS.js": {
+      "kind": "web",
+      "sha256": "54868ecde96822cfd25010f54152f1f51483cb72100326646c1b9431b11348f7",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/sas-Bqaci40L.js": {
+      "kind": "web",
+      "sha256": "a9a33b245ce45047942e7985361725624768eaf87024e9487b03d77d28d24219",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/scheme-qjP0V5Ag.js": {
+      "kind": "web",
+      "sha256": "ba1da3ac4c029e5d32e4213fec259490106af2f592141e6c2bbf136cc92d0718",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/shell-BLav31RL.js": {
+      "kind": "web",
+      "sha256": "8a5302b778ad608edab4484c93477b8d8b8b246a9d6dfb52cece958fb80291a0",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/sieve-r025o_jW.js": {
+      "kind": "web",
+      "sha256": "396d51be28a96e9172d00cb1be0da0b90b7438bff548acebd6a8d7bcd8e51249",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/simple-mode-C3vEBAcb.js": {
+      "kind": "web",
+      "sha256": "28339137f4ed3cfc83e6ff1cf63d8a4dada03824551e31600288001f4841955a",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/smalltalk-C7J3IyEP.js": {
+      "kind": "web",
+      "sha256": "0c77d3eeba1ee8af797725e03fe98cffa935601f45fcf83078fddc14dfda58eb",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/solr-78MBEUkU.js": {
+      "kind": "web",
+      "sha256": "318df19efd03fbc17ac35684b0954db84e98df5603a044e85e87d79610f1fbd2",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/sparql-BRLJFz69.js": {
+      "kind": "web",
+      "sha256": "4c3d46aa9ff550706972789f0beadeedf2c811045b768007e2cdc97fc56da92d",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/spreadsheet-CGlWr0eM.js": {
+      "kind": "web",
+      "sha256": "3c0e571524d20c77a3b500ef4993e22ecb8615b442d09bbac563b8fd27ad61f2",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/sql-ByLYq2fX.js": {
+      "kind": "web",
+      "sha256": "130a68e713a990631501ef05bb04a8e9ac152700c2e73e86004a485dd819511d",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/stex-BuioYw3P.js": {
+      "kind": "web",
+      "sha256": "d15b0885d6b9d392e1e7ff9e62889f3936f49f3e1188b7910464e48bc4c9514d",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/stylus-Bdo_Aemu.js": {
+      "kind": "web",
+      "sha256": "1549e62a70d2073b5ec6932c4c0ca399f99a7c7c2c542629857291f4a37325cc",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/swift-B_XXVlXX.js": {
+      "kind": "web",
+      "sha256": "24f3b165d440f59edb5a14e973acbe0553002b85cdbb1de4277c1bd7df8f7050",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/tcl-B2fODqDH.js": {
+      "kind": "web",
+      "sha256": "a74d042c35f4c2d2312c6703b2d0d22ff042ec4760fbcf6c700ef33f286d4f23",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/textile-BuVhTOzU.js": {
+      "kind": "web",
+      "sha256": "a31849c11a67e50f079f5e35fa87e800321cb7597539ae69517d506f6129c475",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/tiddlywiki-BgR6AEZu.js": {
+      "kind": "web",
+      "sha256": "ed220d0016899dc102f8595763205a3c1265d44ff46fa655fa1bb317152bf31c",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/tiki-CI-ztowC.js": {
+      "kind": "web",
+      "sha256": "da4a5956911f866b123ca208b2655826f9c6e87c5ea31d8531389abe96054570",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/toml-wcPdHu67.js": {
+      "kind": "web",
+      "sha256": "91e886cc97c1ccfc3fd12c20aa5e6f67a247f3cc764f5331806a88c702d962d1",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/troff-Ce85hlLp.js": {
+      "kind": "web",
+      "sha256": "c25fd2c9cebcf26780590604d83cbbe6f4e8b5726a8d0acbd6579bf644ff6de1",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/ttcn-BxnYHtq8.js": {
+      "kind": "web",
+      "sha256": "ef9a0df950e0375f2e41e037eedae71fc30f7653859cb42251d31246364cef45",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/ttcn-cfg-CKJxb-l2.js": {
+      "kind": "web",
+      "sha256": "e79e68e21df54c6fa443d36ee411e30de594f6048ec189082c148ea9dcb7f90e",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/turtle-BkSuIpt-.js": {
+      "kind": "web",
+      "sha256": "b81de86a8fcd09d7ec0b903d20ed3757a68e250200cce09cdba4fe2a52c80b4c",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/vb-BHgjm0DN.js": {
+      "kind": "web",
+      "sha256": "64d816c0bae4ddede833855fe81cbd5d550943ce3e0024a933fab113cae7227f",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/vbscript-VzWlGt02.js": {
+      "kind": "web",
+      "sha256": "6cbd0f62c6f2cbf594d9fa21ac5213fdbe2ced87986215335859a76982c146e4",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/velocity-BdD_26Jv.js": {
+      "kind": "web",
+      "sha256": "385ed4ae9cafe43d941fd74ad27608be3e840b504512854b20fb284d48475e55",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/verilog-C8nH2N0M.js": {
+      "kind": "web",
+      "sha256": "01f17d2cf8be45235683f10ac0c10e8a540cdcc7e9f2dc940cca0de8a498e383",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/vhdl-CWWH2SUo.js": {
+      "kind": "web",
+      "sha256": "700c8cd8277cae830c8ca7b323306ebdc722cd09ff206aa6a46a97569f08b7b2",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/webidl-CGwyPRYs.js": {
+      "kind": "web",
+      "sha256": "b58ca82a1f5364e26c2e25319b468f7d580fca7dfdcb32664f8d895312e65103",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/xquery-CVDBqZPY.js": {
+      "kind": "web",
+      "sha256": "0b3267f6a8421d2c28580d300c3dde227c683d01bd375831cd9d5066365e1c5a",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/yacas-I8QjZlxf.js": {
+      "kind": "web",
+      "sha256": "60bb6327d1bf27d10bb7c4233112dbe7f5fb64dedc98609d8704cb3708f8ade6",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/dist/z80-DMVFMNEx.js": {
+      "kind": "web",
+      "sha256": "6ac1b9f06cbed8358d758c74a51b88e449125678d826b3f247d358d442b9f24e",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/package-lock.json": {
+      "kind": "web",
+      "sha256": "c20359a63036c9660e70293d47732fb95f9431f01b6443b028113aaa4fde4630",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/package.json": {
+      "kind": "web",
+      "sha256": "cb0e3ea36b2b7985643d83eb92524d094249872601a9a7ef514ec45a4cddc02b",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/rollup.config.mjs": {
+      "kind": "web",
+      "sha256": "b4992f0db18425d23c97035026c44d5085d27bd6aa91e4ee07460a18d13b5fc6",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/codemirror/src/index.mjs": {
+      "kind": "web",
+      "sha256": "07108447e8b00e86041e0c259b3bee2107c6d2756d7df16071af5831551a4dc7",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web codemirror",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/colors.js": {
+      "kind": "web",
+      "sha256": "aed7b5f8dc7a66184ba38008c366f6f135f874122dcd17997065c16663c22ee3",
+      "notices": [
+        "NiceGUI"
+      ]
+    },
+    "Resources/nicegui/elements/dark_mode.js": {
+      "kind": "web",
+      "sha256": "f21a888bf79d80a04bded5746955a52f318811a111da5609b6942c87618cd0e9",
+      "notices": [
+        "NiceGUI"
+      ]
+    },
+    "Resources/nicegui/elements/dialog.js": {
+      "kind": "web",
+      "sha256": "5e564296bc1a51b10c34996fb592137e58620f7d248514b72b6479f313201a99",
+      "notices": [
+        "NiceGUI"
+      ]
+    },
+    "Resources/nicegui/elements/echart/dist/index-DlVyZyb_.js": {
+      "kind": "web",
+      "sha256": "a67fedec464a22765df705cc09ee7fe16268e32535fbc74dcb5c74c52a02b01d",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web echart",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/echart/dist/index-Drh96HPB.js": {
+      "kind": "web",
+      "sha256": "18e2801eca18dff44afb47d1a479e5c942f7821a4b7936fcb25f563e438f534e",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web echart",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/echart/dist/index.js": {
+      "kind": "web",
+      "sha256": "1d2ba6aca0b953103efb38e40ce29fc0fb71f3b04d94de0f0133c166197b789e",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web echart",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/echart/echart.js": {
+      "kind": "web",
+      "sha256": "cf26cab5604c34a709f4556e95a972572da9cdddd92fbb26be955f290503a3c3",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web echart",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/echart/package-lock.json": {
+      "kind": "web",
+      "sha256": "2879f01b7c8e0acc97e13b56533b7e25ded30ced742867127591d40fde54e6fe",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web echart",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/echart/package.json": {
+      "kind": "web",
+      "sha256": "8592e2b01687b65c80be525e607416ce45f62ef80dcbd1871c26d8ee8a22d0ee",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web echart",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/echart/src/index.mjs": {
+      "kind": "web",
+      "sha256": "03bd8b71ca5e2b9194ea3cfdbea69967e5ebe5e4cace035ad01392cf719569bc",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web echart",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/echart/vite.config.js": {
+      "kind": "web",
+      "sha256": "6284bcd7198025acd093c6e87e76668c3284eefbec7693369eb01d4737f32b6f",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web echart",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/editor.js": {
+      "kind": "web",
+      "sha256": "961e30a28a911b854bc8698c38bbd0bb5aa00f7d162ffdc4946bad6a5b6ad953",
+      "notices": [
+        "NiceGUI"
+      ]
+    },
+    "Resources/nicegui/elements/expansion.js": {
+      "kind": "web",
+      "sha256": "febe2a400327f1f376ef8f2167f6052b4ac44e0d6421a9434e8f1fa2f93bca04",
+      "notices": [
+        "NiceGUI"
+      ]
+    },
+    "Resources/nicegui/elements/fullscreen.js": {
+      "kind": "web",
+      "sha256": "776b551d0257dbcb382ee672225109e52344afd8f8dcf51c4e43a3caf634501c",
+      "notices": [
+        "NiceGUI"
+      ]
+    },
+    "Resources/nicegui/elements/header.js": {
+      "kind": "web",
+      "sha256": "4010dcb4a250f39dbe3a8792898d7bcedb6616cfb7e960e28bf74e16e07c4582",
+      "notices": [
+        "NiceGUI"
+      ]
+    },
+    "Resources/nicegui/elements/html.js": {
+      "kind": "web",
+      "sha256": "95307b0c3c5b8574c32fdcf24a76a6f95595d3fb707ec88bc12f8ce1cc5b09a5",
+      "notices": [
+        "NiceGUI"
+      ]
+    },
+    "Resources/nicegui/elements/image.js": {
+      "kind": "web",
+      "sha256": "437adc676392d160fe28b9c7834cefdef1f29a781788227101abf8ae070293ce",
+      "notices": [
+        "NiceGUI"
+      ]
+    },
+    "Resources/nicegui/elements/input.js": {
+      "kind": "web",
+      "sha256": "a1826dfcb3b6f9f3f59dcbe63146ca07e4788af95270aae21b2f333a7fa69533",
+      "notices": [
+        "NiceGUI"
+      ]
+    },
+    "Resources/nicegui/elements/interactive_image.js": {
+      "kind": "web",
+      "sha256": "7b084b6c025652778a5597abca75942faa7a85c092b3cb6671f5b161396d43bc",
+      "notices": [
+        "NiceGUI"
+      ]
+    },
+    "Resources/nicegui/elements/joystick/dist/index.js": {
+      "kind": "web",
+      "sha256": "3a72834fb39dfd6b685453f5cdec55bf4277518813ae917a4ce986301c8e2b6a",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web joystick",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/joystick/joystick.js": {
+      "kind": "web",
+      "sha256": "525f49dcf164d05d267919ecf8e4e81408185e7db44ab9378a1ac7b14d0961ec",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web joystick",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/joystick/package-lock.json": {
+      "kind": "web",
+      "sha256": "eaa0e9f4d6c5389c521f09ededca41c491b91132ef9c5bd05f304c0935ea572f",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web joystick",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/joystick/package.json": {
+      "kind": "web",
+      "sha256": "efa04f0d927edec0af4f31f0f4280b7f8cbe1e4ad436f3835a3c961bdd962fb6",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web joystick",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/joystick/rollup.config.mjs": {
+      "kind": "web",
+      "sha256": "b4992f0db18425d23c97035026c44d5085d27bd6aa91e4ee07460a18d13b5fc6",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web joystick",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/joystick/src/index.mjs": {
+      "kind": "web",
+      "sha256": "631d7d1aac33ace9628a9e37a153aed9eb6d3eaacd6b10e38f89cd338eed10e2",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web joystick",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/json_editor/dist/index.js": {
+      "kind": "web",
+      "sha256": "4daa4ff2fa89130041fe289cbfec16856131ee30752e873730f72a80c734e598",
+      "notices": [
+        "NiceGUI"
+      ]
+    },
+    "Resources/nicegui/elements/json_editor/dist/vanilla-picker-Fa_qlZG-.js": {
+      "kind": "web",
+      "sha256": "e83da9b4eeceeb195647f01b6cf74d56d6af4353ab33f3e8e6393484b3eb3ade",
+      "notices": [
+        "NiceGUI"
+      ]
+    },
+    "Resources/nicegui/elements/json_editor/json_editor.js": {
+      "kind": "web",
+      "sha256": "1a84f0cd61fb4e4d243b034f7c1dbcb369cb91a64dcf5606c1db3428a685f90f",
+      "notices": [
+        "NiceGUI"
+      ]
+    },
+    "Resources/nicegui/elements/json_editor/package-lock.json": {
+      "kind": "web",
+      "sha256": "f8ab83712dd59b1f2606d470eee65c0c56f3f9992ed9a91bf21ad06be25c2003",
+      "notices": [
+        "NiceGUI"
+      ]
+    },
+    "Resources/nicegui/elements/json_editor/package.json": {
+      "kind": "web",
+      "sha256": "00fd8e06afb11e55113716ff69595c17d4d21e49f9d88ced21b700437433ffbb",
+      "notices": [
+        "NiceGUI"
+      ]
+    },
+    "Resources/nicegui/elements/json_editor/rollup.config.mjs": {
+      "kind": "web",
+      "sha256": "c07e68affb2cbd0a0f97dc8268d5f27e3202068a18d9bb2fefa220351841b3b5",
+      "notices": [
+        "NiceGUI"
+      ]
+    },
+    "Resources/nicegui/elements/json_editor/src/index.mjs": {
+      "kind": "web",
+      "sha256": "f2773fd71f4162ffbaf8726e72349d991726df04eb44ac64e397182c63997313",
+      "notices": [
+        "NiceGUI"
+      ]
+    },
+    "Resources/nicegui/elements/keep_alive_anchor.js": {
+      "kind": "web",
+      "sha256": "21e48ff8e732a240225cf2451185bac0f99ecaa3b5d0994dbc1b808a8574de36",
+      "notices": [
+        "NiceGUI"
+      ]
+    },
+    "Resources/nicegui/elements/keep_alive_host.js": {
+      "kind": "web",
+      "sha256": "dcaca7edca367dff0dd48f3c5e50359c5eff686dd422dfb4e5c1a4bbbdb2bcf5",
+      "notices": [
+        "NiceGUI"
+      ]
+    },
+    "Resources/nicegui/elements/keyboard.js": {
+      "kind": "web",
+      "sha256": "5d07d7ca323303c6ccfa6c638978e021029c67982de2c7e69b0cf1e7c11da287",
+      "notices": [
+        "NiceGUI"
+      ]
+    },
+    "Resources/nicegui/elements/leaflet/dist/index.js": {
+      "kind": "web",
+      "sha256": "08b74b8e64695116081bf3af47e8c3a794e34ec302f78e788d178e7fe18a3023",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web leaflet",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/leaflet/dist/leaflet-draw/images/layers-2x.png": {
+      "kind": "web",
+      "sha256": "066daca850d8ffbef007af00b06eac0015728dee279c51f3cb6c716df7c42edf",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web leaflet",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/leaflet/dist/leaflet-draw/images/layers.png": {
+      "kind": "web",
+      "sha256": "1dbbe9d028e292f36fcba8f8b3a28d5e8932754fc2215b9ac69e4cdecf5107c6",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web leaflet",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/leaflet/dist/leaflet-draw/images/marker-icon-2x.png": {
+      "kind": "web",
+      "sha256": "2d77a2e4c2f08bbac41808324ef946b9a2fe61b6150480d011b72b379c3b238d",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web leaflet",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/leaflet/dist/leaflet-draw/images/marker-icon.png": {
+      "kind": "web",
+      "sha256": "574c3a5cca85f4114085b6841596d62f00d7c892c7b03f28cbfa301deb1dc437",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web leaflet",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/leaflet/dist/leaflet-draw/images/marker-shadow.png": {
+      "kind": "web",
+      "sha256": "264f5c640339f042dd729062cfc04c17f8ea0f29882b538e3848ed8f10edb4da",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web leaflet",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/leaflet/dist/leaflet-draw/images/spritesheet-2x.png": {
+      "kind": "web",
+      "sha256": "fa2c95e0610f3787c879645e42b86ad010c305f8312e116841730d00d4ab72b7",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web leaflet",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/leaflet/dist/leaflet-draw/images/spritesheet.png": {
+      "kind": "web",
+      "sha256": "a8978a1d3d21d8ee6f16cce342ff67fc47c4241f52161f05baf88f15e1058199",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web leaflet",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/leaflet/dist/leaflet-draw/images/spritesheet.svg": {
+      "kind": "web",
+      "sha256": "7077bae968047180921324df351d95fe2f021cdaefa01e20645162402f767da4",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web leaflet",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/leaflet/dist/leaflet-draw/leaflet.draw.css": {
+      "kind": "web",
+      "sha256": "1075b3357f95ce2b465ab6d08a4485817b847d3c52fece2ab3857ea259851d63",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web leaflet",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/leaflet/dist/leaflet-draw/leaflet.draw.js": {
+      "kind": "web",
+      "sha256": "e67f0eaa66181c506e57d918219bd753dee9e5dcdd5bd928a4e6930d18c62cc8",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web leaflet",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/leaflet/dist/leaflet/images/layers-2x.png": {
+      "kind": "web",
+      "sha256": "066daca850d8ffbef007af00b06eac0015728dee279c51f3cb6c716df7c42edf",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web leaflet",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/leaflet/dist/leaflet/images/layers.png": {
+      "kind": "web",
+      "sha256": "1dbbe9d028e292f36fcba8f8b3a28d5e8932754fc2215b9ac69e4cdecf5107c6",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web leaflet",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/leaflet/dist/leaflet/images/marker-icon-2x.png": {
+      "kind": "web",
+      "sha256": "00179c4c1ee830d3a108412ae0d294f55776cfeb085c60129a39aa6fc4ae2528",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web leaflet",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/leaflet/dist/leaflet/images/marker-icon.png": {
+      "kind": "web",
+      "sha256": "574c3a5cca85f4114085b6841596d62f00d7c892c7b03f28cbfa301deb1dc437",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web leaflet",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/leaflet/dist/leaflet/images/marker-shadow.png": {
+      "kind": "web",
+      "sha256": "264f5c640339f042dd729062cfc04c17f8ea0f29882b538e3848ed8f10edb4da",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web leaflet",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/leaflet/dist/leaflet/leaflet.css": {
+      "kind": "web",
+      "sha256": "337bfca5cabd03b39815b2700febe2b3b7edf55921c59cd49f88ecb328212303",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web leaflet",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/leaflet/leaflet.js": {
+      "kind": "web",
+      "sha256": "2b9691780a2a5e3e000d95bc12674e8311d19f2ce6019a6b8560df9f11d59781",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web leaflet",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/leaflet/package-lock.json": {
+      "kind": "web",
+      "sha256": "e5518de9a783589d46d79d97369607578ca2bff70d64b7ee4bb0bfb1d9c6e754",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web leaflet",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/leaflet/package.json": {
+      "kind": "web",
+      "sha256": "6ceeb2fc3da33802708d9a57766e03e26d0a589285a671296ea16c6d96a94791",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web leaflet",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/leaflet/rollup.config.mjs": {
+      "kind": "web",
+      "sha256": "c5db1d166f8951c874e666c05a8437f928afd6adf5f34b34575388eda9b913c9",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web leaflet",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/leaflet/src/index.mjs": {
+      "kind": "web",
+      "sha256": "f9e946d94139d62a353367b7a6a5b1304110bdee6e08aa5a6dea77835f5474c9",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web leaflet",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/link.js": {
+      "kind": "web",
+      "sha256": "30b2e3a8c49f77bfae1df61c9cffe2b887d92d9e1f31e9ecad368fbb0d51b450",
+      "notices": [
+        "NiceGUI"
+      ]
+    },
+    "Resources/nicegui/elements/log.js": {
+      "kind": "web",
+      "sha256": "d9c87b7bf74ed075fda1688acff8ff19239633cb7c21a03ba11c5db3b9dcac33",
+      "notices": [
+        "NiceGUI"
+      ]
+    },
+    "Resources/nicegui/elements/markdown.js": {
+      "kind": "web",
+      "sha256": "78590c0ed0af3f8e8a4782d6f8686c5e3adf89264de99863e6ab2e78bd5db5bd",
+      "notices": [
+        "NiceGUI"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/abnfDiagram-N423BO3Z-DEQhJUPs.js": {
+      "kind": "web",
+      "sha256": "17738e42d350d6e6bc7e821e70b552e7953ce515dd0f12e4b119a8b4b9562a05",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/arc-DGYdTq9y.js": {
+      "kind": "web",
+      "sha256": "1f442a3ef08aac013e9f420fe944215a6bd9337a3ba63b142de9bb0e48b601cc",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/architectureDiagram-T3A2C74G-CPIRwalQ.js": {
+      "kind": "web",
+      "sha256": "08ed270a798d8ef180028ca1bd8126658d9f7cfd0b15e054fce4520c1eb75c40",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/blockDiagram-VBNYF7ZC-fvEx522A.js": {
+      "kind": "web",
+      "sha256": "ca4827c4be9333195914fd36df493e3c10bfb3d04bf1cf586012b4a4b3dfa0f9",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/c4Diagram-5PPSVZJV-BGE4E9Du.js": {
+      "kind": "web",
+      "sha256": "bfd1bc9cfb86f46efa35516caa8c1982b161f92f7a64a4d6e02677ef44db57dd",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/channel-axb3YgKs.js": {
+      "kind": "web",
+      "sha256": "06ae9383fd9d2dceff05d5db07fa92d2d2fdb36e6e94f4367f2208191a992daf",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/chunk-2GRJ4B5K-DXuB1T0N.js": {
+      "kind": "web",
+      "sha256": "571aa2f825e5f2ae1b33bbf59b49e9818f3ebcfdd65b9427b4d1657c78e5e278",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/chunk-2Q5K7J3B-CjJOU3vT.js": {
+      "kind": "web",
+      "sha256": "e3a91ee969a8fafa76050d6648efbd7da6713dce3db2cd7d9767687c8e2f5f05",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/chunk-5RXB4S5H-CjLF3yJN.js": {
+      "kind": "web",
+      "sha256": "ce1fb35f897f5916a2fd9502ed2f0a115de4336b43b9c12e12859530d9a9a895",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/chunk-5VM5RSS4-VYY7_JKe.js": {
+      "kind": "web",
+      "sha256": "7efb867f824a5747cac7a00f75b6b7d2297729c3f7d3f15014ed6cee2de4c0c9",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/chunk-6Q2QTUOP-DvP9twtL.js": {
+      "kind": "web",
+      "sha256": "3bdf7d2cc412bd43b892af4e6bfe35e5d41b851e290eca3d9a429eb8c1e3b6ca",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/chunk-GF5L2VYU-BxsATXzZ.js": {
+      "kind": "web",
+      "sha256": "8cff34098605f22f59e594f881daad3c24dcd6fc302cb7a0187385e046a9a664",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/chunk-JWPE2WC7-KUu4n26q.js": {
+      "kind": "web",
+      "sha256": "07f88b28b426a885487a4da841a261ff454b5276d6795869801cbd80aff13765",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/chunk-KBJHAD2P-vVhCmtb4.js": {
+      "kind": "web",
+      "sha256": "b83ec8bb80846b745864e1e930be4406559ab78285aa1aa24d847e1ab53450ac",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/chunk-RYQCIY6F-DDVALlBY.js": {
+      "kind": "web",
+      "sha256": "87b9473d0f9bae38366517674af64cc08404ee4aeb17904d01b7f06751bc0fa1",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/chunk-XXDRQBXY-DVIeZkYU.js": {
+      "kind": "web",
+      "sha256": "4147b07ae8a3ac9b72ebc0a53e47b0e17974b46e9d7ca3a0b33186e25f394287",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/classDiagram-JCYQIIEL-CcTIERdf.js": {
+      "kind": "web",
+      "sha256": "7d9978d703004807ac7bfbc343a93737b54dadcb3b928d870cc445f9e6bae8d1",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/classDiagram-v2-OCEON4UE-CcTIERdf.js": {
+      "kind": "web",
+      "sha256": "82923e8e2655af39188eb0b052187a2f2759d97d915d84954b9d480f15735d6a",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/cose-bilkent-JH36ORCC-Cyw42Mp4.js": {
+      "kind": "web",
+      "sha256": "f2332271475b77fab9e91f03a7569e1f6619e8fc381807517a9f9c2b72d5a187",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/cynefin-VYW2F7L2-B-9CeVSD.js": {
+      "kind": "web",
+      "sha256": "e61a9643edc7c4a1ddd13fad379edb99ca3ec29d4aecea1aa9afb00cbf66f63c",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/cynefinDiagram-MW4NZA55-0XutRj5Y.js": {
+      "kind": "web",
+      "sha256": "631eb081b19fc8d65d327083451617027622ddcafcac0a39705bc7c81dacfe16",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/cytoscape.esm-BXUmgHKB.js": {
+      "kind": "web",
+      "sha256": "d6b213d9aafb5dd715172b1422183fe3b7a44c60bb0da80364b194462c4d974e",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/dagre-VZM6K2ZE-Ga1AB68n.js": {
+      "kind": "web",
+      "sha256": "9d547bc225904d1baca6383ada87846bad8fbcf74e7831fc47adc6e2fa354d43",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/defaultLocale-HOdfsG1x.js": {
+      "kind": "web",
+      "sha256": "fdda50b33d154632450b79d009ee97960ee8abf0f7aeae7eda72f171686e880e",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/diagram-7IWD3JNH-DUFQvIRw.js": {
+      "kind": "web",
+      "sha256": "d23884f0cfa8a9c6fee0c14de62bb9f23b7072576f70658923f8c03771f284e5",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/diagram-B4RE2ZJO-DjUQAJ4s.js": {
+      "kind": "web",
+      "sha256": "15104bcac9b3e13031fe06a7438d6c35f32c83861533dd1d29d3800d4729a87c",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/diagram-LBJQPF4R-BPO0LoZV.js": {
+      "kind": "web",
+      "sha256": "f16f7417288f89140fd053af278d715d1f2806be1c6e59402421f44ae95cac41",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/diagram-Q27KOJAE-DnsXmo6b.js": {
+      "kind": "web",
+      "sha256": "262eed78f78a71e190f9dc56d7c437b50cfd74005f2bb8b1e3e8c2386d29b5b4",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/diagram-UB23O5K3-BU0gmavY.js": {
+      "kind": "web",
+      "sha256": "f10c7f4d4be39d3aebb5a93f48150eca953df5d8eeef0dcd63d72603da182f08",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/ebnfDiagram-BXEA7PRR-CBpa3iG_.js": {
+      "kind": "web",
+      "sha256": "6b68ea970a8188e6ef3aad27c0cb62e36508d3b408ba169a9bed12c592452f13",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/erDiagram-JOGREHBK-CbgFk24N.js": {
+      "kind": "web",
+      "sha256": "5fd9a1bdcaab6f876699d8ce37f503fd39a4ac68fd8f84b160fa4598e503e2bc",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/flowDiagram-UKHOOZJN-C56AqToO.js": {
+      "kind": "web",
+      "sha256": "949d9b2ad79faa40556d1f48a380380dd5f4f8bbfdaaea88f2a1d473c7d935a3",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/ganttDiagram-PKOTCBZU-0_YPgZFf.js": {
+      "kind": "web",
+      "sha256": "49f1891608809862d84a2dd7b21ca36ef16ab097b06d0a9e0137439057d482b4",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/gitGraphDiagram-DS77QQ5N-Cceb5ltr.js": {
+      "kind": "web",
+      "sha256": "a47b6eca7ab7f23c59e83106c797f9ccedb8b7793eddbd4025ff3e9e8541ff96",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/graph-B2pySykS.js": {
+      "kind": "web",
+      "sha256": "5ea77cf05a4a766f74e469720cb2b44f26905e2a7ae618902b1fc9b7c497c104",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/index-C6_oXyon.js": {
+      "kind": "web",
+      "sha256": "c578b8b66677bc6d3868767db06ffd81d1aa4e0cca3d2ea2bb4e1c1fee5b62f8",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/index.js": {
+      "kind": "web",
+      "sha256": "79bf8e23f44c092129d9cdf29bca232c84dd5c580972fabc90023b6141d8c5e0",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/infoDiagram-6WML65LV-kU7SlqW3.js": {
+      "kind": "web",
+      "sha256": "3e9628c2ffcf4746e7b9b6db9a5ff9b980d2e3f8023d1f88646751f5645981d7",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/init-C0SZ43gy.js": {
+      "kind": "web",
+      "sha256": "d1a92bcb49c2dad81a3ff2ef110ca5617dd1c1c5321d0a70ca7212e4644345c0",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/ishikawaDiagram-WSZJBQD7-BwWrUT-P.js": {
+      "kind": "web",
+      "sha256": "9ef5f8153362ca25cdb11479797166181f98832e04f4070804db0aeb42f37a5b",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/journeyDiagram-NVQOT4AX-DRESEHWr.js": {
+      "kind": "web",
+      "sha256": "fa46a7a87239325d24af7f453a4bc51fba939e900a69e9e6b1cbda315feb0f5f",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/kanban-definition-27J2QSJJ-C3bvcRIU.js": {
+      "kind": "web",
+      "sha256": "10eeeb0930a589f9a43c9e67b62e7ac77c7744fa087803f68aba5090a09d1827",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/katex-ukrPy3Hx.js": {
+      "kind": "web",
+      "sha256": "8f17399b4a73ce01a6c96a57040295a3ee0740edb099e12d9fe24e37e641ca72",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/layout-Ce_fUztB.js": {
+      "kind": "web",
+      "sha256": "539eb634bf2eafaa8a212699ecb3b2073d0e6ea5d341720d5f77d55bcb6a6262",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/linear-cjoVe-N0.js": {
+      "kind": "web",
+      "sha256": "57adaeccbd1529fc28516bd56ae156aba2c284d01a47bd4e46b64d62c5d53d6e",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/map-B_LRdbnB.js": {
+      "kind": "web",
+      "sha256": "3ece4d06f0ca8c580eee52dd174fda27e5ccecbd69d9a23eee4059426f36fa37",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/mindmap-definition-FAOFIHXS-C6oJCHHE.js": {
+      "kind": "web",
+      "sha256": "6e7938a05c852056a21c5188f452e69078f1370bcf3b56ba7cc6e469f4a5da6b",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/ordinal-DjOj1knp.js": {
+      "kind": "web",
+      "sha256": "d469ff16c5ffc2809f5171dd54085ea13eb6fc6f5771c3f41760610cd843c146",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/pegDiagram-VL7TDLO6-CTpIWiei.js": {
+      "kind": "web",
+      "sha256": "1b8a20da4978287216be7d0242156db9928d480a07c89df5bce31bb9ee8ee74c",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/pieDiagram-7S7Q4E2Y-DQKpXTr4.js": {
+      "kind": "web",
+      "sha256": "497b7b30c1aa114926d0fb322bfa2cd7abc8f67d6d04e1eacc3d9ebddc09aca6",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/quadrantDiagram-CIZ2JOQS-BWde1lk1.js": {
+      "kind": "web",
+      "sha256": "3856fc3f3d7c2f2fb487d00c79d011167e87610290f42ea3d40ab0a92721a673",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/railroadDiagram-AXF67PYL-DQri1P0a.js": {
+      "kind": "web",
+      "sha256": "011cbdfee99d77629e62f2d447b062e13de395891a8bec35ed7fe9fc28c167e3",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/requirementDiagram-LRYGKXZP-BIy0CwOZ.js": {
+      "kind": "web",
+      "sha256": "00659f14464cd330c9aaae436a64a21afa6ec17d0761fe375791cebce4467176",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/sankeyDiagram-W5VNT64P-CFHAxnEt.js": {
+      "kind": "web",
+      "sha256": "e6acbded2d20a4f94d3231df21345bd0890ab59bb71a97c1effd8af0359ffb6a",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/sequenceDiagram-SI44F4Z6-DW5BoO7g.js": {
+      "kind": "web",
+      "sha256": "3641e113d42e7f00976278c1fcf61eec5d4397a8577fecbbc5380511949a3652",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/sizeCapture-X5ZJPWSS-CpVl88Ls.js": {
+      "kind": "web",
+      "sha256": "2758862d71b5b4b45f2c9088595d3256c732d4acaa813d5ae33eecc415baa346",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/stateDiagram-OKZ733FA-_sgoUaw2.js": {
+      "kind": "web",
+      "sha256": "0aa3d75481f652744cd1a375e2495dd9fef129ca8b84bab160bb38e1feeb6662",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/stateDiagram-v2-UEYNNEHI-DaeLB192.js": {
+      "kind": "web",
+      "sha256": "d47677087b93746f91aafb9c97da1107bf73cf3a52482178fb59e8bc2f4573ea",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/swimlanes-SLNWSIFB-CVyxnWvY.js": {
+      "kind": "web",
+      "sha256": "d60ee83de7d0cbf707e2499d25b1978a217f07a801ef8c4c4cc6a1864ed18805",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/swimlanesDiagram-ULZ7WXOC-BknULaI7.js": {
+      "kind": "web",
+      "sha256": "85cff6fea1938a5d6f96e379cdb4aefe5ce67720726478c7534e4378d4d837ad",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/timeline-definition-Z64GVDOM-Cn8UbsZT.js": {
+      "kind": "web",
+      "sha256": "786e57900c2498cd281328ec4ee7ae1246752bfc89e4dcfd8f6fbc91128f60ed",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/vennDiagram-T6HMQDX7-DM2Pit-J.js": {
+      "kind": "web",
+      "sha256": "be17564de8fe767bfbc6410faaa839c587eb387cc19ae01d48c67e46f0f3241a",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/wardleyDiagram-T6FBY63Y-BFtpR5QJ.js": {
+      "kind": "web",
+      "sha256": "88a6646c6d6f337302662612f71f016621912bf997588da4ea4e7d9bd8767471",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/dist/xychartDiagram-ELKLHX3M-IU_evFgm.js": {
+      "kind": "web",
+      "sha256": "a390a669bcd0f827c0a8cad889710a2441af1bae5d4e62acb2ab90c879c06149",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/mermaid.js": {
+      "kind": "web",
+      "sha256": "2f0c3346a9d379b4f75b3a2873737eca654384aa8c7958ffc2da95c861534187",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/package-lock.json": {
+      "kind": "web",
+      "sha256": "3d84e28e8dd3e540f8e7a6aa4ac3091c03c37c8ef14c370b6930c50ad1a5eed6",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/package.json": {
+      "kind": "web",
+      "sha256": "9f6934a16d32ae36827ed16d8c0a23311c8531032c43e11fb27470aff7f97363",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/rollup.config.mjs": {
+      "kind": "web",
+      "sha256": "3516f1d584fece4d972e4f0fd55cdb1a58ab21dabfa91148b7a1a76aa3cbc3fe",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/mermaid/src/index.mjs": {
+      "kind": "web",
+      "sha256": "12ae83bc38987b8bc34ae3267acad2cc93f14d547454c307471847c56b13cc68",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web mermaid",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/notification.js": {
+      "kind": "web",
+      "sha256": "3ef2bc0e25bfb8c24a2d65cc0b9a502ca4827ccd8afcd4b93e709c281ea0fdf7",
+      "notices": [
+        "NiceGUI"
+      ]
+    },
+    "Resources/nicegui/elements/plotly/dist/index.js": {
+      "kind": "web",
+      "sha256": "df6998c8481ff6f66ef2694e9d101013dfbeb226039aebaef69cb2105b704b74",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web plotly",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/plotly/package-lock.json": {
+      "kind": "web",
+      "sha256": "6b34d8bba125c14196154113f0b77caeff476188d20778e24fc891a1ff428acb",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web plotly",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/plotly/package.json": {
+      "kind": "web",
+      "sha256": "4a14bf4845bbef3c29d99fd7cc777714c1e99ea96e68048cd25de5efd2e44a82",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web plotly",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/plotly/plotly.js": {
+      "kind": "web",
+      "sha256": "83b29a8614b9cf73e6b8f6f46f00dc16863c1fc1a7a4cb265c94ff35d6e21db5",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web plotly",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/plotly/rollup.config.mjs": {
+      "kind": "web",
+      "sha256": "35984bd10dddbd12b8d1ff2591fc5edaf4e1eb6061115a8fcd2bf4b5277d7d1e",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web plotly",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/plotly/src/index.mjs": {
+      "kind": "web",
+      "sha256": "b9273c9f65563d72088c63180005c4ac8178a00af8c3f99082e5d713575d8148",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web plotly",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/query.js": {
+      "kind": "web",
+      "sha256": "a2114e0721c869e458f28dc86d78c5a611a2bdb3a3a01baff8a428b4b5934929",
+      "notices": [
+        "NiceGUI"
+      ]
+    },
+    "Resources/nicegui/elements/scene/dist/index.js": {
+      "kind": "web",
+      "sha256": "f55227d12dac0eb037cae13b1992091746fc017a275748e4a1bebd0f6244e7e5",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web scene",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/scene/objects/axes_helper.js": {
+      "kind": "web",
+      "sha256": "4c2e46a78f23a58c28d31ae45d2c7df952b07d8d72dea9b2ea14e1c1dce63205",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web scene",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/scene/objects/box.js": {
+      "kind": "web",
+      "sha256": "d92929c7be72ca5f7421f8d0a17b13e56cf7a9513d8d9b923596f7492b0730a2",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web scene",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/scene/objects/curve.js": {
+      "kind": "web",
+      "sha256": "78b85f51433f31724606b7b2b9824d01ba8662e8d08af30b3e9dc28414dcac94",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web scene",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/scene/objects/cylinder.js": {
+      "kind": "web",
+      "sha256": "46c2d7ed01be771f8b1d7282ede235530f51e5aca19764885cc0be9390ea3a53",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web scene",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/scene/objects/extrusion.js": {
+      "kind": "web",
+      "sha256": "07c5d11c8cf195ac5dedc3f299c75cf972dd8c89a256cd0645b2e33f29793257",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web scene",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/scene/objects/gltf.js": {
+      "kind": "web",
+      "sha256": "0b6e35b7eaba22332b7810cd440d65d08fffd4b714eb4d1952ce19cb5432d5a4",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web scene",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/scene/objects/group.js": {
+      "kind": "web",
+      "sha256": "2b87f147d4bf7721ef7b7bc21cd092d07d058ea182a3ba89de2ac916e2864d59",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web scene",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/scene/objects/line.js": {
+      "kind": "web",
+      "sha256": "9af102b2276eb801c5c7df500f2a2996e7ae29cae617affa96f8c03ce483b3cf",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web scene",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/scene/objects/point_cloud.js": {
+      "kind": "web",
+      "sha256": "503e07701e429396ed624b815f3a1b3e1621b3dbad41560c2912a66bae4b72e8",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web scene",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/scene/objects/quadratic_bezier_tube.js": {
+      "kind": "web",
+      "sha256": "a6cb54b338b182fc3cfc911ad725cda42506bfe127e3b06a2ad6c383a1d07bc0",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web scene",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/scene/objects/ring.js": {
+      "kind": "web",
+      "sha256": "d95d2a741a89b3b1ffdc0d22c341ab870a32ae322cbfd0ca852d047c97530e7f",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web scene",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/scene/objects/sphere.js": {
+      "kind": "web",
+      "sha256": "941746f727b6d3f3794f44a9561d841277482f88f1d0e05661b832fdd8897be1",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web scene",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/scene/objects/spot_light.js": {
+      "kind": "web",
+      "sha256": "855016f9dc5c888fc7be72fc3d028791d6a0153fdc6cf24968bcbc2f20d5a280",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web scene",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/scene/objects/stl.js": {
+      "kind": "web",
+      "sha256": "1d46b997b04dee62a78dc666119e9b0e5bf57b87e441923753965393701c4206",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web scene",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/scene/objects/text.js": {
+      "kind": "web",
+      "sha256": "0401dba67633c0f4467f5016589e749b59af421a6f21ffc335a66fdd7aa943e0",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web scene",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/scene/objects/text3d.js": {
+      "kind": "web",
+      "sha256": "86f0276bdb2daf0fb9df235dc8354f03a40df549990f8ecb24850850cb335248",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web scene",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/scene/objects/texture.js": {
+      "kind": "web",
+      "sha256": "51fa55fde4ed959dd9426920e8d1deb6a4a1e0d82c2544d6f31eac0bfdb3ed68",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web scene",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/scene/package-lock.json": {
+      "kind": "web",
+      "sha256": "13fd28900b87ab8eab210e1d1f4a5fa3ee7df39062d54672213e258229ec7f7a",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web scene",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/scene/package.json": {
+      "kind": "web",
+      "sha256": "7b7f7d5f9edb28cc1b33cad1b92d90ec4311a10eff58c062f163dab673ee55d7",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web scene",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/scene/rollup.config.mjs": {
+      "kind": "web",
+      "sha256": "0d3f4dd80e93e0e63ec6ce149d883d3a7ef827a654dff9b18325d9b51aaff5c4",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web scene",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/scene/scene.js": {
+      "kind": "web",
+      "sha256": "d518f408f918c6991f4c5686bdb46ecd39e015cb38fe0f901124b192ed7604ad",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web scene",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/scene/scene_view.js": {
+      "kind": "web",
+      "sha256": "8e438c9e4a87b1ed7d145bbb19b80222226ab2a3e5138b7cbc2849a329592bc7",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web scene",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/scene/src/index.mjs": {
+      "kind": "web",
+      "sha256": "26df7538dcb14898fd037f51a1824fb20d6696faf855d5b6efb4eeeba565177f",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web scene",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/select.js": {
+      "kind": "web",
+      "sha256": "8112c97d4d2e2bc0a450b099bb540c3a4f9749fc9f3636b038dafff78de6bcf5",
+      "notices": [
+        "NiceGUI"
+      ]
+    },
+    "Resources/nicegui/elements/sortable/dist/index.js": {
+      "kind": "web",
+      "sha256": "c5692671e20072f6434c8c3dc1eed845702bad7d199e00e5d66d0bfaba34ca5b",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web sortable",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/sortable/package-lock.json": {
+      "kind": "web",
+      "sha256": "e19ccf345a9b95b49bfe27bf61a0953c6696e9f65e8c40f29a1aa4aa6ec157b6",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web sortable",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/sortable/package.json": {
+      "kind": "web",
+      "sha256": "00ad340afa896159e082869e223f8c9c684a0ce5f7666025346d44c99fefc0d6",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web sortable",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/sortable/rollup.config.mjs": {
+      "kind": "web",
+      "sha256": "b4992f0db18425d23c97035026c44d5085d27bd6aa91e4ee07460a18d13b5fc6",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web sortable",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/sortable/sortable.js": {
+      "kind": "web",
+      "sha256": "83336b36c95df16822169e40b40e0a39debe5d1b0e3f430e33ef453e3f6ad83d",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web sortable",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/sortable/src/index.mjs": {
+      "kind": "web",
+      "sha256": "ff79172aebee0f67d57b746a475fd46b593e79d5e727fa1f69ab40048a16201c",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web sortable",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/sub_pages.js": {
+      "kind": "web",
+      "sha256": "2dab0562b567a77bdc00ab127d47449d65d76f8dcabc36a56ddf6bad6ac9c709",
+      "notices": [
+        "NiceGUI"
+      ]
+    },
+    "Resources/nicegui/elements/table.js": {
+      "kind": "web",
+      "sha256": "5854a1d452d3d9bcee04a6668c680ee352153bc5dfb35c644b797bc6f92242c1",
+      "notices": [
+        "NiceGUI"
+      ]
+    },
+    "Resources/nicegui/elements/teleport.js": {
+      "kind": "web",
+      "sha256": "ce8e343d9901a89d6d1a2feb4a2b0bb0e9a6b8a06dad50b24967388af90a6c55",
+      "notices": [
+        "NiceGUI"
+      ]
+    },
+    "Resources/nicegui/elements/timer.js": {
+      "kind": "web",
+      "sha256": "450f0af4f4c1ecc4c7180f2e364c8a59bfed69dd350fb6b47bce8641c2a37786",
+      "notices": [
+        "NiceGUI"
+      ]
+    },
+    "Resources/nicegui/elements/upload.js": {
+      "kind": "web",
+      "sha256": "3b53c7bc57b7f81285790f0d619a5aa58b0ae8fc018c6a9b19d2b2ac0668be7b",
+      "notices": [
+        "NiceGUI"
+      ]
+    },
+    "Resources/nicegui/elements/video.js": {
+      "kind": "web",
+      "sha256": "b13daef78623492c0a6f27372b01a1fd54a32774a76923b6bb57159fa998d77b",
+      "notices": [
+        "NiceGUI"
+      ]
+    },
+    "Resources/nicegui/elements/xterm/dist/index.js": {
+      "kind": "web",
+      "sha256": "bcb6ed5ea46551ea2181ba6a5d648280862272b051ac2c55b8d90c676c6e28a8",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web xterm",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/xterm/dist/xterm.css": {
+      "kind": "web",
+      "sha256": "ba8e6985669488981ccf40c0cefe3aba80722cb6c92de7ad628b0bd717faf2b6",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web xterm",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/xterm/package-lock.json": {
+      "kind": "web",
+      "sha256": "73bb68485594ec29040282ffbaacf39a11566c2e159a664bd204b36ebbb6a66f",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web xterm",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/xterm/package.json": {
+      "kind": "web",
+      "sha256": "970dbe9f8fba778de419cca761a2cf28827a8d7edfe6465e1a7b2d3ff1ea2fca",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web xterm",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/xterm/rollup.config.mjs": {
+      "kind": "web",
+      "sha256": "e560e8d078a62850334196098d3fb2fa3893d683ba693054db29f130d15d82d3",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web xterm",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/xterm/src/index.mjs": {
+      "kind": "web",
+      "sha256": "e3aad5520a426bfb66529cfd93982e6c3538ff27fb4606f5aa081c33a92e8076",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web xterm",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/elements/xterm/xterm.js": {
+      "kind": "web",
+      "sha256": "a9ca14deb062abf2353431f4c3e514469bb144eb51327127788fcdac58b6fb53",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web xterm",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/functions/refreshable.js": {
+      "kind": "web",
+      "sha256": "52722194f95da926630d6528e864557e03d3f1fc2ade12e4e21115f9c72327e7",
+      "notices": [
+        "NiceGUI"
+      ]
+    },
+    "Resources/nicegui/static/dompurify.mjs": {
+      "kind": "web",
+      "sha256": "eb3183bfda22b2d2f538a067eed2f68820922454538915f006af027b58327cad",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/favicon.ico": {
+      "kind": "web",
+      "sha256": "767e2acf7452c0654927039c1caf3ba4eae0a92d92004740f7da144e09f4f60b",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/fonts.css": {
+      "kind": "web",
+      "sha256": "1dc09af153dd55333d30ab1dcf0ba7258ac621ee8422b7b4ea2b85ebe12b7efa",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/fonts/0c19a63c7528cc1a.woff2": {
+      "kind": "web",
+      "sha256": "4a4dbc62fa335e411b94a532be091c58c0c0c4fa731339f11722577d3cf6443b",
+      "notices": [
+        "NiceGUI",
+        "Material Icons and Material Symbols (NiceGUI)"
+      ],
+      "font_names": {
+        "0": [
+          "Copyright 2018 Google, Inc. All Rights Reserved."
+        ],
+        "1": [
+          "Material Icons"
+        ],
+        "2": [
+          "Regular"
+        ],
+        "4": [
+          "Material Icons"
+        ],
+        "6": [
+          "MaterialIcons-Regular"
+        ],
+        "13": [],
+        "16": [],
+        "17": []
+      }
+    },
+    "Resources/nicegui/static/fonts/11995e935aba4c35.woff2": {
+      "kind": "web",
+      "sha256": "6f612fa0695439e4667b655620581fcd62568aecac5f5b8d60d183a350ae97ba",
+      "notices": [
+        "NiceGUI",
+        "Roboto web font (NiceGUI)"
+      ],
+      "font_names": {
+        "0": [
+          "Copyright 2011 The Roboto Project Authors (https://github.com/googlefonts/roboto-classic)"
+        ],
+        "1": [
+          "Roboto"
+        ],
+        "2": [
+          "Regular"
+        ],
+        "4": [
+          "Roboto Regular"
+        ],
+        "6": [
+          "Roboto-Regular"
+        ],
+        "13": [],
+        "16": [],
+        "17": []
+      }
+    },
+    "Resources/nicegui/static/fonts/1e891d4a2a7f2f96.woff2": {
+      "kind": "web",
+      "sha256": "d31bfb81d56e790e0d9e2fa00b83df8f7159f9063114cdc014859b1d483956c8",
+      "notices": [
+        "NiceGUI",
+        "Material Icons and Material Symbols (NiceGUI)"
+      ],
+      "font_names": {
+        "0": [
+          "Copyright 2019 Google LLC. All Rights Reserved."
+        ],
+        "1": [
+          "Material Icons Sharp"
+        ],
+        "2": [
+          "Regular"
+        ],
+        "4": [
+          "Material Icons Sharp Regular"
+        ],
+        "6": [
+          "MaterialIconsSharp-Regular"
+        ],
+        "13": [],
+        "16": [],
+        "17": []
+      }
+    },
+    "Resources/nicegui/static/fonts/2474057f3040a08c.woff2": {
+      "kind": "web",
+      "sha256": "4716e88b8af5262c45da9faaaf84520391b762f6e5a676000248c7c76163041a",
+      "notices": [
+        "NiceGUI",
+        "Roboto web font (NiceGUI)"
+      ],
+      "font_names": {
+        "0": [
+          "Copyright 2011 The Roboto Project Authors (https://github.com/googlefonts/roboto-classic)"
+        ],
+        "1": [
+          "Roboto"
+        ],
+        "2": [
+          "Regular"
+        ],
+        "4": [
+          "Roboto Regular"
+        ],
+        "6": [
+          "Roboto-Regular"
+        ],
+        "13": [],
+        "16": [],
+        "17": []
+      }
+    },
+    "Resources/nicegui/static/fonts/2af55f54d9fac778.woff2": {
+      "kind": "web",
+      "sha256": "c948f1263341699b3c1e9c55d8d0f3e446669d0f2b9d55494c6169222c0243a6",
+      "notices": [
+        "NiceGUI",
+        "Material Icons and Material Symbols (NiceGUI)"
+      ],
+      "font_names": {
+        "0": [
+          "Copyright 2019 Google LLC. All Rights Reserved."
+        ],
+        "1": [
+          "Material Icons Round"
+        ],
+        "2": [
+          "Regular"
+        ],
+        "4": [
+          "Material Icons Round Regular"
+        ],
+        "6": [
+          "MaterialIconsRound-Regular"
+        ],
+        "13": [],
+        "16": [],
+        "17": []
+      }
+    },
+    "Resources/nicegui/static/fonts/3a20f367986a2130.woff2": {
+      "kind": "web",
+      "sha256": "a6398242a7e9ace573c6d1ba48ba48b9f72589f6af5b9efb787385e4c75f33bc",
+      "notices": [
+        "NiceGUI",
+        "Roboto web font (NiceGUI)"
+      ],
+      "font_names": {
+        "0": [
+          "Copyright 2011 The Roboto Project Authors (https://github.com/googlefonts/roboto-classic)"
+        ],
+        "1": [
+          "Roboto"
+        ],
+        "2": [
+          "Regular"
+        ],
+        "4": [
+          "Roboto Regular"
+        ],
+        "6": [
+          "Roboto-Regular"
+        ],
+        "13": [],
+        "16": [],
+        "17": []
+      }
+    },
+    "Resources/nicegui/static/fonts/5d016cfdc2ac4298.woff2": {
+      "kind": "web",
+      "sha256": "e6d326ead7478d03d634b4fc2906e5911f09914da9d01985771015a9d03a135e",
+      "notices": [
+        "NiceGUI",
+        "Roboto web font (NiceGUI)"
+      ],
+      "font_names": {
+        "0": [
+          "Copyright 2011 The Roboto Project Authors (https://github.com/googlefonts/roboto-classic)"
+        ],
+        "1": [
+          "Roboto"
+        ],
+        "2": [
+          "Regular"
+        ],
+        "4": [
+          "Roboto Regular"
+        ],
+        "6": [
+          "Roboto-Regular"
+        ],
+        "13": [],
+        "16": [],
+        "17": []
+      }
+    },
+    "Resources/nicegui/static/fonts/5f5fa57fb07d7e44.woff2": {
+      "kind": "web",
+      "sha256": "8139a402ce239285716452e5668bce94bbf240b433fcfa2e154aa7e4d240445b",
+      "notices": [
+        "NiceGUI",
+        "Roboto web font (NiceGUI)"
+      ],
+      "font_names": {
+        "0": [
+          "Copyright 2011 The Roboto Project Authors (https://github.com/googlefonts/roboto-classic)"
+        ],
+        "1": [
+          "Roboto"
+        ],
+        "2": [
+          "Regular"
+        ],
+        "4": [
+          "Roboto Regular"
+        ],
+        "6": [
+          "Roboto-Regular"
+        ],
+        "13": [],
+        "16": [],
+        "17": []
+      }
+    },
+    "Resources/nicegui/static/fonts/935e23d0cd87ac6f.woff2": {
+      "kind": "web",
+      "sha256": "34a340a09fa1c7530f2f2d7e509c62ac8fc3df0ed94b91f13cac7f2c115d460a",
+      "notices": [
+        "NiceGUI",
+        "Material Icons and Material Symbols (NiceGUI)"
+      ],
+      "font_names": {
+        "0": [
+          "Copyright 2025 Google LLC.  All Rights Reserved."
+        ],
+        "1": [
+          "Material Symbols Outlined"
+        ],
+        "2": [
+          "Regular"
+        ],
+        "4": [
+          "Material Symbols Outlined Regular"
+        ],
+        "6": [
+          "MaterialSymbolsOutlined-Regular"
+        ],
+        "13": [],
+        "16": [],
+        "17": []
+      }
+    },
+    "Resources/nicegui/static/fonts/a35a05f781345176.woff2": {
+      "kind": "web",
+      "sha256": "35dca8a7145a17c8d1306f25a3ca091578e15396f0b22d61eb8e73262ac75577",
+      "notices": [
+        "NiceGUI",
+        "Material Icons and Material Symbols (NiceGUI)"
+      ],
+      "font_names": {
+        "0": [
+          "Copyright 2019 Google LLC. All Rights Reserved."
+        ],
+        "1": [
+          "Material Icons Outlined"
+        ],
+        "2": [
+          "Regular"
+        ],
+        "4": [
+          "Material Icons Outlined Regular"
+        ],
+        "6": [
+          "MaterialIconsOutlined-Regular"
+        ],
+        "13": [],
+        "16": [],
+        "17": []
+      }
+    },
+    "Resources/nicegui/static/fonts/b4ccbbab3fd3e3be.woff2": {
+      "kind": "web",
+      "sha256": "6d67ed802745c658eaf443bfe9d0e28595959defb07f544b2c8f8211c7ff8b35",
+      "notices": [
+        "NiceGUI",
+        "Roboto web font (NiceGUI)"
+      ],
+      "font_names": {
+        "0": [
+          "Copyright 2011 The Roboto Project Authors (https://github.com/googlefonts/roboto-classic)"
+        ],
+        "1": [
+          "Roboto"
+        ],
+        "2": [
+          "Regular"
+        ],
+        "4": [
+          "Roboto Regular"
+        ],
+        "6": [
+          "Roboto-Regular"
+        ],
+        "13": [],
+        "16": [],
+        "17": []
+      }
+    },
+    "Resources/nicegui/static/fonts/bb828b03a1f11130.woff2": {
+      "kind": "web",
+      "sha256": "0f551c738277c9b9b87c5e0ea58c8a4ab2133eb58212ff8affc3d00a27a6f8fc",
+      "notices": [
+        "NiceGUI",
+        "Material Icons and Material Symbols (NiceGUI)"
+      ],
+      "font_names": {
+        "0": [
+          "Copyright 2025 Google LLC.  All Rights Reserved."
+        ],
+        "1": [
+          "Material Symbols Sharp"
+        ],
+        "2": [
+          "Regular"
+        ],
+        "4": [
+          "Material Symbols Sharp Regular"
+        ],
+        "6": [
+          "MaterialSymbolsSharp-Regular"
+        ],
+        "13": [],
+        "16": [],
+        "17": []
+      }
+    },
+    "Resources/nicegui/static/fonts/d3527d1a9c475ae3.woff2": {
+      "kind": "web",
+      "sha256": "29ba06d53c9bab39cf472bf4b33c16961b9537c4393e8cf57f9436a0f7e8d1eb",
+      "notices": [
+        "NiceGUI",
+        "Roboto web font (NiceGUI)"
+      ],
+      "font_names": {
+        "0": [
+          "Copyright 2011 The Roboto Project Authors (https://github.com/googlefonts/roboto-classic)"
+        ],
+        "1": [
+          "Roboto"
+        ],
+        "2": [
+          "Regular"
+        ],
+        "4": [
+          "Roboto Regular"
+        ],
+        "6": [
+          "Roboto-Regular"
+        ],
+        "13": [],
+        "16": [],
+        "17": []
+      }
+    },
+    "Resources/nicegui/static/fonts/d4e71f49ac06b20e.woff2": {
+      "kind": "web",
+      "sha256": "21e31276451306eb99b5f75e5e5e910e4a0e4bb9a4ee9984faa386e44333596a",
+      "notices": [
+        "NiceGUI",
+        "Material Icons and Material Symbols (NiceGUI)"
+      ],
+      "font_names": {
+        "0": [
+          "Copyright 2025 Google LLC.  All Rights Reserved."
+        ],
+        "1": [
+          "Material Symbols Rounded"
+        ],
+        "2": [
+          "Regular"
+        ],
+        "4": [
+          "Material Symbols Rounded Regular"
+        ],
+        "6": [
+          "MaterialSymbolsRounded-Regular"
+        ],
+        "13": [],
+        "16": [],
+        "17": []
+      }
+    },
+    "Resources/nicegui/static/fonts/f0862fc752441e3c.woff2": {
+      "kind": "web",
+      "sha256": "f01ead3afd8bb988e344caf10203ba085ed13cf8ece46295968a3eb17916528a",
+      "notices": [
+        "NiceGUI",
+        "Roboto web font (NiceGUI)"
+      ],
+      "font_names": {
+        "0": [
+          "Copyright 2011 The Roboto Project Authors (https://github.com/googlefonts/roboto-classic)"
+        ],
+        "1": [
+          "Roboto"
+        ],
+        "2": [
+          "Regular"
+        ],
+        "4": [
+          "Roboto Regular"
+        ],
+        "6": [
+          "Roboto-Regular"
+        ],
+        "13": [],
+        "16": [],
+        "17": []
+      }
+    },
+    "Resources/nicegui/static/fonts/f3c560102a6d7def.woff2": {
+      "kind": "web",
+      "sha256": "31f7abb9248fed6be3da749d07f03592f815c5ef07ebc9afe62402cbf753ff1b",
+      "notices": [
+        "NiceGUI",
+        "Roboto web font (NiceGUI)"
+      ],
+      "font_names": {
+        "0": [
+          "Copyright 2011 The Roboto Project Authors (https://github.com/googlefonts/roboto-classic)"
+        ],
+        "1": [
+          "Roboto"
+        ],
+        "2": [
+          "Regular"
+        ],
+        "4": [
+          "Roboto Regular"
+        ],
+        "6": [
+          "Roboto-Regular"
+        ],
+        "13": [],
+        "16": [],
+        "17": []
+      }
+    },
+    "Resources/nicegui/static/headwind.css": {
+      "kind": "web",
+      "sha256": "ea6f49294279e3d00d4de31e5945198234636dcd5a408ded96b3498527cf06c5",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/immutable.es.js": {
+      "kind": "web",
+      "sha256": "4d2e4c4dbc0babd5a48f8372d1d569e369f916fea248ce234f76edef3a0f4ced",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/ar-TN.umd.prod.js": {
+      "kind": "web",
+      "sha256": "ba6656bed50c89ee654b8bd37caee3683f937f010cc172538ddb874acd7ab454",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/ar.umd.prod.js": {
+      "kind": "web",
+      "sha256": "ba3ae0547a259e571e6894098c53ca04310d18558f066718aa06ef439ba319da",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/az-Latn.umd.prod.js": {
+      "kind": "web",
+      "sha256": "51d1c5eda89e82ff49bf658333834a6f77eab352acac1c0fa24a10187db19c58",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/bg.umd.prod.js": {
+      "kind": "web",
+      "sha256": "122a2f2165e2e32b08aadcbe7be8775d12a45207773f946b1e0debc16a0adbff",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/bn.umd.prod.js": {
+      "kind": "web",
+      "sha256": "88e7bb69fdec1d3e62c31b5639742065cc77351265bcd8696d8ab5a8578ba451",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/bs-BA.umd.prod.js": {
+      "kind": "web",
+      "sha256": "8b903f89462502cc26ca2ad6a19880ddea759e4a17ff844162190275ec6b9904",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/ca.umd.prod.js": {
+      "kind": "web",
+      "sha256": "7a1edb4c512ed0b5f3f2094f99fef204c2e3f1e0ae2fcf47263db78bead627f7",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/cs.umd.prod.js": {
+      "kind": "web",
+      "sha256": "a86d2a233142c6036c3e58db18253b21ad3b2caeae3c55f75c85530cda265385",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/da.umd.prod.js": {
+      "kind": "web",
+      "sha256": "8ccbdeff9187a7f0d7b3c1a499db4d49a6f8ca0bedf681ce4cb13c82107b9290",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/de-CH.umd.prod.js": {
+      "kind": "web",
+      "sha256": "538481f231c51fa6276993d96d35b7d883c6e029cc089842092bf3eaac0c483a",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/de-DE.umd.prod.js": {
+      "kind": "web",
+      "sha256": "203e7f3be9944732fc7260dea44962d1997581869a472be13ecd6624f70b68a5",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/de.umd.prod.js": {
+      "kind": "web",
+      "sha256": "ed39c3b703358d17f36fa33327e08e38213f4b3cd7fef3db90f28b6bd149ed5b",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/el.umd.prod.js": {
+      "kind": "web",
+      "sha256": "1165fda1248b76a89513332315d4dd327e36afb99214c7c5cdaba57935066642",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/en-GB.umd.prod.js": {
+      "kind": "web",
+      "sha256": "fdf82c294c3a0c6d10b80f612f95be4dd1861de0b8c2b7072edc8fe49af3d104",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/en-US.umd.prod.js": {
+      "kind": "web",
+      "sha256": "892bdbda49602eda2fba3244b36888d896c918bc6702a6963ee058c575f83332",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/eo.umd.prod.js": {
+      "kind": "web",
+      "sha256": "5ae62191271ef35a36dd62cb1d76a198c5dfaa16c69c37e6c2cdde69e1c255cb",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/es.umd.prod.js": {
+      "kind": "web",
+      "sha256": "19b73a1a7482e627a32bf974917e294d442769e43ccd69a42ebd7cf554f13734",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/et.umd.prod.js": {
+      "kind": "web",
+      "sha256": "589ec1901d66476e306750145d3546ea21c251fd69bfb9d9d1781ec3471350fd",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/eu.umd.prod.js": {
+      "kind": "web",
+      "sha256": "32c38d317f9e489766ed0c20560513e3216bf1f9bca37b6d70f8b1415bb71c9b",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/fa-IR.umd.prod.js": {
+      "kind": "web",
+      "sha256": "b1e3b70edf6ad82ac4facae3702375b2e181ee0629241b1e051fb7dbe841dd33",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/fa.umd.prod.js": {
+      "kind": "web",
+      "sha256": "5415067c3aa6c9258dffc1f279dda3831afe9cd85a414f684281bf9efb1fad09",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/fi.umd.prod.js": {
+      "kind": "web",
+      "sha256": "d543c99d83bbbe4552ac45f241fff3198e34323426a30cff4543aa61f6ccfe47",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/fr.umd.prod.js": {
+      "kind": "web",
+      "sha256": "01e9169695be70fe96cfe8d948e3681ca602d9874674ae1fd7c85db9d3ffaaef",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/gn.umd.prod.js": {
+      "kind": "web",
+      "sha256": "9ca0d686f03e3b2e3ba4c4dc1782ee1c8397e20d193d72a0ab25ea3e27c5d8e1",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/he.umd.prod.js": {
+      "kind": "web",
+      "sha256": "3e4ed9a0560e7c8b73eccc22252a1f65f51604bc691e35013435d9babfd8cbfe",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/hi.umd.prod.js": {
+      "kind": "web",
+      "sha256": "02bcfcf868a095dca306660d37860ef2f05c6ded308dbc26948fe86a6e852405",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/hr.umd.prod.js": {
+      "kind": "web",
+      "sha256": "c64383bd5fedae6ac4de089bbecd342d5efedcdbac569089aaa02e45793602cf",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/hu.umd.prod.js": {
+      "kind": "web",
+      "sha256": "97e7d5c97c3ade8141ce55eb67abf781332e3e1bba57428b8ddf788951c2bdee",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/id.umd.prod.js": {
+      "kind": "web",
+      "sha256": "7e558aa209a3d026626e56a310c1ffcc6b68c6e715e650a66977dc7b20a2530a",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/is.umd.prod.js": {
+      "kind": "web",
+      "sha256": "effc1e8a3f6ce95d1e160872dccb731d8389a10b52076a27fd4c37758f1be30a",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/it.umd.prod.js": {
+      "kind": "web",
+      "sha256": "03c8b7ee436972c6c4ad7f8ed9265c8b2ec0528af28e0f219262aaee801ca28f",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/ja.umd.prod.js": {
+      "kind": "web",
+      "sha256": "1018a564216bed5d17dca7822907c0e9d29c9f973a1f66803116f2160fe361f0",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/kk.umd.prod.js": {
+      "kind": "web",
+      "sha256": "124edd0f4ee7dabb08031f856869cdb4a3380c068cdfb8fe20c43fe5f7faeda6",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/km.umd.prod.js": {
+      "kind": "web",
+      "sha256": "7339aef4820e93a118e667a4c21a429387bc8256b4d08eeae0bedc0f8cf81aca",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/ko-KR.umd.prod.js": {
+      "kind": "web",
+      "sha256": "daef3569657ec3ab3bc22388d3c4f8f4986fc1b75572a3f8b9795ceab0ab44c4",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/kur-CKB.umd.prod.js": {
+      "kind": "web",
+      "sha256": "a5c98b3505a7a43e6026eb46d3e78cd5661c4d9a576df9d3fd979ac09c8b3ffc",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/lt.umd.prod.js": {
+      "kind": "web",
+      "sha256": "af4594a1ed90942d2799a07a5fd38a933395bb307fe8ffb31cc1d1afbfc54f44",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/lu.umd.prod.js": {
+      "kind": "web",
+      "sha256": "62554bc3143a6951873c8dd1722f2662ab70937d9ca88df3b8f3d1970ae25331",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/lv.umd.prod.js": {
+      "kind": "web",
+      "sha256": "a8b99004aaa8d424804002a7def6b567ce698a20ce5c3cac4a2a7c0d2d3cfa34",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/mk.umd.prod.js": {
+      "kind": "web",
+      "sha256": "9700a0fc33e55bfe41e0dbbf9f6be6dbdbeb2ba2ff4d16fbbc63c87bd3a484c0",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/ml.umd.prod.js": {
+      "kind": "web",
+      "sha256": "ba99351426239b3ac3b20b35ff841175ed1c2bd63e5046bbe00f89baddd345a2",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/mm.umd.prod.js": {
+      "kind": "web",
+      "sha256": "d4ab3d57d7d6e20fd04d46113fe7e65d14b80966905ac670c95ac7ba45ff6dd6",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/ms-MY.umd.prod.js": {
+      "kind": "web",
+      "sha256": "9132532e50cf2f6306b840c084e501b33399f91ea5983e56389ddef6e18c2cb0",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/ms.umd.prod.js": {
+      "kind": "web",
+      "sha256": "65c46cb695a0bb8d55d702f12bd75e2688310ef2ab38952d93789e8a55b8a32b",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/my.umd.prod.js": {
+      "kind": "web",
+      "sha256": "12080e2f2a40f2aaddb29e0506e01b7a13e3a102921fddd6204f8cb41515ff67",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/nb-NO.umd.prod.js": {
+      "kind": "web",
+      "sha256": "e5ba6132ba6bdbe6194926ca3d7b423d6776901f72a0a098f92b4232cc3955ba",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/nl.umd.prod.js": {
+      "kind": "web",
+      "sha256": "517bf9208c6967a49fa1ca6b95fc9962193cf303de0a16347097e19392db8bc8",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/pl.umd.prod.js": {
+      "kind": "web",
+      "sha256": "acf0f93bd566071c967dad6eefe62bf8515e6f776ff41c29875d1b87ed7f3054",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/pt-BR.umd.prod.js": {
+      "kind": "web",
+      "sha256": "f34c93bea4a20929662bcacbc109eeec1673f26bcb4225af5d2890056319759e",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/pt.umd.prod.js": {
+      "kind": "web",
+      "sha256": "ac1d4bd4316a7582691cf3db7db2dc6aa8052a34d3a5017ffc7f612947652668",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/ro.umd.prod.js": {
+      "kind": "web",
+      "sha256": "59f76a846faf6c25dd0fb1435f2b4fa24c3637704e3d0236db7ab4f72b7eec96",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/ru.umd.prod.js": {
+      "kind": "web",
+      "sha256": "954e9af33a9a3c56d69fe5f0530f567d2f6831098fc7f49ef4e42bea62057783",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/sk.umd.prod.js": {
+      "kind": "web",
+      "sha256": "2e5ecc951e0dbd0ef270de3d585fef82e77b6905f1ce83d920c50c5352f2f37a",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/sl.umd.prod.js": {
+      "kind": "web",
+      "sha256": "a5451cf186df029ef3e29e484931742c73b809bf1187463c0ad5ffe7a4f34607",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/sm.umd.prod.js": {
+      "kind": "web",
+      "sha256": "fd3ec708dbb33073a604ee8803ba4506d65fa07fa4e46403d2f6e708b5a22896",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/sq.umd.prod.js": {
+      "kind": "web",
+      "sha256": "52bab2ef107e04c7ee27856b2c8f05ca46970942985154ea59452a6d87af2d27",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/sr-CYR.umd.prod.js": {
+      "kind": "web",
+      "sha256": "c4538868e18846a2e788c977d6c111efba8939f523865e04ad911813ffbed5c2",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/sr.umd.prod.js": {
+      "kind": "web",
+      "sha256": "51a05e4f9cd446d519fc37ecf390bcb594a17b077efc98dd1949cd6753b0b8a3",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/sv.umd.prod.js": {
+      "kind": "web",
+      "sha256": "34b15112639ad8a85d5ed492ab36403238b0d4cc46632d0c9af0f79bbde825ca",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/ta.umd.prod.js": {
+      "kind": "web",
+      "sha256": "b69eb93a324301699a163ab700f2c2b3789c915682a8c5236995e1985d4e9c7b",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/th.umd.prod.js": {
+      "kind": "web",
+      "sha256": "40e31fec826648f9c12d23e502800d6a1a24fd51bdbf35c190af576b812f5ac3",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/tl.umd.prod.js": {
+      "kind": "web",
+      "sha256": "28fb1936cbcd925f4284983701dce35c0f73c55a6f70c58a8a1b1b5e5b9b5055",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/tr.umd.prod.js": {
+      "kind": "web",
+      "sha256": "a4187fb950f4002b778bda2533d7a4cbe79668919a8266840d19886746b91b0f",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/ug.umd.prod.js": {
+      "kind": "web",
+      "sha256": "e81476bb3668e92be31283dbeda137908406f035bc93b43d4a6099cb4959aef6",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/uk.umd.prod.js": {
+      "kind": "web",
+      "sha256": "a1c2032c35cd56af640fabc2d9e304e9387174669ade5604a73bcf1982578420",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/ur-PK.umd.prod.js": {
+      "kind": "web",
+      "sha256": "7bcdf17d063fb3427c6b8e332a0a984c5fa29c128a6f813bbf6661ec2d4d8936",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/uz-Cyrl.umd.prod.js": {
+      "kind": "web",
+      "sha256": "982b067d5345594cdcb857831d6d5155336848420b104f77240e933c2edd00a2",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/uz-Latn.umd.prod.js": {
+      "kind": "web",
+      "sha256": "61ecdd0296b80066f8a040932cefcf566f4d5c698465e72c44f38a8c02c5b29c",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/vi.umd.prod.js": {
+      "kind": "web",
+      "sha256": "f15b519c7384ebd0c1a242f8c3cbaa5b10bd90ff7739fa2d5c96170f35801e3f",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/zh-CN.umd.prod.js": {
+      "kind": "web",
+      "sha256": "c12f33919a13e34f525144b4264255fa5a461e85bbb5680da3984e4462d42c30",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/lang/zh-TW.umd.prod.js": {
+      "kind": "web",
+      "sha256": "0fb3c90995b39624ab8e3ecbca0ac84945ebd2303940f25a361e108027ef3236",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/nicegui.css": {
+      "kind": "web",
+      "sha256": "86f3596f018c163b6a559293cd893d470b554335eacae487c1e8971476e5537f",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/nicegui.js": {
+      "kind": "web",
+      "sha256": "2f1257d5b83278930eea2de1a4d537e1f1123c8e77274259c4172dfc3bb25336",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/quasar.important.css": {
+      "kind": "web",
+      "sha256": "87f8c9dcb2b1dd350fdad1a347add22bb74517be6c1553dcc09f5603feae2cac",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/quasar.important.prod.css": {
+      "kind": "web",
+      "sha256": "1d85d2db2a5aaed4cf3767b5ede5652e7af9ae59d086d216aa584cb80d28de72",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/quasar.umd.js": {
+      "kind": "web",
+      "sha256": "0941b1b3d555fe3756dd17b8eb2c37be9e4a90b7c5e8d86e86537715fb82f110",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/quasar.umd.prod.js": {
+      "kind": "web",
+      "sha256": "ab8d0d9e69eac525a824dc796d6ce8b683efe0ecb5bef5d23b203f3e18bb3384",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/quasar.unimportant.css": {
+      "kind": "web",
+      "sha256": "5a6c623f276582ebbc7657d7190b0b2652540769bc6582962a06de6bb902f038",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/quasar.unimportant.prod.css": {
+      "kind": "web",
+      "sha256": "8e01b5d29820a5d696da31a57a76df5d7126799a16ed1974c7bfbc924a1fb9fa",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/sad_face.svg": {
+      "kind": "web",
+      "sha256": "c9856ff5bc2460c4563479378cb59d43db9dc750b4193b498a5148fe089ce123",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/sass.dart.js": {
+      "kind": "web",
+      "sha256": "a0a83224dcc37d55a3680f3c59dbe70e76dae272ece50f50b24aea1857a4e736",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/sass.default.js": {
+      "kind": "web",
+      "sha256": "6078bfb9871efcd8a5825125a4aa206c9e9ef489fbb7fc671447ad8ba71d2dcb",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/socket.io.min.js": {
+      "kind": "web",
+      "sha256": "b0e735814f8dcfecd6cdb8a7ce95a297a7e1e5f2727a29e6f5901801d52fa0c5",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/tailwindcss.min.js": {
+      "kind": "web",
+      "sha256": "4df034809c175da313a3e44657411bd26cbd52ceb16f52f028e35e3d646bb9c8",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/unocss/core.global.js": {
+      "kind": "web",
+      "sha256": "a3718955885d1313e02ec2f5f28b184bbbc1f6bda538a59686921ce1f1e307ba",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/unocss/preset-mini.global.js": {
+      "kind": "web",
+      "sha256": "eb79142e39b1ef99037a673f966bc41e368c6c3d419351073483a67425f4f67c",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/unocss/preset-wind3.global.js": {
+      "kind": "web",
+      "sha256": "d70987665180c193c2b750f87eb34a86e65552c850ab939f6fb850747b4c0970",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/unocss/preset-wind4.global.js": {
+      "kind": "web",
+      "sha256": "2cdb254cd3c8e71c8b0c848ddb804be11c1dd9aae68a54966ca3571d168693a9",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/utils/dynamic_properties.js": {
+      "kind": "web",
+      "sha256": "d721b0a44afa535b7de80733d3d51627c7cdab13959ed56eeb5ed7e94c00611a",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/utils/json.js": {
+      "kind": "web",
+      "sha256": "e09362dbf3af571aa3319d54cee6fe9b8a30dce3ef291de2024b55599588076e",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/utils/resources.js": {
+      "kind": "web",
+      "sha256": "0a0aa80267153aba48a59a3915a1760c78ca3387407c9c9f093303065fe93e43",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/vue.esm-browser.js": {
+      "kind": "web",
+      "sha256": "a675f77cd64d1cddac9a329ba5bf19e6845eaf604535ef2a0c4f3ef9e8f337c1",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/nicegui/static/vue.esm-browser.prod.js": {
+      "kind": "web",
+      "sha256": "f1dfbe4ca6bdc0f8eac639eea8652654a073433018be9bfd1cc55e75574b78f0",
+      "notices": [
+        "NiceGUI",
+        "NiceGUI web core",
+        "Web standard license texts"
+      ]
+    },
+    "Resources/resources/fonts/JournalSans/JournalSans-Bold.ttf": {
+      "kind": "font",
+      "sha256": "2a8bc1f65b82151138288b5614440c23b10fbd2e0c5bc880bc8cf46940e3e2ff",
+      "notices": [
+        "HeartWings Journal Sans (Noto Sans KR static derivative)"
+      ],
+      "font_names": {
+        "0": [
+          "(c) 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'."
+        ],
+        "1": [
+          "HeartWings Journal Sans"
+        ],
+        "2": [
+          "Bold"
+        ],
+        "4": [
+          "HeartWings Journal Sans Bold"
+        ],
+        "6": [
+          "HeartWingsJournalSans-Bold"
+        ],
+        "13": [
+          "This Font Software is licensed under the SIL Open Font License, Version 1.1. This license is available with a FAQ at: https://scripts.sil.org/OFL"
+        ],
+        "16": [
+          "HeartWings Journal Sans"
+        ],
+        "17": [
+          "Bold"
+        ]
+      }
+    },
+    "Resources/resources/fonts/JournalSans/JournalSans-Regular.ttf": {
+      "kind": "font",
+      "sha256": "215c123f22cecf0c6d48c23c588c789b97b10d6ede64004cad9aca8da32502a9",
+      "notices": [
+        "HeartWings Journal Sans (Noto Sans KR static derivative)"
+      ],
+      "font_names": {
+        "0": [
+          "(c) 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'."
+        ],
+        "1": [
+          "HeartWings Journal Sans"
+        ],
+        "2": [
+          "Regular"
+        ],
+        "4": [
+          "HeartWings Journal Sans Regular"
+        ],
+        "6": [
+          "HeartWingsJournalSans-Regular"
+        ],
+        "13": [
+          "This Font Software is licensed under the SIL Open Font License, Version 1.1. This license is available with a FAQ at: https://scripts.sil.org/OFL"
+        ],
+        "16": [
+          "HeartWings Journal Sans"
+        ],
+        "17": [
+          "Regular"
+        ]
+      }
+    },
+    "Resources/resources/fonts/NotoSansKR-VariableFont_wght.ttf": {
+      "kind": "font",
+      "sha256": "16efec3833f189345a7185d85790cd0db4d9729ea2d58c57fccc06ba5d1f3017",
+      "notices": [
+        "Noto Sans KR"
+      ],
+      "font_names": {
+        "0": [
+          "(c) 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'."
+        ],
+        "1": [
+          "Noto Sans KR Thin"
+        ],
+        "2": [
+          "Regular"
+        ],
+        "4": [
+          "Noto Sans KR Thin"
+        ],
+        "6": [
+          "NotoSansKR-Thin"
+        ],
+        "13": [
+          "This Font Software is licensed under the SIL Open Font License, Version 1.1. This license is available with a FAQ at: https://scripts.sil.org/OFL"
+        ],
+        "16": [
+          "Noto Sans KR"
+        ],
+        "17": [
+          "Thin"
+        ]
+      }
+    },
+    "Resources/resources/fonts/PretendardVariable.ttf": {
+      "kind": "font",
+      "sha256": "3090ccde0442bb347aa7685d9ba8b17436a60682df6e8f92a9a670de14056e22",
+      "notices": [
+        "Pretendard"
+      ],
+      "font_names": {
+        "0": [
+          "Copyright © 2023 Kil Hyung-jin",
+          "Copyright © 2023 길형진"
+        ],
+        "1": [
+          "Pretendard Variable"
+        ],
+        "2": [
+          "Regular"
+        ],
+        "4": [
+          "Pretendard Variable"
+        ],
+        "6": [
+          "PretendardVariable-Regular"
+        ],
+        "13": [
+          "This Font Software is licensed under the SIL Open Font License, Version 1.1. This license is available with a FAQ at: http://scripts.sil.org/OFL"
+        ],
+        "16": [
+          "Pretendard Variable"
+        ],
+        "17": [
+          "Regular"
+        ]
+      }
+    },
+    "Resources/resources/fonts/RIDIBatang/HeartWingsRidiBatang-Regular.ttf": {
+      "kind": "font",
+      "sha256": "341577e135d066a947a3080c7d4eb9e5ff090f6576d8b7768a507f9d58140034",
+      "notices": [
+        "HeartWings Ridi Batang (리디바탕 PDF용 변환본)"
+      ],
+      "font_names": {
+        "0": [
+          "Copyright © 2019 RIDI & Sandoll. All rights reserved. Font designed by Sandoll Inc."
+        ],
+        "1": [
+          "HeartWings Ridi Batang"
+        ],
+        "2": [
+          "Regular"
+        ],
+        "4": [
+          "HeartWings Ridi Batang Regular"
+        ],
+        "6": [
+          "HeartWingsRidiBatang-Regular"
+        ],
+        "13": [],
+        "16": [
+          "HeartWings Ridi Batang"
+        ],
+        "17": [
+          "Regular"
+        ]
+      }
+    },
+    "Resources/resources/fonts/SpoqaHanSansNeo/SpoqaHanSansNeo-Bold.otf": {
+      "kind": "font",
+      "sha256": "47a25f01c527b605b65a83de3f578ea5eba154bdc37fe0846b9deb02318a777e",
+      "notices": [
+        "Spoqa Han Sans Neo"
+      ],
+      "font_names": {
+        "0": [
+          "Copyright 2020 Spoqa \\(http://www.spoqa-han-sans.com\\)"
+        ],
+        "1": [
+          "Spoqa Han Sans Neo",
+          "Spoqa Han Sans Neo Bold"
+        ],
+        "2": [
+          "Bold"
+        ],
+        "4": [
+          "Spoqa Han Sans Neo Bold"
+        ],
+        "6": [
+          "SpoqaHanSansNeo-Bold"
+        ],
+        "13": [
+          "This Font Software is licensed under the SIL Open Font License, Version 1.1. This Font Software is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the SIL Open Font License for the specific language, permissions and limitations governing your use of this Font Software."
+        ],
+        "16": [
+          "Spoqa Han Sans Neo"
+        ],
+        "17": []
+      }
+    },
+    "Resources/resources/fonts/SpoqaHanSansNeo/SpoqaHanSansNeo-Light.otf": {
+      "kind": "font",
+      "sha256": "a2e8ce410c791c0826f8f0f8a39b41b8ba82df2fc2ca304c31821deb8112817f",
+      "notices": [
+        "Spoqa Han Sans Neo"
+      ],
+      "font_names": {
+        "0": [
+          "Copyright 2020 Spoqa \\(http://www.spoqa-han-sans.com\\)"
+        ],
+        "1": [
+          "Spoqa Han Sans Neo",
+          "Spoqa Han Sans Neo Light"
+        ],
+        "2": [
+          "Light",
+          "Regular"
+        ],
+        "4": [
+          "Spoqa Han Sans Neo Light"
+        ],
+        "6": [
+          "SpoqaHanSansNeo-Light"
+        ],
+        "13": [
+          "This Font Software is licensed under the SIL Open Font License, Version 1.1. This Font Software is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the SIL Open Font License for the specific language, permissions and limitations governing your use of this Font Software."
+        ],
+        "16": [
+          "Spoqa Han Sans Neo"
+        ],
+        "17": [
+          "Light"
+        ]
+      }
+    },
+    "Resources/resources/fonts/SpoqaHanSansNeo/SpoqaHanSansNeo-Medium.otf": {
+      "kind": "font",
+      "sha256": "c593d5a1f3eeeaf6d8a7e4774f04fe58a95ce41c04fee71359ecf7175e0014f2",
+      "notices": [
+        "Spoqa Han Sans Neo"
+      ],
+      "font_names": {
+        "0": [
+          "Copyright 2020 Spoqa \\(http://www.spoqa-han-sans.com\\)"
+        ],
+        "1": [
+          "Spoqa Han Sans Neo",
+          "Spoqa Han Sans Neo Medium"
+        ],
+        "2": [
+          "Medium",
+          "Regular"
+        ],
+        "4": [
+          "Spoqa Han Sans Neo Medium"
+        ],
+        "6": [
+          "SpoqaHanSansNeo-Medium"
+        ],
+        "13": [
+          "This Font Software is licensed under the SIL Open Font License, Version 1.1. This Font Software is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the SIL Open Font License for the specific language, permissions and limitations governing your use of this Font Software."
+        ],
+        "16": [
+          "Spoqa Han Sans Neo"
+        ],
+        "17": [
+          "Medium"
+        ]
+      }
+    },
+    "Resources/resources/fonts/SpoqaHanSansNeo/SpoqaHanSansNeo-Regular.otf": {
+      "kind": "font",
+      "sha256": "ba5aeca436d91553cb664070afa66f0715d81f59fee6e2a0c72cc7589b4937f4",
+      "notices": [
+        "Spoqa Han Sans Neo"
+      ],
+      "font_names": {
+        "0": [
+          "Copyright 2020 Spoqa \\(http://www.spoqa-han-sans.com\\)"
+        ],
+        "1": [
+          "Spoqa Han Sans Neo"
+        ],
+        "2": [
+          "Regular"
+        ],
+        "4": [
+          "Spoqa Han Sans Neo Regular"
+        ],
+        "6": [
+          "SpoqaHanSansNeo-Regular"
+        ],
+        "13": [
+          "This Font Software is licensed under the SIL Open Font License, Version 1.1. This Font Software is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the SIL Open Font License for the specific language, permissions and limitations governing your use of this Font Software."
+        ],
+        "16": [],
+        "17": []
+      }
+    },
+    "Resources/resources/fonts/SpoqaHanSansNeo/SpoqaHanSansNeo-Thin.otf": {
+      "kind": "font",
+      "sha256": "448a01c35f46cf34a7dc7cc6f12aa6e5f5a47265366d390ef10a1f39bb975c70",
+      "notices": [
+        "Spoqa Han Sans Neo"
+      ],
+      "font_names": {
+        "0": [
+          "Copyright 2020 Spoqa \\(http://www.spoqa-han-sans.com\\)"
+        ],
+        "1": [
+          "Spoqa Han Sans Neo",
+          "Spoqa Han Sans Neo Thin"
+        ],
+        "2": [
+          "Regular",
+          "Thin"
+        ],
+        "4": [
+          "Spoqa Han Sans Neo Thin"
+        ],
+        "6": [
+          "SpoqaHanSansNeo-Thin"
+        ],
+        "13": [
+          "This Font Software is licensed under the SIL Open Font License, Version 1.1. This Font Software is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the SIL Open Font License for the specific language, permissions and limitations governing your use of this Font Software."
+        ],
+        "16": [
+          "Spoqa Han Sans Neo"
+        ],
+        "17": [
+          "Thin"
+        ]
+      }
+    }
+  },
+  "evidence_files": [
+    {
+      "file": "assets/evidence/aggrid-package-lock.json",
+      "sha256": "d1a7fa8ff6eccbc7766920288ac03d6c0dd65323b3174fdbf3a7886ec6ceff1f"
+    },
+    {
+      "file": "assets/evidence/anywidget-widget.js",
+      "sha256": "f50e71de6d56fe038d26b6ecc010e23029dd76fbfb1ac421889c208e1c3ab460"
+    },
+    {
+      "file": "assets/evidence/codemirror-package-lock.json",
+      "sha256": "c20359a63036c9660e70293d47732fb95f9431f01b6443b028113aaa4fde4630"
+    },
+    {
+      "file": "assets/evidence/echart-package-lock.json",
+      "sha256": "2879f01b7c8e0acc97e13b56533b7e25ded30ced742867127591d40fde54e6fe"
+    },
+    {
+      "file": "assets/evidence/joystick-package-lock.json",
+      "sha256": "eaa0e9f4d6c5389c521f09ededca41c491b91132ef9c5bd05f304c0935ea572f"
+    },
+    {
+      "file": "assets/evidence/json_editor-package-lock.json",
+      "sha256": "f8ab83712dd59b1f2606d470eee65c0c56f3f9992ed9a91bf21ad06be25c2003"
+    },
+    {
+      "file": "assets/evidence/leaflet-package-lock.json",
+      "sha256": "e5518de9a783589d46d79d97369607578ca2bff70d64b7ee4bb0bfb1d9c6e754"
+    },
+    {
+      "file": "assets/evidence/mermaid-package-lock.json",
+      "sha256": "3d84e28e8dd3e540f8e7a6aa4ac3091c03c37c8ef14c370b6930c50ad1a5eed6"
+    },
+    {
+      "file": "assets/evidence/native-linkage.json",
+      "sha256": "bf0c9cf8c9bcc7581768097433d2b6355dec0f1a507ff7a2813ab6e095202dfc"
+    },
+    {
+      "file": "assets/evidence/nh3-wheel-sbom.json",
+      "sha256": "3547cc774782b7ab9c57bb2e9eb89a75b2f8482cb5e1a60297ce1cdf2f0cd5d8"
+    },
+    {
+      "file": "assets/evidence/orjson-wheel-sbom.json",
+      "sha256": "bb647540fbebea32fc4f0109ebe6f4d5436ca1272427153b3f379bfd9bf40ce2"
+    },
+    {
+      "file": "assets/evidence/plotly-package-lock.json",
+      "sha256": "6b34d8bba125c14196154113f0b77caeff476188d20778e24fc891a1ff428acb"
+    },
+    {
+      "file": "assets/evidence/pydantic_core-wheel-sbom.json",
+      "sha256": "786fc70e8b0bb3de0277d377b82c29fff6e9d65485d856b566e52b6c8a4b8835"
+    },
+    {
+      "file": "assets/evidence/root-package-lock.json",
+      "sha256": "fa7d882bf16691ef5c7b75466e9672e00e8e0a15c8ee2e9f2f028362e5f1a664"
+    },
+    {
+      "file": "assets/evidence/scene-package-lock.json",
+      "sha256": "13fd28900b87ab8eab210e1d1f4a5fa3ee7df39062d54672213e258229ec7f7a"
+    },
+    {
+      "file": "assets/evidence/sortable-package-lock.json",
+      "sha256": "e19ccf345a9b95b49bfe27bf61a0953c6696e9f65e8c40f29a1aa4aa6ec157b6"
+    },
+    {
+      "file": "assets/evidence/watchfiles-wheel-sbom.json",
+      "sha256": "e53a3410410dcb0252103e3720a8fac7200edb7ec319093642f043fa25041371"
+    },
+    {
+      "file": "assets/evidence/xterm-package-lock.json",
+      "sha256": "73bb68485594ec29040282ffbaacf39a11566c2e159a664bd204b36ebbb6a66f"
+    },
+    {
+      "file": "ASSET_COMPONENTS.json",
+      "sha256": "411ebe1468366230571421602bef0727d34dab7bde5fb57096a71895d0be4745"
+    },
+    {
+      "file": "assets/evidence/native-versions.json",
+      "sha256": "171b216ad9a2f61414bee35e69d809891bd7c9cd737bd46c6f7b390d011974ea"
+    },
+    {
+      "file": "assets/evidence/rust-toolchains.json",
+      "sha256": "5c91f82e534ace3992dc9adb61f1a650d22587521534df83f118fa9cf5cb5685"
+    },
+    {
+      "file": "assets/evidence/orjson-toolchain/github-workflows-artifact.yaml",
+      "sha256": "e0aea061cbe859401d2012e741166cc4045b09fbab5e2e59358f4b81d39a3574"
+    },
+    {
+      "file": "assets/evidence/orjson-toolchain/channel-rust-nightly.toml",
+      "sha256": "f4b63db200deb36a120b27ae085140637ee04af1254891308799225e5afbe8bf"
+    },
+    {
+      "file": "assets/evidence/orjson-toolchain/ci_config.toml",
+      "sha256": "a9732779fda796a8bddef71dbf014b995680ff83bc5e080ec5f53dae5e9d8277"
+    },
+    {
+      "file": "assets/evidence/orjson-toolchain/ci_macos.sh",
+      "sha256": "1c4196e70d7cda2cfccbc5747348df623b6f423a0b579757a54c772289e52c54"
+    },
+    {
+      "file": "assets/evidence/orjson-toolchain/orjson-3.12.0-cp314-cp314-macosx_10_15_x86_64.macosx_11_0_arm64.macosx_10_15_universal2.whl.provenance.json",
+      "sha256": "38f0fae310ad92a3a94cc6e103fff648409d29fa36a18b654a5b2db18b1940a7"
+    },
+    {
+      "file": "assets/evidence/orjson-toolchain/orjson-3.12.0-cp314-cp314-macosx_15_0_arm64.whl.provenance.json",
+      "sha256": "001978b5626dfd963cb093c627cd7c29be7e4d43d68660aaea9adf3db6ad410d"
+    },
+    {
+      "file": "assets/evidence/orjson-toolchain/pypi-certificate.txt",
+      "sha256": "95246584467c2e37bbfe31b8b8c72df278704c88c66cdbb3647042e2ab24e5db"
+    },
+    {
+      "file": "assets/evidence/orjson-toolchain/pypi.json",
+      "sha256": "cdafc4194828752c0b9638fea5a6433e5b0e5e068957f423d55396ca4fe77c1a"
+    },
+    {
+      "file": "assets/evidence/orjson-toolchain/rust-library_std_Cargo.toml",
+      "sha256": "d2c360091f6dcd57d0025d3c54e28ba07258661d7a0cda737289d2fb4f1b05e1"
+    },
+    {
+      "file": "assets/evidence/orjson-toolchain/verification.json",
+      "sha256": "4836b0554a79cda4c5ecb9c070ceec2800e612c1d12e1763934af468f378119d"
+    }
+  ],
+  "font_name_check": "JournalSans uses HeartWings Journal Sans (not RFN Source); Ridi derivative uses HeartWings Ridi Batang. Original copyright notices retained.",
+  "audit_started": "2026-10-29",
+  "limitations": [
+    "Component closures from upstream locks/SBOMs include candidates that may be removed or target-specific, not exact linker reachability.",
+    "orjson macOS arm64 toolchain identified from PyPI publish provenance and pinned build workflow; see ORJSON_TOOLCHAIN_AUDIT.md for evidence and limits. Revalidate any new release artifact.",
+    "This records a validation macOS artifact, not a rebuilt release or Windows/Linux/installer audit."
+  ]
+}

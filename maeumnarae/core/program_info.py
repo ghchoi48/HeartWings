@@ -11,6 +11,15 @@ GITHUB_URL = 'https://github.com/ghchoi48/HeartWings'
 RESOURCE_ROOT = PROJECT_ROOT
 
 
+def third_party_source(relative_path: str) -> bytes:
+    """동봉 소스를 내려받을 때 라이선스 폴더 밖 접근을 막는다."""
+    root = (RESOURCE_ROOT / 'resources' / 'licenses').resolve()
+    path = (root / relative_path).resolve()
+    if not path.is_relative_to(root):
+        raise ValueError('소스 파일은 licenses 폴더 안에 있어야 합니다.')
+    return path.read_bytes()
+
+
 def program_license() -> str:
     return (RESOURCE_ROOT / 'LICENSE').read_text(encoding='utf-8')
 

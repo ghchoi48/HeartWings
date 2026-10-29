@@ -1,0 +1,527 @@
+{
+  "otool_dependencies": {
+    "Frameworks/AppKit/_AppKit.cpython-314-darwin.so": [
+      "\t/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit (compatibility version 45.0.0, current version 2685.60.104)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)",
+      "\t/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation (compatibility version 150.0.0, current version 5026.5.4)",
+      "\t/usr/lib/libobjc.A.dylib (compatibility version 1.0.0, current version 228.0.0)"
+    ],
+    "Frameworks/AppKit/_inlines.cpython-314-darwin.so": [
+      "\t/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit (compatibility version 45.0.0, current version 2685.60.104)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/CoreFoundation/_CoreFoundation.cpython-314-darwin.so": [
+      "\t/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation (compatibility version 150.0.0, current version 5026.5.4)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)",
+      "\t/usr/lib/libobjc.A.dylib (compatibility version 1.0.0, current version 228.0.0)"
+    ],
+    "Frameworks/CoreFoundation/_inlines.cpython-314-darwin.so": [
+      "\t/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation (compatibility version 150.0.0, current version 5026.5.4)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/Foundation/_Foundation.cpython-314-darwin.so": [
+      "\t/System/Library/Frameworks/Foundation.framework/Versions/C/Foundation (compatibility version 300.0.0, current version 5026.5.4)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)",
+      "\t/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation (compatibility version 150.0.0, current version 5026.5.4)",
+      "\t/usr/lib/libobjc.A.dylib (compatibility version 1.0.0, current version 228.0.0)"
+    ],
+    "Frameworks/Foundation/_inlines.cpython-314-darwin.so": [
+      "\t/System/Library/Frameworks/Foundation.framework/Versions/C/Foundation (compatibility version 300.0.0, current version 5026.5.4)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)",
+      "\t/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation (compatibility version 150.0.0, current version 5026.5.4)",
+      "\t/usr/lib/libobjc.A.dylib (compatibility version 1.0.0, current version 228.0.0)"
+    ],
+    "Frameworks/PIL/__dot__dylibs/libXau.6.dylib": [
+      "\t@rpath/libXau.6.dylib (compatibility version 7.0.0, current version 7.0.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/PIL/__dot__dylibs/libavif.16.4.2.dylib": [
+      "\t@rpath/libavif.16.4.2.dylib (compatibility version 16.0.0, current version 16.4.2)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/PIL/__dot__dylibs/libbrotlicommon.1.2.0.dylib": [
+      "\t@rpath/libbrotlicommon.1.2.0.dylib (compatibility version 1.0.0, current version 1.2.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/PIL/__dot__dylibs/libbrotlidec.1.2.0.dylib": [
+      "\t@rpath/libbrotlidec.1.2.0.dylib (compatibility version 1.0.0, current version 1.2.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)",
+      "\t@rpath/libbrotlicommon.1.2.0.dylib (compatibility version 1.0.0, current version 1.2.0)"
+    ],
+    "Frameworks/PIL/__dot__dylibs/libfreetype.6.dylib": [
+      "\t@rpath/libfreetype.6.dylib (compatibility version 27.0.0, current version 27.6.0)",
+      "\t/usr/lib/libbz2.1.0.dylib (compatibility version 1.0.0, current version 1.0.8)",
+      "\t@rpath/libpng16.16.dylib (compatibility version 75.0.0, current version 75.0.0)",
+      "\t@rpath/libz.1.3.1.zlib-ng.dylib (compatibility version 1.0.0, current version 1.3.1)",
+      "\t@rpath/libbrotlidec.1.2.0.dylib (compatibility version 1.0.0, current version 1.2.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/PIL/__dot__dylibs/libharfbuzz.0.dylib": [
+      "\t@rpath/libharfbuzz.0.dylib (compatibility version 61421.0.0, current version 61421.0.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)",
+      "\t@rpath/libfreetype.6.dylib (compatibility version 27.0.0, current version 27.6.0)"
+    ],
+    "Frameworks/PIL/__dot__dylibs/libjpeg.62.4.0.dylib": [
+      "\t@rpath/libjpeg.62.4.0.dylib (compatibility version 62.0.0, current version 62.4.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/PIL/__dot__dylibs/liblcms2.2.dylib": [
+      "\t@rpath/liblcms2.2.dylib (compatibility version 3.0.0, current version 3.19.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/PIL/__dot__dylibs/liblzma.5.dylib": [
+      "\t@rpath/liblzma.5.dylib (compatibility version 14.0.0, current version 14.3.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/PIL/__dot__dylibs/libopenjp2.2.5.4.dylib": [
+      "\t@rpath/libopenjp2.2.5.4.dylib (compatibility version 7.0.0, current version 2.5.4)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/PIL/__dot__dylibs/libpng16.16.dylib": [
+      "\t@rpath/libpng16.16.dylib (compatibility version 75.0.0, current version 75.0.0)",
+      "\t@rpath/libz.1.3.1.zlib-ng.dylib (compatibility version 1.0.0, current version 1.3.1)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/PIL/__dot__dylibs/libsharpyuv.0.dylib": [
+      "\t@rpath/libsharpyuv.0.dylib (compatibility version 2.0.0, current version 2.2.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/PIL/__dot__dylibs/libtiff.6.dylib": [
+      "\t@rpath/libtiff.6.dylib (compatibility version 9.0.0, current version 9.0.0)",
+      "\t@rpath/liblzma.5.dylib (compatibility version 14.0.0, current version 14.3.0)",
+      "\t@rpath/libjpeg.62.4.0.dylib (compatibility version 62.0.0, current version 62.4.0)",
+      "\t@rpath/libz.1.3.1.zlib-ng.dylib (compatibility version 1.0.0, current version 1.3.1)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/PIL/__dot__dylibs/libwebp.7.dylib": [
+      "\t@rpath/libwebp.7.dylib (compatibility version 10.0.0, current version 10.0.0)",
+      "\t@rpath/libsharpyuv.0.dylib (compatibility version 2.0.0, current version 2.2.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/PIL/__dot__dylibs/libwebpdemux.2.dylib": [
+      "\t@rpath/libwebpdemux.2.dylib (compatibility version 3.0.0, current version 3.17.0)",
+      "\t@rpath/libwebp.7.dylib (compatibility version 10.0.0, current version 10.0.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/PIL/__dot__dylibs/libwebpmux.3.dylib": [
+      "\t@rpath/libwebpmux.3.dylib (compatibility version 5.0.0, current version 5.2.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)",
+      "\t@rpath/libwebp.7.dylib (compatibility version 10.0.0, current version 10.0.0)"
+    ],
+    "Frameworks/PIL/__dot__dylibs/libxcb.1.1.0.dylib": [
+      "\t@rpath/libxcb.1.1.0.dylib (compatibility version 3.0.0, current version 3.0.0)",
+      "\t@rpath/libXau.6.dylib (compatibility version 7.0.0, current version 7.0.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/PIL/__dot__dylibs/libz.1.3.1.zlib-ng.dylib": [
+      "\t@rpath/libz.1.3.1.zlib-ng.dylib (compatibility version 1.0.0, current version 1.3.1)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/PIL/_avif.cpython-314-darwin.so": [
+      "\t@rpath/libavif.16.4.2.dylib (compatibility version 16.0.0, current version 16.4.2)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/PIL/_imaging.cpython-314-darwin.so": [
+      "\t@rpath/libtiff.6.dylib (compatibility version 9.0.0, current version 9.0.0)",
+      "\t@rpath/libjpeg.62.4.0.dylib (compatibility version 62.0.0, current version 62.4.0)",
+      "\t@rpath/libopenjp2.2.5.4.dylib (compatibility version 7.0.0, current version 2.5.4)",
+      "\t@rpath/libz.1.3.1.zlib-ng.dylib (compatibility version 1.0.0, current version 1.3.1)",
+      "\t@rpath/libxcb.1.1.0.dylib (compatibility version 3.0.0, current version 3.0.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/PIL/_imagingcms.cpython-314-darwin.so": [
+      "\t@rpath/liblcms2.2.dylib (compatibility version 3.0.0, current version 3.19.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/PIL/_imagingft.cpython-314-darwin.so": [
+      "\t@rpath/libfreetype.6.dylib (compatibility version 27.0.0, current version 27.6.0)",
+      "\t@rpath/libharfbuzz.0.dylib (compatibility version 61421.0.0, current version 61421.0.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/PIL/_imagingmath.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/PIL/_imagingtk.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/PIL/_webp.cpython-314-darwin.so": [
+      "\t@rpath/libwebp.7.dylib (compatibility version 10.0.0, current version 10.0.0)",
+      "\t@rpath/libwebpmux.3.dylib (compatibility version 5.0.0, current version 5.2.0)",
+      "\t@rpath/libwebpdemux.2.dylib (compatibility version 3.0.0, current version 3.17.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/Python.framework/Versions/3.14/Python": [
+      "\t@rpath/Python (compatibility version 3.14.0, current version 3.14.0)",
+      "\t/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation (compatibility version 150.0.0, current version 5026.5.4)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/Quartz/CoreGraphics/_callbacks.cpython-314-darwin.so": [
+      "\t/System/Library/Frameworks/Quartz.framework/Versions/A/Quartz (compatibility version 1.0.0, current version 1.0.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)",
+      "\t/usr/lib/libobjc.A.dylib (compatibility version 1.0.0, current version 228.0.0)"
+    ],
+    "Frameworks/Quartz/CoreGraphics/_coregraphics.cpython-314-darwin.so": [
+      "\t/System/Library/Frameworks/ApplicationServices.framework/Versions/A/ApplicationServices (compatibility version 1.0.0, current version 66.0.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)",
+      "\t/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation (compatibility version 150.0.0, current version 5026.5.4)",
+      "\t/System/Library/Frameworks/CoreGraphics.framework/Versions/A/CoreGraphics (compatibility version 64.0.0, current version 1965.5.1)",
+      "\t/usr/lib/libobjc.A.dylib (compatibility version 1.0.0, current version 228.0.0)"
+    ],
+    "Frameworks/Quartz/CoreGraphics/_doubleindirect.cpython-314-darwin.so": [
+      "\t/System/Library/Frameworks/Quartz.framework/Versions/A/Quartz (compatibility version 1.0.0, current version 1.0.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)",
+      "\t/usr/lib/libobjc.A.dylib (compatibility version 1.0.0, current version 228.0.0)"
+    ],
+    "Frameworks/Quartz/CoreGraphics/_inlines.cpython-314-darwin.so": [
+      "\t/System/Library/Frameworks/Quartz.framework/Versions/A/Quartz (compatibility version 1.0.0, current version 1.0.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/Quartz/CoreGraphics/_sortandmap.cpython-314-darwin.so": [
+      "\t/System/Library/Frameworks/Quartz.framework/Versions/A/Quartz (compatibility version 1.0.0, current version 1.0.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)",
+      "\t/usr/lib/libobjc.A.dylib (compatibility version 1.0.0, current version 228.0.0)"
+    ],
+    "Frameworks/Quartz/CoreVideo/_CVPixelBuffer.cpython-314-darwin.so": [
+      "\t/System/Library/Frameworks/Quartz.framework/Versions/A/Quartz (compatibility version 1.0.0, current version 1.0.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)",
+      "\t/System/Library/Frameworks/CoreVideo.framework/Versions/A/CoreVideo (compatibility version 1.2.0, current version 734.4.0)",
+      "\t/usr/lib/libobjc.A.dylib (compatibility version 1.0.0, current version 228.0.0)"
+    ],
+    "Frameworks/Quartz/ImageKit/_imagekit.cpython-314-darwin.so": [
+      "\t/System/Library/Frameworks/Quartz.framework/Versions/A/Quartz (compatibility version 1.0.0, current version 1.0.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/Quartz/PDFKit/_PDFKit.cpython-314-darwin.so": [
+      "\t/System/Library/Frameworks/Quartz.framework/Versions/A/Quartz (compatibility version 1.0.0, current version 1.0.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/Quartz/QuartzCore/_quartzcore.cpython-314-darwin.so": [
+      "\t/System/Library/Frameworks/QuartzCore.framework/Versions/A/QuartzCore (compatibility version 1.2.0, current version 1195.14.4)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/Quartz/QuickLookUI/_QuickLookUI.cpython-314-darwin.so": [
+      "\t/System/Library/Frameworks/Quartz.framework/Versions/A/Quartz (compatibility version 1.0.0, current version 1.0.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/Security/_Security.cpython-314-darwin.so": [
+      "\t/System/Library/Frameworks/Security.framework/Versions/A/Security (compatibility version 1.0.0, current version 61901.120.67)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/WebKit/_WebKit.cpython-314-darwin.so": [
+      "\t/System/Library/Frameworks/WebKit.framework/Versions/A/WebKit (compatibility version 1.0.0, current version 624.2.5)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/aiohttp/_http_parser.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/aiohttp/_http_writer.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/aiohttp/_websocket/mask.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/aiohttp/_websocket/reader_c.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/frozenlist/_frozenlist.cpython-314-darwin.so": [
+      "\t/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 1900.180.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)"
+    ],
+    "Frameworks/httptools/parser/parser.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)"
+    ],
+    "Frameworks/httptools/parser/url_parser.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)"
+    ],
+    "Frameworks/libcrypto.3.dylib": [
+      "\t@rpath/libcrypto.3.dylib (compatibility version 3.0.0, current version 3.0.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/libssl.3.dylib": [
+      "\t@rpath/libssl.3.dylib (compatibility version 3.0.0, current version 3.0.0)",
+      "\t@rpath/libcrypto.3.dylib (compatibility version 3.0.0, current version 3.0.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/libzstd.1.dylib": [
+      "\t@rpath/libzstd.1.dylib (compatibility version 1.0.0, current version 1.5.7)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/markupsafe/_speedups.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)"
+    ],
+    "Frameworks/multidict/_multidict.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/nh3/nh3.abi3.so": [
+      "\t@rpath/nh3.abi3.so (compatibility version 0.0.0, current version 0.0.0)",
+      "\t/usr/lib/libiconv.2.dylib (compatibility version 7.0.0, current version 7.0.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/objc/_machsignals.cpython-314-darwin.so": [
+      "\t/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation (compatibility version 150.0.0, current version 5026.5.4)",
+      "\t/System/Library/Frameworks/Foundation.framework/Versions/C/Foundation (compatibility version 300.0.0, current version 5026.5.4)",
+      "\t/usr/lib/libffi.dylib (compatibility version 1.0.0, current version 40.0.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/objc/_objc.cpython-314-darwin.so": [
+      "\t/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation (compatibility version 150.0.0, current version 5026.5.4)",
+      "\t/System/Library/Frameworks/Foundation.framework/Versions/C/Foundation (compatibility version 300.0.0, current version 5026.5.4)",
+      "\t/usr/lib/libffi.dylib (compatibility version 1.0.0, current version 40.0.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)",
+      "\t/usr/lib/libobjc.A.dylib (compatibility version 1.0.0, current version 228.0.0)"
+    ],
+    "Frameworks/orjson/orjson.cpython-314-darwin.so": [
+      "\t@rpath/orjson.cpython-314-darwin.so (compatibility version 0.0.0, current version 0.0.0)",
+      "\t/usr/lib/libiconv.2.dylib (compatibility version 7.0.0, current version 7.0.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1359.0.0)"
+    ],
+    "Frameworks/propcache/_helpers_c.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)"
+    ],
+    "Frameworks/pydantic_core/_pydantic_core.cpython-314-darwin.so": [
+      "\t@rpath/pydantic_core._pydantic_core.cpython-314-darwin.so (compatibility version 0.0.0, current version 0.0.0)",
+      "\t/usr/lib/libiconv.2.dylib (compatibility version 7.0.0, current version 7.0.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_asyncio.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_bisect.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_blake2.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_bz2.cpython-314-darwin.so": [
+      "\t/usr/lib/libbz2.1.0.dylib (compatibility version 1.0.0, current version 1.0.8)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_codecs_cn.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_codecs_hk.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_codecs_iso2022.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_codecs_jp.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_codecs_kr.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_codecs_tw.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_csv.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_ctypes.cpython-314-darwin.so": [
+      "\t/usr/lib/libffi.dylib (compatibility version 1.0.0, current version 40.0.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_decimal.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_elementtree.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_hashlib.cpython-314-darwin.so": [
+      "\t@rpath/libcrypto.3.dylib (compatibility version 3.0.0, current version 3.0.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_heapq.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_hmac.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_interpqueues.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_interpreters.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_json.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_lzma.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_md5.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_multibytecodec.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_multiprocessing.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_pickle.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_posixshmem.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_posixsubprocess.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_queue.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_random.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_scproxy.cpython-314-darwin.so": [
+      "\t/System/Library/Frameworks/SystemConfiguration.framework/Versions/A/SystemConfiguration (compatibility version 1.0.0, current version 1405.120.5)",
+      "\t/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation (compatibility version 150.0.0, current version 5026.5.4)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_sha1.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_sha2.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_sha3.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_socket.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_ssl.cpython-314-darwin.so": [
+      "\t@rpath/libssl.3.dylib (compatibility version 3.0.0, current version 3.0.0)",
+      "\t@rpath/libcrypto.3.dylib (compatibility version 3.0.0, current version 3.0.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_statistics.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_struct.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_uuid.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_zoneinfo.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/_zstd.cpython-314-darwin.so": [
+      "\t@rpath/libzstd.1.dylib (compatibility version 1.0.0, current version 1.5.7)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/array.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/binascii.cpython-314-darwin.so": [
+      "\t/usr/lib/libz.1.dylib (compatibility version 1.0.0, current version 1.2.12)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/fcntl.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/grp.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/math.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/mmap.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/pyexpat.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/readline.cpython-314-darwin.so": [
+      "\t/usr/lib/libedit.3.dylib (compatibility version 2.0.0, current version 3.0.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/resource.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/select.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/syslog.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/termios.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/unicodedata.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/python3__dot__14/lib-dynload/zlib.cpython-314-darwin.so": [
+      "\t/usr/lib/libz.1.dylib (compatibility version 1.0.0, current version 1.2.12)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/sqlcipher3/_sqlite3.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/uvloop/loop.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)"
+    ],
+    "Frameworks/watchfiles/_rust_notify.cpython-314-darwin.so": [
+      "\t@rpath/watchfiles._rust_notify.cpython-314-darwin.so (compatibility version 0.0.0, current version 0.0.0)",
+      "\t/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation (compatibility version 150.0.0, current version 3502.1.255)",
+      "\t/System/Library/Frameworks/CoreServices.framework/Versions/A/CoreServices (compatibility version 1.0.0, current version 1226.0.0)",
+      "\t/usr/lib/libiconv.2.dylib (compatibility version 7.0.0, current version 7.0.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)"
+    ],
+    "Frameworks/websockets/speedups.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "Frameworks/yaml/_yaml.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)"
+    ],
+    "Frameworks/yarl/_quoting_c.cpython-314-darwin.so": [
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "MacOS/maeumnarae": [
+      "\t/System/Library/Frameworks/Carbon.framework/Versions/A/Carbon (compatibility version 2.0.0, current version 170.0.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)",
+      "\t/usr/lib/libz.1.dylib (compatibility version 1.0.0, current version 1.2.12)",
+      "\t/System/Library/Frameworks/ApplicationServices.framework/Versions/A/ApplicationServices (compatibility version 1.0.0, current version 66.0.0)",
+      "\t/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation (compatibility version 150.0.0, current version 4201.0.0)",
+      "\t/System/Library/Frameworks/CoreServices.framework/Versions/A/CoreServices (compatibility version 1.0.0, current version 1226.0.0)"
+    ]
+  },
+  "code_section_comparisons": {
+    "nh3": {
+      "version": "0.3.7",
+      "code_section_sha256": "f62a3759596517476a6772725c4727d6c525fb2b9777c2ba12b274b66616b7f5",
+      "result": "installed wheel and bundled code sections match"
+    },
+    "pydantic_core": {
+      "version": "2.46.5",
+      "code_section_sha256": "80b60779c441123ccbea9741a64b999f41f75d9eb85d10b69d6b12802de16ba7",
+      "result": "installed wheel and bundled code sections match"
+    },
+    "watchfiles": {
+      "version": "1.2.0",
+      "code_section_sha256": "9f18eb692412be621a47cc9975e7c26df8053fad2f111ce409e47d4e2616589d",
+      "result": "installed wheel and bundled code sections match"
+    },
+    "orjson": {
+      "version": "3.12.0",
+      "code_section_sha256": "217a257ebe4956fe96a7ecab9633a2512289b1c5fb96ba83f9296af1afb18650",
+      "result": "installed wheel and bundled code sections match"
+    },
+    "sqlcipher3": {
+      "version": "0.6.4",
+      "code_section_sha256": "e32db36bc9fb641788ae1be9f9022df788ba1d9bafedd2824240799b071b0df6",
+      "result": "installed wheel and bundled code sections match"
+    },
+    "yaml": {
+      "version": "6.0.3",
+      "code_section_sha256": "3182aa83ed363defa4210d87f8cb2cab89c4c64d0a7d0547baeb58e19dcdaa9e",
+      "result": "installed wheel and bundled code sections match"
+    },
+    "uvloop": {
+      "version": "0.22.1",
+      "code_section_sha256": "32c867e497bc1d1ae883cec5fb0705887d7ac5ac79b05c42becb25a10a63a009",
+      "result": "installed wheel and bundled code sections match"
+    }
+  }
+}

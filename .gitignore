@@ -4,6 +4,7 @@
 !/.gitattributes
 !/LICENSE
 !/README.md
+!/BUILDING.md
 !/main.py
 !/init_db.py
 !/maeumnarae/
@@ -11,6 +12,7 @@
 !/resources/
 !/requirements/
 !/scripts/
+!/tests/
 
 /requirements/*
 !/requirements/base.txt

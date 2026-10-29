@@ -1,3 +1,21 @@
+pyxlsb 1.0.10 — LGPL-3.0-or-later
+Upstream author: William Turner (setup.py / PKG-INFO).
+Copyright (c) William Turner.
+
+HeartWings includes a modified implementation derived from pyxlsb/workbook.py
+in maeumnarae/services/memory_xlsb.py, licensed under LGPL-3.0-or-later.
+Copyright (c) 2026 Gyuho Choi (HeartWings modifications).
+Attribution and modification notice added 2026-10-29; original edit date unknown.
+Changes: in-memory ZIP streams instead of temporary files, ExitStack resource
+management, defusedxml parsing, archive path checks, and rejection of rels=True.
+Additional changes on 2026-10-29: application reader adapter, input/archive/sheet
+limits, and a serial date conversion boundary; upstream objects stay internal.
+See resources/licenses/pyxlsb/PROVENANCE.md for comparison evidence and sources.
+The upstream source does not specify a copyright year; none is asserted here.
+The derived Python file and the upstream library are exceptions to the application's MIT license.
+
+The GNU GPL and LGPL license texts follow unchanged.
+
                     GNU GENERAL PUBLIC LICENSE
                        Version 3, 29 June 2007
 

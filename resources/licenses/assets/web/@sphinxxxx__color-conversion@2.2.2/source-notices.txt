@@ -1,0 +1,17 @@
+===== package/dist/color-conversion.js =====
+/*!
+ * @sphinxxxx/color-conversion v2.2.2
+ * https://github.com/Sphinxxxx/color-conversion
+ *
+ * Copyright 2017-2019 Joudee (https://github.com/Joudee), Andreas Borgen (https://github.com/Sphinxxxx), Michael Jackson (https://github.com/mjackson)
+ * Released under the ISC license.
+ */
+
+===== package/dist/color-conversion.min.js =====
+/*!
+ * @sphinxxxx/color-conversion v2.2.2
+ * https://github.com/Sphinxxxx/color-conversion
+ *
+ * Copyright 2017-2019 Joudee (https://github.com/Joudee), Andreas Borgen (https://github.com/Sphinxxxx), Michael Jackson (https://github.com/mjackson)
+ * Released under the ISC license.
+ */

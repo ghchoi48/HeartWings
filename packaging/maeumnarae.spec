@@ -1,11 +1,17 @@
 # 각 대상 OS/CPU의 가상환경에서 빌드한다. 사용자 DB/로그는 절대 포함하지 않는다.
 import sys
+import runpy
 from pathlib import Path
 
 import nicegui
 from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs, copy_metadata
 
 root = Path(SPECPATH).parent
+_, app_version = runpy.run_path(str(root / 'scripts/build_desktop.py'))['windows_metadata']()
+runpy.run_path(str(root / 'packaging' / 'verify_certifi.py'), run_name='__main__')
+import pyxlsb
+source_tools = runpy.run_path(str(root / 'packaging' / 'prepare_pyxlsb_sources.py'))
+source_tools['prepare'](root, Path(pyxlsb.__file__).parent, pyxlsb.__version__)
 app_icon = root / 'resources' / 'icons' / ('icon.icns' if sys.platform == 'darwin' else 'icon.ico')
 datas = [(str(Path(nicegui.__file__).parent), 'nicegui')]
 datas += [(str(root / 'resources'), 'resources'), (str(root / 'LICENSE'), '.')]
@@ -42,5 +48,5 @@ if sys.platform == 'darwin':
     app = BUNDLE(coll, name='마음나래.app', bundle_identifier='org.maeumnarae.desktop',
                  icon=str(app_icon),
                  info_plist={'CFBundleName': '마음나래', 'CFBundleDisplayName': '마음나래',
-                             'CFBundleShortVersionString': '0.5.0', 'CFBundleVersion': '5',
+                             'CFBundleShortVersionString': app_version, 'CFBundleVersion': app_version,
                              'NSHighResolutionCapable': True})

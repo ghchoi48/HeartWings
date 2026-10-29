@@ -1,0 +1,9 @@
+{
+  "cipher_version": "4.19.0 community",
+  "cipher_provider": "openssl",
+  "cipher_provider_version": "OpenSSL 3.6.0 1 Oct 2025",
+  "python_openssl": "OpenSSL 3.5.7 9 Jun 2026",
+  "libuv": "1.48.0",
+  "libyaml": "0.2.5",
+  "basis": "Installed environment; 7 native arm64 code sections compared with validation bundle in native-linkage.json. OpenSSL dylib version also found in bundled libcrypto strings."
+}

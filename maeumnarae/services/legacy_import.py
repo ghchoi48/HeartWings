@@ -4,21 +4,18 @@ from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from html import escape
-from io import BytesIO
-from zipfile import ZipFile
 import hashlib
 import json
 import re
 
-from pyxlsb import convert_date
-from maeumnarae.services.memory_xlsb import open_memory_workbook
+from maeumnarae.services import xlsb_reader
 from pydantic import ValidationError
 
 from maeumnarae.core.models import (StudentInput, GroupCounselingInput, CounselingInput, GroupLogInput,
                     TeacherInput, ConsultationInput, CONSULTATION_AREAS, PsychologicalTestInput,
                     GUARDIAN_COUNSELING_AREAS, EducationEventInput)
 
-MAX_BYTES = 10 * 1024 * 1024
+MAX_BYTES = xlsb_reader.MAX_BYTES
 PERSON_HEADERS = ['사례번호', '소속학교', '성명/집단명', '성별/인원', '학년', '반',
                   '생년월일', '학생연락처', '보호자연락처', '비고']
 LOG_HEADERS = ['접수', '일자', '교시', '시간(시)', '시간(분)', '사례번호', '소속학교',
@@ -64,7 +61,7 @@ def excel_day(value):
     if isinstance(value, (int, float)) and not isinstance(value, bool):
         if value <= 0:
             raise ValueError('날짜가 비어 있거나 올바르지 않습니다.')
-        return convert_date(value).date()
+        return xlsb_reader.serial_date(value)
     if isinstance(value, datetime):
         return value.date()
     if isinstance(value, date):
@@ -77,47 +74,33 @@ def original(row):
 
 
 def read_rows(content):
-    if not content or len(content) > MAX_BYTES:
-        raise ValueError('10MB 이하의 XLSB 파일을 선택하세요.')
-    try:
-        with ZipFile(BytesIO(content)) as archive:
-            if len(archive.infolist()) > 512 or sum(i.file_size for i in archive.infolist()) > 80 * 1024 * 1024:
-                raise ValueError('압축 해제 크기가 너무 큽니다.')
-        result = {}
-        with open_memory_workbook(content) as book:
-            for name, required in [('인적사항등록', PERSON_HEADERS), ('상담대장', LOG_HEADERS)]:
-                with book.get_sheet(name) as sheet:
-                    if sheet.dimension.h > 20000 or sheet.dimension.w > 100:
-                        raise ValueError('시트는 최대 20,000행, 100열까지 지원합니다.')
-                    headers = None
-                    records = []
-                    for cells in sheet.rows(sparse=True):
-                        number = cells[0].r + 1
-                        if number > 20000 or len(cells) > 100:
-                            raise ValueError('시트 크기 제한을 초과했습니다.')
-                        if headers is None:
-                            labels = [re.sub(r'\s+', '', text(c.v)) for c in cells]
-                            if all(label in labels for label in required):
-                                if any(labels.count(label) != 1 for label in required):
-                                    raise ValueError(f'{name}: 중복된 제목 열입니다.')
-                                headers = {label: labels.index(label) for label in required}
-                            elif number > 20:
-                                raise ValueError(f'{name}: 원본 서식의 제목 행을 찾지 못했습니다.')
-                            continue
-                        row = {key: cells[index].v if index < len(cells) else None for key, index in headers.items()}
-                        # 빈 서식의 접수번호/학년도/날짜 계산값은 기록이 아니다.
-                        meaningful = (PERSON_HEADERS if name == '인적사항등록' else
-                                      [key for key in LOG_HEADERS if key not in ('접수', '학년도', '상담일자', '소속학교', '성별/인원')])
-                        if any(text(row[key]) for key in meaningful):
-                            records.append((number, row))
+    result = {}
+    with xlsb_reader.open_workbook(content) as book:
+        for name, required in [('인적사항등록', PERSON_HEADERS), ('상담대장', LOG_HEADERS)]:
+            with book.read_sheet(name) as sheet_rows:
+                headers = None
+                records = []
+                for sheet_row in sheet_rows:
+                    number, cells = sheet_row.number, sheet_row.values
                     if headers is None:
-                        raise ValueError(f'{name}: 원본 서식의 제목 행이 없습니다.')
-                    result[name] = records
-        return result
-    except ValueError:
-        raise
-    except Exception:
-        raise ValueError('XLSB 파일을 읽지 못했습니다. 두 시트와 파일 형식을 확인하세요.') from None
+                        labels = [re.sub(r'\s+', '', text(c)) for c in cells]
+                        if all(label in labels for label in required):
+                            if any(labels.count(label) != 1 for label in required):
+                                raise ValueError(f'{name}: 중복된 제목 열입니다.')
+                            headers = {label: labels.index(label) for label in required}
+                        elif number > 20:
+                            raise ValueError(f'{name}: 원본 서식의 제목 행을 찾지 못했습니다.')
+                        continue
+                    row = {key: cells[index] if index < len(cells) else None for key, index in headers.items()}
+                    # 빈 서식의 접수번호/학년도/날짜 계산값은 기록이 아니다.
+                    meaningful = (PERSON_HEADERS if name == '인적사항등록' else
+                                  [key for key in LOG_HEADERS if key not in ('접수', '학년도', '상담일자', '소속학교', '성별/인원')])
+                    if any(text(row[key]) for key in meaningful):
+                        records.append((number, row))
+                if headers is None:
+                    raise ValueError(f'{name}: 원본 서식의 제목 행이 없습니다.')
+                result[name] = records
+    return result
 
 
 def period_key(value):
