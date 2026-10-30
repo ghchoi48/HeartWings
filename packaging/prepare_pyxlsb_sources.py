@@ -32,11 +32,20 @@ def source_bundle(root: Path, package_dir: Path, version: str) -> tuple[Path, by
     archive = licenses / entry['source_file']
     if hashlib.sha256(archive.read_bytes()).hexdigest() != entry['source_sha256']:
         raise RuntimeError('동봉한 pyxlsb 기준 원본의 SHA-256이 일치하지 않습니다.')
+
+    def normalize_newlines(data: bytes) -> bytes:
+        return data.replace(b'\r\n', b'\n').replace(b'\r', b'\n')
+
     with tarfile.open(archive, 'r:gz') as source:
         prefix = f"pyxlsb-{entry['version']}/"
         for name in ('COPYING', 'COPYING.LESSER'):
-            if source.extractfile(prefix + name).read() != (licenses / 'pyxlsb' / name).read_bytes():
-                raise RuntimeError(f'pyxlsb {name} 원문이 공식 소스와 다릅니다.')
+            original = source.extractfile(prefix + name).read()
+            bundled = (licenses / 'pyxlsb' / name).read_bytes()
+
+            if normalize_newlines(original) != normalize_newlines(bundled):
+                raise RuntimeError(
+                    f'pyxlsb {name} 원문이 공식 소스와 다릅니다.'
+                )
         originals = {
             member.name[len(prefix):]: source.extractfile(member).read()
             for member in source.getmembers()

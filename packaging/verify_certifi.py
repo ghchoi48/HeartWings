@@ -20,9 +20,19 @@ def verify_certifi(root: Path, package_dir: Path, version: str) -> None:
     if requirement not in (root / 'requirements/base.txt').read_text().splitlines():
         raise RuntimeError('certifi requirements 버전과 고지가 일치하지 않습니다.')
     prefix = f'certifi-{version}/'
+
+    def normalize_newlines(data: bytes) -> bytes:
+        return data.replace(b'\r\n', b'\n').replace(b'\r', b'\n')
+
     with tarfile.open(archive, 'r:gz') as source:
-        if source.extractfile(prefix + 'LICENSE').read() != (licenses / entry['text_file']).read_bytes():
-            raise RuntimeError('certifi 라이선스 원문과 동봉 소스가 일치하지 않습니다.')
+        original = source.extractfile(prefix + 'LICENSE').read()
+        bundled = (licenses / entry['text_file']).read_bytes()
+
+        if normalize_newlines(original) != normalize_newlines(bundled):
+            raise RuntimeError(
+                'certifi 라이선스 원문과 동봉 소스가 일치하지 않습니다.'
+            )
+        
         originals = {
             member.name[len(prefix + 'certifi/'):]: source.extractfile(member).read()
             for member in source.getmembers()
