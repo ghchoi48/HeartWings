@@ -23,6 +23,11 @@ from maeumnarae.views.update_notification import StartupUpdateCheck
 def register_page(path: Path) -> None:
     """페이지마다 비밀번호를 입력받는다. 전역으로 잠금 해제된 저장소를 공유하지 않는다."""
     register_fonts()
+
+    cursor_dir = Path(__file__).resolve().parent.parent / 'resources' / 'cursors'
+    app.add_static_files('/app-cursors', str(cursor_dir))
+
+
     update_check = StartupUpdateCheck()
     for name in ('icon.ico', 'icon-dark.ico', 'logo.png', 'logo-dark.png'):
         app.add_static_file(url_path=f'/app-assets/{name}', local_file=ICON_PATH.with_name(name))
@@ -43,6 +48,20 @@ def register_page(path: Path) -> None:
             .nicegui-content { flex: 1; min-height: 0; flex-wrap: nowrap; }
             .app-content > * { flex-shrink: 0; }
             .nicegui-drawer > .q-btn { flex-shrink: 0; }
+
+            /* 라이트 모드 */
+            body:not(.body--dark) input,
+            body:not(.body--dark) textarea,
+            body:not(.body--dark) [contenteditable="true"] {
+                cursor: url('/app-cursors/text-dark.cur'), text !important;
+            }
+
+            /* 다크 모드 */
+            body.body--dark input,
+            body.body--dark textarea,
+            body.body--dark [contenteditable="true"] {
+                cursor: url('/app-cursors/text-dark.cur'), text !important;
+            }
         ''')
         drawer = ui.left_drawer(value=False, bordered=True).props('width=200').classes('bg-white p-4')
         drawer.set_visibility(False)
