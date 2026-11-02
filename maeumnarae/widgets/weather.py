@@ -12,6 +12,67 @@ GEOLOCATION = '''return await new Promise(resolve => {
 });'''
 
 
+# Keep Material 3 geometry while inheriting the existing application palette.
+WEATHER_CSS = """
+.weather-md3, .home-widget[data-kind="weather"] {
+    --weather-surface: transparent; --weather-container: transparent;
+    --weather-muted: #64748b;
+    --weather-primary: var(--app-primary-accent, var(--q-primary));
+    --weather-outline: #e5e7eb;
+    --weather-low: #2563eb; --weather-high: #dc2626;
+}
+body.body--dark .weather-md3, body.body--dark .home-widget[data-kind="weather"] {
+    --weather-muted: #b8c5d6;
+}
+.home-widget[data-kind="weather"].q-card {
+    border-radius: 28px; box-shadow: none; border: 1px solid transparent;
+}
+.weather-md3 { width: 100%; gap: 12px; container-type: inline-size; }
+.weather-location { flex: 1; min-width: 0; overflow-wrap: anywhere; font-weight: 500; }
+.weather-md3 .weather-accent { color: var(--weather-primary); }
+.weather-md3 .weather-muted { color: var(--weather-muted); }
+.weather-refresh.q-btn { background: var(--weather-container); color: var(--weather-primary) !important;
+    width: 32px; height: 32px; flex-shrink: 0; }
+.weather-segments { flex-shrink: 0; border: 1px solid var(--weather-outline);
+    border-radius: 24px; overflow: hidden; box-shadow: none; }
+.weather-segments .q-btn { min-height: 32px; padding: 4px 10px; box-shadow: none; font-weight: 500; }
+.weather-segments .q-btn + .q-btn { border-left: 1px solid var(--weather-outline); }
+.weather-segments .q-btn[aria-pressed="true"] .q-btn__content::before {
+    content: '✓'; margin-right: 8px;
+}
+.weather-md3 .q-btn:focus-visible, .weather-md3 a:focus-visible,
+.weather-segments .q-btn:focus-visible, .weather-refresh.q-btn:focus-visible {
+    outline: 2px solid var(--weather-primary); outline-offset: 3px;
+}
+.weather-hero { width: 100%; padding: 20px; border-radius: 24px;
+    background: var(--weather-container); gap: 12px; }
+.weather-temperature { font-size: 56px; font-weight: 400; line-height: 1.1; letter-spacing: -2px; }
+.weather-unit { font-size: 24px; letter-spacing: 0; }
+.weather-symbol { color: var(--weather-primary); margin-left: auto; }
+.weather-temperatures { gap: 12px; flex-wrap: wrap; font-size: 13px; font-weight: 500;
+    font-variant-numeric: tabular-nums; }
+.weather-low { color: var(--weather-low); }
+.weather-high { color: var(--weather-high); }
+.weather-week { width: 100%; min-width: 0; display: flex; gap: 4px;
+    overflow-x: auto; padding-bottom: 8px; }
+.weather-week:focus-visible { outline: 2px solid var(--weather-primary); outline-offset: -2px; }
+.weather-forecast { flex: 1 0 104px; display: flex; flex-direction: column;
+    align-items: center; gap: 8px; padding: 12px 8px; border-radius: 16px;
+    text-align: center; background: var(--weather-surface); }
+.weather-forecast:first-child { background: var(--weather-container); }
+.weather-forecast .weather-temperatures { flex-direction: row; flex-wrap: nowrap;
+    align-items: center; justify-content: center; gap: 4px; }
+.weather-state { width: 100%; padding: 24px 16px; border-radius: 24px;
+    background: var(--weather-container); gap: 12px; align-items: center; text-align: center; }
+.weather-caption { font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+@container (max-width: 260px) {
+    .weather-hero { padding: 16px; }
+    .weather-temperature { font-size: 44px; }
+    .weather-symbol { font-size: 44px !important; }
+}
+"""
+
+
 class Weather:
     kind = 'weather'
     title = '날씨'
@@ -27,24 +88,35 @@ class Weather:
         self.loaded = False
         self.saving = False
 
+    def build_header_actions(self):
+        self.toggle = ui.toggle({'daily': '일간', 'weekly': '주간'}, value=self.preferences['mode'],
+                                on_change=self.change_mode).props(
+            'no-caps unelevated dense aria-label="날씨 예보 기간"').classes('weather-segments')
+        ui.button(icon='refresh', on_click=self.refresh).props(
+            'flat round dense aria-label="날씨 새로고침"').classes('weather-refresh').tooltip('새로고침')
+
     def build(self):
-        with ui.row().classes('w-full items-center flex-nowrap gap-1'):
-            ui.icon('location_on').classes('text-primary')
-            self.location_label = ui.label('현재 기기 위치').classes('font-semibold grow break-words')
-            ui.button(icon='refresh', on_click=self.refresh).props('flat round aria-label="날씨 새로고침"')
-        self.toggle = ui.toggle({'daily': '일간', 'weekly': '주간'}, value='daily',
-                                on_change=self.change_mode).props('no-caps')
-        self.body = ui.column().classes('w-full gap-3')
-        ui.link('날씨: Open-Meteo · 지역: GeoNames', 'https://open-meteo.com/', new_tab=True).classes('text-xs text-slate-500')
+        ui.add_css(WEATHER_CSS)
+        with ui.column().classes('weather-md3'):
+            with ui.row().classes('w-full items-center flex-nowrap gap-2'):
+                ui.icon('location_on', size='20px').classes('weather-accent')
+                self.location_label = ui.label('현재 기기 위치').classes('weather-location')
+            self.body = ui.column().classes('w-full gap-2').props('aria-live=polite')
+            ui.link('날씨: Open-Meteo · 지역: GeoNames', 'https://open-meteo.com/', new_tab=True).classes(
+                'weather-caption weather-muted')
         ui.timer(0, self.load, once=True)
         ui.timer(1800, self.reload)
 
-    def message(self, text):
+    def message(self, text, *, loading=False):
         if self.body.is_deleted:
             return
         self.body.clear()
-        with self.body:
-            ui.label(text).classes('text-sm text-slate-500')
+        with self.body, ui.column().classes('weather-state'):
+            if loading:
+                ui.spinner(size='28px').classes('weather-accent')
+            else:
+                ui.icon('cloud_off', size='28px').classes('weather-accent')
+            ui.label(text).classes('text-sm weather-muted')
 
     async def load(self):
         try:
@@ -95,7 +167,7 @@ class Weather:
         self.data = None
         location = self.preferences['location']
         self.location_label.text = location['name'] if location else '현재 기기 위치'
-        self.message('날씨를 불러오는 중입니다…' if location else '기기 위치를 확인하는 중입니다…')
+        self.message('날씨를 불러오는 중입니다…' if location else '기기 위치를 확인하는 중입니다…', loading=True)
         try:
             if location is None:
                 location = await ui.run_javascript(GEOLOCATION, timeout=12)
@@ -114,10 +186,12 @@ class Weather:
         self.data = data
         self.render()
 
-    def temperatures(self, low, high):
-        with ui.row().classes('gap-3 items-center'):
-            ui.label(f'최저 {low:.0f}°').classes('text-blue-600 font-semibold')
-            ui.label(f'최고 {high:.0f}°').classes('text-red-600 font-semibold')
+    def temperatures(self, low, high, *, compact=False):
+        with ui.row().classes('weather-temperatures items-center'):
+            ui.label(f'{"" if compact else "최저 "}{low:.0f}°').classes('weather-low').props(
+                f'aria-label="최저 {low:.0f}도"')
+            ui.label(f'{"" if compact else "최고 "}{high:.0f}°').classes('weather-high').props(
+                f'aria-label="최고 {high:.0f}도"')
 
     def render(self):
         self.body.clear()
@@ -125,23 +199,31 @@ class Weather:
             if self.preferences['mode'] == 'daily':
                 today = self.data['days'][0]
                 description, icon = weather_status(self.data['code'], self.data['is_day'])
-                with ui.row().classes('w-full items-center gap-4'):
-                    ui.icon(icon, size='56px').classes('text-primary')
-                    with ui.column().classes('gap-0'):
-                        ui.label(f'{self.data["temperature"]:.0f}°C').classes('text-4xl font-bold')
-                        ui.label(description).classes('text-lg')
-                ui.label(f'오늘 · {today["date"]:%m월 %d일}').classes('text-sm text-slate-500')
-                self.temperatures(today['low'], today['high'])
+                with ui.column().classes('weather-hero'):
+                    ui.label(f'오늘 · {today["date"]:%m월 %d일}').classes('text-sm weather-muted')
+                    with ui.row().classes('w-full items-center flex-nowrap gap-3'):
+                        with ui.column().classes('gap-1'):
+                            with ui.row().classes('items-baseline flex-nowrap gap-1'):
+                                ui.label(f'{self.data["temperature"]:.0f}°').classes('weather-temperature')
+                                ui.label('C').classes('weather-unit weather-muted')
+                            ui.label(description).classes('text-base font-medium')
+                        ui.icon(icon, size='64px').classes('weather-symbol').props('aria-hidden=true')
+                    self.temperatures(today['low'], today['high'])
             else:
-                for day in self.data['days']:
-                    description, icon = weather_status(day['code'])
-                    with ui.row().classes('w-full items-center justify-between gap-2 border-b pb-2'):
-                        ui.label(f'{day["date"]:%m/%d} ({"월화수목금토일"[day["date"].weekday()]})').classes('text-sm')
-                        with ui.row().classes('items-center gap-1'):
-                            ui.icon(icon).classes('text-primary')
-                            ui.label(description).classes('text-sm')
-                        self.temperatures(day['low'], day['high'])
-            ui.label(f'기준 {self.data["time"].replace("T", " ")} · 해당 지역 시각 · °C').classes('text-xs text-slate-500')
+                with ui.element('div').classes('weather-week').props(
+                        'tabindex=0 role=region aria-label="주간 날씨 예보, 좌우로 스크롤"'):
+                    for index, day in enumerate(self.data['days']):
+                        description, icon = weather_status(day['code'])
+                        with ui.element('div').classes('weather-forecast'):
+                            weekday = "월화수목금토일"[day['date'].weekday()]
+                            label = '오늘' if index == 0 else f'{weekday}요일'
+                            ui.label(label).classes('text-sm font-medium')
+                            ui.label(f'{day["date"]:%m/%d}').classes('text-xs weather-muted')
+                            ui.icon(icon, size='28px').classes('weather-accent').props('aria-hidden=true')
+                            ui.label(description).classes('text-xs weather-muted')
+                            self.temperatures(day['low'], day['high'], compact=True)
+            ui.label(f'기준 {self.data["time"].replace("T", " ")} · 해당 지역 시각 · °C').classes(
+                'weather-caption weather-muted')
 
     async def open_settings(self):
         with ui.dialog() as dialog, ui.card().classes('w-full max-w-lg p-6 gap-4'):
