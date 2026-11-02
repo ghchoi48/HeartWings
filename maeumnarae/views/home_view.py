@@ -68,8 +68,8 @@ class HomeView:
             .home-resize-y { bottom: 0; left: 25%; width: 50%; height: 12px; cursor: ns-resize; }
             .home-resize-xy { right: 0; bottom: 0; width: 28px; height: 28px; cursor: nwse-resize; }
             .home-resize-handle:hover { background: #b8e2d9; }
-            .home-resize-handle:focus-visible, .home-drag-handle:focus-visible { outline: 2px solid #24756b; }
-            .home-resizing { outline: 2px solid #24756b; user-select: none; z-index: 3; }
+            .home-resize-handle:focus-visible, .home-drag-handle:focus-visible { outline: 2px solid var(--q-primary); }
+            .home-resizing { outline: 2px solid var(--q-primary); user-select: none; z-index: 3; }
             @media (max-width: 899px) {
                 .home-grid { display: flex; flex-direction: column; gap: 10px; }
                 .home-grid-editing { background: none; }
@@ -80,7 +80,7 @@ class HomeView:
         with ui.column().classes('w-full mx-auto gap-6 p-4 md:p-8'):
             with ui.row().classes('w-full items-center justify-between gap-4'):
                 with ui.column().classes('gap-1'):
-                    ui.label('홈').classes('text-sm font-semibold text-teal-700')
+                    ui.label('홈').classes('text-sm font-semibold text-primary')
                     ui.label('오늘도, 마음을 잇는 시간').classes('text-3xl font-bold text-slate-800')
                     self.greeting = ui.label(f'선생님, {self.welcome_message}').classes('text-slate-500')
                 self.edit_button = ui.button('위젯 편집', icon='dashboard_customize', on_click=self.toggle_edit)
@@ -155,7 +155,7 @@ class HomeView:
                     with ui.row().classes('home-widget-header w-full items-center flex-nowrap gap-2' + (' home-drag-handle' if self.editing else '')) as header:
                         if self.editing:
                             ui.icon('drag_indicator').classes('shrink-0 text-slate-400')
-                        ui.icon(widget.icon, size='24px').classes('shrink-0 text-teal-700')
+                        ui.icon(widget.icon, size='24px').classes('shrink-0 text-primary')
                         ui.label(widget.title).classes('min-w-0 truncate font-bold text-slate-800').tooltip(widget.title)
                         if self.editing or hasattr(view, 'build_header_actions'):
                             ui.space()
@@ -173,7 +173,7 @@ class HomeView:
                         for axis, label, icon in (('x', '너비 조절', 'drag_indicator'),
                                                   ('y', '높이 조절', 'drag_handle'),
                                                   ('xy', '크기 조절', 'open_in_full')):
-                            with ui.element('button').classes(f'home-resize-handle home-resize-{axis} text-teal-700').props(
+                            with ui.element('button').classes(f'home-resize-handle home-resize-{axis} text-primary').props(
                                     f'type=button data-resize-axis={axis} aria-label="{widget.title} {label}"') as handle:
                                 ui.icon(icon, size='16px').classes('pointer-events-none')
                             self.bind_geometry(handle, item['id'])

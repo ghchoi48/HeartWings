@@ -16,7 +16,7 @@ class DigitalClock:
     def build(self) -> None:
         with ui.column().classes('w-full items-center justify-center flex-1 gap-3 py-8'):
             date = ui.label().classes('text-slate-500')
-            clock = ui.label().classes('text-5xl font-bold text-teal-800 tabular-nums')
+            clock = ui.label().classes('text-5xl font-bold text-primary tabular-nums')
             ui.label('한국 표준시 · KST').classes('text-xs text-slate-400')
 
             def tick():

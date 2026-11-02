@@ -1,10 +1,11 @@
-"""캘린더 설정과 사용자 일정, 개인상담·집단상담·자문·특별교육 일정의 통합 조회."""
-from datetime import date
+"""캘린더 설정과 사용자 일정, 상담·자문·특별교육·교육/행사 일정의 통합 조회."""
+from datetime import date, datetime, time, timedelta
 
-from maeumnarae.core.database import Database, NotFoundError
+from maeumnarae.core.database import Database, DatabaseError, NotFoundError
 from maeumnarae.services.calendar_holidays import HOLIDAY_CALENDAR_ID, HOLIDAY_COLOR
 from maeumnarae.core.models import Calendar, CalendarInput, CalendarEvent, CalendarEventInput
-from maeumnarae.repositories._support import now_text, values
+from maeumnarae.repositories._support import now_text, utc_text, values
+from maeumnarae.services.reporting import KST
 from maeumnarae.repositories.reporting_repo import ReportingRepository
 from maeumnarae.services.school_calendar import NEIS_CALENDAR_ID, NEIS_COLOR, NEIS_NAME
 
@@ -108,14 +109,58 @@ class CalendarRepository:
                 UNION ALL
                 SELECT e.id, c.id, e.title, e.starts_at, e.duration_minutes,
                     e.status, 'special_education' AS source, '상담 일정', c.color,
-                    s.name, e.author, s.name || ' · 특별교육', s.id, '', '', 0
+                    s.name, e.author, s.name, s.id, '', '', 0
                 FROM special_education_logs e JOIN students s ON s.id=e.student_id
                     JOIN calendars c ON c.source='counseling'
                 WHERE c.id IN ({slots}) AND e.starts_at<:end
                     AND julianday(e.starts_at) + e.duration_minutes / 1440.0 > julianday(:start)
                     AND (:status IS NULL OR e.status=:status)
                 ORDER BY starts_at, calendar_id, source, id''', params).fetchall()
-            return [CalendarEvent.model_validate(dict(row)) for row in rows]
+            events = [CalendarEvent.model_validate(dict(row)) for row in rows]
+            if status is None:
+                education_rows = connection.execute(f'''SELECT e.id, e.title, e.event_date, e.event_time,
+                    e.duration_minutes, e.location, e.author, c.id AS calendar_id, c.color
+                    FROM education_events e JOIN calendars c ON c.source='counseling'
+                    WHERE c.id IN ({slots}) AND e.event_date BETWEEN :education_start AND :education_end''',
+                    {**params, 'education_start': (start - timedelta(days=1)).isoformat(),
+                     'education_end': end.isoformat()}).fetchall()
+                for row in education_rows:
+                    all_day = not row['event_time']
+                    begins = datetime.combine(date.fromisoformat(row['event_date']),
+                                              time.fromisoformat(row['event_time']) if not all_day else time.min, KST)
+                    # A missing time is shown as an all-day entry; a missing duration
+                    # uses the smallest interval so it does not imply an invented end time.
+                    duration = 1440 if all_day else row['duration_minutes'] or 1
+                    if begins >= datetime.fromisoformat(params['end']) or (
+                            begins + timedelta(minutes=duration) <= datetime.fromisoformat(params['start'])):
+                        continue
+                    events.append(CalendarEvent(
+                        id=row['id'], calendar_id=row['calendar_id'], title=row['title'],
+                        starts_at=begins, duration_minutes=duration, all_day=all_day,
+                        source='education_event', calendar_name='상담 일정', color=row['color'],
+                        display_name=row['title'], location=row['location'], author=row['author']))
+            return sorted(events, key=lambda e: (e.starts_at, e.calendar_id, e.source, e.id))
+
+    def move_event(self, entry_id: int, expected_start: datetime, days: int):
+        """사용자 일정의 시작 시각만 이동하며 동시 변경된 일정은 덮어쓰지 않는다."""
+        with self.database.session(write=True) as connection:
+            row = connection.execute('''SELECT e.starts_at, e.duration_minutes FROM calendar_events e
+                JOIN calendars c ON c.id=e.calendar_id WHERE e.id=? AND c.source='custom' ''',
+                                     (entry_id,)).fetchone()
+            if row is None:
+                raise NotFoundError('이동할 사용자 일정을 찾을 수 없습니다.')
+            original = datetime.fromisoformat(row['starts_at'])
+            if original != expected_start:
+                raise DatabaseError('일정이 변경되었습니다. 새로고침 후 다시 이동해 주세요.')
+            try:
+                moved = original.astimezone(KST) + timedelta(days=days)
+                end = moved + timedelta(minutes=row['duration_minutes'])
+                if not 2 <= moved.year <= 9998 or not 2 <= end.year <= 9998:
+                    raise ValueError
+            except (ValueError, OverflowError) as error:
+                raise DatabaseError('이동 가능한 날짜 범위를 벗어났습니다.') from error
+            connection.execute('UPDATE calendar_events SET starts_at=?, updated_at=? WHERE id=?',
+                               (utc_text(moved), now_text(), entry_id))
 
     def save_event(self, value: CalendarEventInput, entry_id: int | None = None):
         data = values(CalendarEventInput.model_validate(value.model_dump(include=set(CalendarEventInput.model_fields))))

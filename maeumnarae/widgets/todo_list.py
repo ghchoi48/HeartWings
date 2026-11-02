@@ -109,8 +109,8 @@ class TodoList:
                 title.on('blur', save_title)
                 title.on('keydown.escape', cancel_title)
                 with ui.chip(PRIORITIES[priority],
-                             color={'high': 'red-1', 'normal': 'teal-1', 'low': 'grey-2'}[priority],
-                             text_color={'high': 'red-9', 'normal': 'teal-9', 'low': 'grey-8'}[priority]).props(
+                             color={'high': 'red-1', 'normal': 'app-primary-soft', 'low': 'grey-2'}[priority],
+                             text_color={'high': 'red-9', 'normal': 'primary', 'low': 'grey-8'}[priority]).props(
                         'dense clickable aria-label="우선순위 수정"').classes('shrink-0').tooltip('우선순위 수정'):
                     with ui.menu():
                         for value, label in PRIORITIES.items():

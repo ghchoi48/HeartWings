@@ -10,7 +10,7 @@ from maeumnarae.services.calendar_holidays import korean_holidays
 from maeumnarae.services.reporting import KST
 from maeumnarae.services.school_calendar import load_school_events
 from maeumnarae.views.calendar_event_editor import open_event_editor
-from maeumnarae.views.calendar_view import render_event_icons, show_school_event
+from maeumnarae.views.calendar_view import event_caption, event_name, render_event_icons, show_school_event
 
 
 class CalendarWidget:
@@ -135,9 +135,9 @@ class CalendarWidget:
                 for day in visible_days(self.anchor, 'month'):
                     classes = 'w-full min-w-0 p-0 rounded-lg '
                     if day == self.selected:
-                        classes += 'bg-teal-100 text-teal-900 dark:bg-teal-900 dark:text-teal-100 '
+                        classes += 'app-primary-soft text-primary '
                     if day == self.today_date:
-                        classes += 'ring-2 ring-inset ring-teal-500 '
+                        classes += 'ring-2 ring-inset app-primary-ring '
                     if day.month != self.anchor.month:
                         classes += 'opacity-50 '
                     with ui.button(on_click=lambda day=day: self.choose(day)).props(
@@ -158,12 +158,11 @@ class CalendarWidget:
             if not entries:
                 ui.label('일정이 없습니다').classes('text-sm')
             for entry in entries:
-                with ui.button(on_click=lambda entry=entry: self.open_event(entry)).props('flat no-caps align=left').classes('w-full min-w-0'):
+                with ui.button(on_click=lambda entry=entry: self.open_event(entry)).props('flat no-caps align=left').classes(
+                        'w-full min-w-0').style('color:#000000 !important' if not entry.all_day else ''):
                     with ui.row().classes('w-full items-center gap-1 flex-nowrap'):
                         ui.element('span').classes('w-2 h-2 rounded-full shrink-0').style(f'background:{entry.color}')
-                        ui.label('종일' if entry.all_day else entry.starts_at.astimezone(KST).strftime('%H:%M')).classes('text-xs shrink-0')
-                        name = entry.student_name if entry.source == 'counseling' else entry.title
-                        ui.label(name).classes('truncate min-w-0').tooltip(name)
+                        ui.label(event_caption(entry)).classes('truncate min-w-0').tooltip(event_name(entry))
                         render_event_icons(entry)
 
     async def open_event(self, entry):

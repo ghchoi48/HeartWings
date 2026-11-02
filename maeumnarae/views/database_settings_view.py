@@ -10,12 +10,12 @@ from maeumnarae.core.secure_upload import SecureUpload, MAX_BACKUP_BYTES
 from nicegui import events, run, ui
 
 from maeumnarae.core.database import Database, DatabaseError
-from maeumnarae.services.database_maintenance import create_backup, restore_backup
+from maeumnarae.services.database_maintenance import create_backup, reset_database, restore_backup
 from maeumnarae.views.roster_import_view import RosterImportView
 from maeumnarae.views.legacy_import_view import LegacyImportView
 from maeumnarae.views.settings_card import settings_card
 from maeumnarae.views.journal_export_view import JournalExportView
-from maeumnarae.views.journal_print_view import build_all_print
+from maeumnarae.views.journal_print_view import build_all_print, invalidate_prints
 
 
 def build_database_settings(database: Database, on_roster_import=None) -> None:
@@ -26,7 +26,8 @@ def build_database_settings(database: Database, on_roster_import=None) -> None:
     def set_busy(value: bool):
         nonlocal busy
         busy = value
-        for control in (folder_button, backup, open_restore, upload, password, confirm, restore, cancel):
+        for control in (folder_button, backup, open_restore, upload, password, confirm, restore, cancel,
+                        open_reset, reset_confirm, reset, reset_cancel):
             control.set_enabled(not value)
         for view in import_views:
             view.apply_busy(value)
@@ -117,6 +118,30 @@ def build_database_settings(database: Database, on_roster_import=None) -> None:
         finally:
             secret = ''
 
+    def close_reset():
+        if not busy:
+            reset_dialog.close()
+
+    async def initialize_database():
+        if busy:
+            return
+        if not reset_confirm.value:
+            ui.notify('DB 파일 삭제 확인에 체크해 주세요.', type='warning')
+            return
+        set_busy(True)
+        reset.props('loading')
+        try:
+            await run.io_bound(reset_database, database)
+        except DatabaseError as error:
+            ui.notify(str(error), type='negative')
+            set_busy(False)
+        else:
+            invalidate_prints()
+            reset_dialog.close()
+            ui.navigate.to('/')
+        finally:
+            reset.props(remove='loading')
+
     with settings_card('DB 관리', 'storage', '상담 데이터의 보관 상태와 백업을 관리하세요.', collapsible=True):
         folder_button = ui.button('DB 폴더 열기', icon='folder_open', on_click=open_database_folder).props('outline')
         ui.separator()
@@ -140,6 +165,19 @@ def build_database_settings(database: Database, on_roster_import=None) -> None:
                 restore = ui.button('복원', icon='restore', on_click=restore_database)
         dialog.on('hide', clear_restore)
         open_restore = ui.button('백업 파일에서 복원', icon='restore', on_click=dialog.open).props('outline')
+        ui.separator()
+        ui.label('DB 초기화').classes('font-semibold text-slate-700')
+        ui.label('현재 DB 파일을 삭제하고 첫 실행 화면으로 돌아갑니다. 필요한 데이터는 먼저 백업해 주세요.').classes('text-sm text-slate-500')
+        with ui.dialog().props('persistent') as reset_dialog, ui.card().classes('w-full max-w-xl p-6 gap-4'):
+            ui.label('DB를 초기화할까요?').classes('text-xl font-bold text-slate-800')
+            ui.label('학생, 상담 기록, 첨부파일 등 현재 DB에 저장된 모든 데이터가 삭제됩니다. 백업 파일이 없으면 복구할 수 없습니다.').classes('text-sm text-red-700')
+            ui.label(str(database.path.resolve())).classes('w-full break-all text-sm text-slate-500')
+            reset_confirm = ui.checkbox('현재 DB 파일을 삭제하고 처음부터 시작하겠습니다.')
+            with ui.row().classes('w-full justify-end gap-2'):
+                reset_cancel = ui.button('취소', on_click=close_reset).props('flat')
+                reset = ui.button('DB 삭제 및 초기화', icon='delete_forever', color='negative', on_click=initialize_database)
+        reset_dialog.on('hide', lambda: reset_confirm.set_value(False))
+        open_reset = ui.button('DB 초기화', icon='delete_forever', color='negative', on_click=reset_dialog.open).props('outline')
     JournalExportView(database).build(collapsible=True)
     JournalExportView(database, ledger=True).build(collapsible=True)
     build_all_print(database)

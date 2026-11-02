@@ -28,7 +28,7 @@ def settings_card(title: str, icon: str, description: str,
         with ui.row().classes('w-full items-start justify-between gap-3'):
             with ui.row().classes('items-center gap-3'):
                 with ui.element('div').classes(
-                    'flex items-center justify-center w-12 h-12 rounded-xl bg-teal-50 text-teal-700'
+                    'flex items-center justify-center w-12 h-12 rounded-xl app-primary-soft text-primary'
                 ):
                     ui.icon(icon, size='26px')
                 ui.label(title).classes('text-xl font-bold text-slate-800')

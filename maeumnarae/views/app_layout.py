@@ -227,7 +227,7 @@ class AppLayout:
                 self.education_event_view.build()
         if page == 'statistics' and self.statistics_view is None:
             with self.panels['statistics']:
-                self.statistics_view = StatisticsView(self.reporting)
+                self.statistics_view = StatisticsView(self.reporting, self.display)
                 self.statistics_view.build()
         if page == 'home' and hasattr(self, 'home_view'):
             with self.panels['home']:
@@ -283,7 +283,7 @@ class AppLayout:
             self.opening_schedule = False
 
     async def open_linked_schedule(self, entry) -> None:
-        """연동 일정의 집단상담·자문·특별교육 일지를 연다."""
+        """연동 일정의 집단상담·자문·특별교육·교육/행사 일지를 연다."""
         if self.opening_schedule:
             return
         self.opening_schedule = True
@@ -299,5 +299,8 @@ class AppLayout:
             elif entry.source == 'special_education':
                 self.navigate('special_education')
                 await self.special_education_view.open_record(entry.id)
+            elif entry.source == 'education_event':
+                self.navigate('education_events')
+                await self.education_event_view.select_event(entry.id)
         finally:
             self.opening_schedule = False

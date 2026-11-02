@@ -29,7 +29,7 @@ class RosterImportView:
                                     on_rejected=lambda: ui.notify('10MB 이하의 XLSX 파일 하나를 선택해 주세요.', type='warning')
                                     ).props('accept=.xlsx').classes('w-full')
             self.upload.on('removed', lambda: self.clear(False))
-            self.status = ui.label().classes('text-sm text-teal-700')
+            self.status = ui.label().classes('text-sm text-primary')
         with ui.dialog().props('persistent') as self.dialog:
             with ui.card().classes('w-full max-w-4xl max-h-[85vh] p-6 gap-4'):
                 ui.label(f'{title} 일괄 등록 미리보기').classes('text-xl font-bold')

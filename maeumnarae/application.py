@@ -95,7 +95,7 @@ def register_page(path: Path) -> None:
                 OnboardingView(path, start).build()
             else:
                 with ui.card().classes('w-full max-w-md mx-auto mt-16 p-8 rounded-2xl'):
-                    ui.icon('lock_outline', size='40px').classes('text-teal-700')
+                    ui.icon('lock_outline', size='40px').classes('text-primary')
                     ui.label('학생들의 이야기를 안전하게').classes('text-xl font-bold')
                     ui.label('상담 DB 비밀번호를 입력해 주세요.').classes('text-slate-500')
                     password = ui.input('DB 비밀번호', password=True, password_toggle_button=True).props('outlined').classes('w-full')

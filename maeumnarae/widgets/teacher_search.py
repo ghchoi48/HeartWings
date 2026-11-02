@@ -48,4 +48,4 @@ class TeacherSearch:
                 with ui.column().classes('w-full gap-1 border-b border-slate-100 pb-3'):
                     ui.label(teacher.name).classes('font-semibold text-slate-800')
                     ui.label(teacher.responsibilities or '담당 업무 미등록').classes('text-sm text-slate-500')
-                    ui.label(f'내선 {teacher.extension or "—"} · 연락처 {teacher.contact or "—"}').classes('text-sm text-teal-700 break-all')
+                    ui.label(f'내선 {teacher.extension or "—"} · 연락처 {teacher.contact or "—"}').classes('text-sm text-primary break-all')

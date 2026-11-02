@@ -151,7 +151,7 @@ class GroupCounselingView:
                         if value:
                             with ui.row().classes('w-full flex-wrap gap-2'):
                                 for participant in value:
-                                    ui.chip(participant, icon='person', color='teal-1', text_color='teal-9')
+                                    ui.chip(participant, icon='person', color='app-primary-soft', text_color='primary')
                         else:
                             ui.label('연결된 참여 학생이 없습니다.').classes('text-slate-500')
                     else:

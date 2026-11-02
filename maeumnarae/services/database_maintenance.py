@@ -10,6 +10,27 @@ from maeumnarae.core.upload_limits import MAX_BACKUP_BYTES
 from maeumnarae.core.database import Database, DatabaseError, SCHEMA_VERSION
 
 
+def reset_database(database: Database) -> None:
+    """사용 중인 작업을 마친 후 DB를 삭제하고 기존 인스턴스의 접근을 차단한다."""
+    with database._session_lock:
+        try:
+            connection = database._connect()
+            try:
+                result = connection.execute('PRAGMA wal_checkpoint(TRUNCATE)').fetchone()
+                if result and result[0] != 0:
+                    raise DatabaseError('DB가 사용 중입니다. 다른 창의 작업을 마친 뒤 다시 시도하세요.')
+                mode = connection.execute('PRAGMA journal_mode=DELETE').fetchone()[0]
+                if mode.lower() != 'delete':
+                    raise DatabaseError('DB가 사용 중이어서 초기화할 수 없습니다.')
+            finally:
+                connection.close()
+            database.path.unlink()
+            database._state.generation += 1
+            database._password = None
+        except (OSError, database.driver.DatabaseError):
+            raise DatabaseError('DB를 초기화하지 못했습니다. 파일 사용 상태와 폴더 권한을 확인하세요.') from None
+
+
 def database_info(database: Database) -> dict:
     with database.session() as connection:
         return {

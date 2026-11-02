@@ -1,6 +1,7 @@
 """캘린더 목록과 월간/주간 일정 화면."""
 
 from collections.abc import Awaitable, Callable
+import json
 from datetime import date, datetime, timedelta
 
 from nicegui import run, ui
@@ -23,8 +24,36 @@ JOURNAL_ICONS = {
     'counseling': ('edit_note', '개인상담'),
     'group': ('groups', '집단상담'),
     'special_education': ('menu_book', '특별교육'),
+    'education_event': ('event', '교육/행사'),
     'consultation': ('forum', '자문'),
 }
+
+HIDE_DROP_GUIDES = '''
+    document.querySelectorAll('[data-calendar-drop-guide]').forEach(guide => {
+        guide.style.display = 'none';
+    });
+'''
+RESET_CALENDAR_DRAG = HIDE_DROP_GUIDES + '''
+    document.querySelectorAll('[data-calendar-drop-surface]').forEach(surface => {
+        surface.calendarDrag = null;
+    });
+'''
+
+
+def event_name(entry: CalendarEvent) -> str:
+    """큰 캘린더와 홈 위젯에서 같은 일정 이름을 표시한다."""
+    if entry.source == 'special_education':
+        return entry.student_name
+    if entry.source == 'custom':
+        return entry.title
+    return entry.display_name or entry.student_name or entry.title
+
+
+def event_caption(entry: CalendarEvent) -> str:
+    name = event_name(entry)
+    if entry.all_day:
+        return name
+    return f'{entry.starts_at.astimezone(KST):%H:%M} {name}'.strip()
 
 
 def render_event_icons(entry: CalendarEvent) -> None:
@@ -84,6 +113,7 @@ class CalendarView:
         self.editor_open = False
         self.loaded_revision = None
         self.refreshing = False
+        self.moving_event = False
 
     def build(self) -> None:
         with ui.column().classes('w-full gap-5 p-4 md:p-8'):
@@ -225,6 +255,7 @@ class CalendarView:
 
     def render_grid(self):
         self.grid.clear()
+        self.grid.props('data-calendar-drop-surface')
         today = datetime.now(KST).date()
         days = visible_days(self.anchor, self.mode.value)
         hidden = ({5} if self.hide_saturday.value else set()) | ({6} if self.hide_sunday.value else set())
@@ -240,26 +271,34 @@ class CalendarView:
                 week = [day for day in days[offset:offset + 7] if day.weekday() not in hidden]
                 segments = week_event_segments(week, self.events_by_day)
                 lanes = max((s[3] + 1 for s in segments), default=0)
-                with ui.element('div').classes(f'relative grid {columns} w-full isolate'):
+                with ui.element('div').classes(f'relative grid {columns} w-full isolate') as week_grid:
+                    self.bind_week_interactions(week_grid, week)
                     with ui.element('div').classes(f'absolute inset-0 grid {columns} pointer-events-none -z-10'):
                         for day in week:
-                            color = 'bg-teal-50' if day == self.selected else 'bg-white'
-                            ui.element('div').classes(f'border border-slate-200 {color}')
+                            selection = ('ring-2 ring-inset app-primary-ring'
+                                         if day == self.selected else '')
+                            ui.element('div').classes(f'border border-slate-200 bg-white {selection}')
                     for col, day in enumerate(week):
                         with ui.column().classes('min-w-0 p-2 gap-1').style(f'grid-column:{col + 1}; grid-row:1'):
                             label = f'{day.month}/{day.day}' + (' · 오늘' if day == today else '')
-                            button = ui.button(label, on_click=lambda day=day: self.choose(day)).props('flat dense').classes('w-full')
+                            button = ui.button(label).props(
+                                f'flat dense data-calendar-date aria-pressed={str(day == self.selected).lower()}').classes('w-full')
+                            button.on('click', lambda e, day=day: self.choose(day), js_handler='''event => {
+                                const button = event.currentTarget;
+                                clearTimeout(button.calendarClickTimer);
+                                button.calendarClickTimer = setTimeout(() => emit({}), 350);
+                            }''')
                             if day.weekday() == 6 or day in self.holiday_days:
                                 button.props('color=red-7')
                             elif day.weekday() == 5:
                                 button.props('color=blue-7')
-                            if day.month != self.anchor.month and self.mode.value == 'month':
+                            if day.month != self.anchor.month and self.mode.value == 'month' and day != self.selected:
                                 button.classes('opacity-50')
                             if day in self.holiday_days and any(item.visible and item.source == 'holidays' for item in self.calendars):
                                 ui.label(self.holiday_days[day]).classes('w-full text-xs break-words').style(f'color:{HOLIDAY_COLOR}')
                     for entry, col, span, lane, first, last in segments:
-                        name = entry.title if entry.source == 'custom' else entry.display_name or entry.student_name
-                        caption = name if entry.all_day else f'{entry.starts_at.astimezone(KST):%H:%M} {name}'
+                        name = event_name(entry)
+                        caption = event_caption(entry)
                         style = (f'grid-column:{col + 1} / span {span}; grid-row:{lane + 2}; '
                                  f'margin:2px {"4px" if last else "0"} 2px {"4px" if first else "0"}; '
                                  f'border-radius:{"6px" if first else "0"} {"6px" if last else "0"} '
@@ -269,11 +308,12 @@ class CalendarView:
                             foreground = '#111827' if sum(v * w for v, w in zip(rgb, (0.299, 0.587, 0.114))) > 150 else '#ffffff'
                             style += f'background:{entry.color} !important; color:{foreground} !important;'
                         else:
-                            style += f'color:{entry.color}; border:1px solid {entry.color};'
+                            style += f'color:#000000 !important; border:1px solid {entry.color};'
                         with ui.button(on_click=lambda entry=entry: self.open_event(entry)).props(
                                 'unelevated dense no-caps align=left' if entry.all_day else 'flat dense no-caps align=left').classes(
                                     'min-w-0 text-xs h-7').style(style).tooltip(name) as bar:
                             bar.props['aria-label'] = caption
+                            self.bind_event_drag(bar, entry)
                             if first:
                                 ui.label(caption).classes('flex-1 min-w-0 truncate text-left')
                                 render_event_icons(entry)
@@ -285,14 +325,121 @@ class CalendarView:
                                        if not e.all_day and event_dates(e)[0] == event_dates(e)[1]]
                             limit = len(entries) if day == self.selected else (10 if self.mode.value == 'week' else 3)
                             for entry in entries[:limit]:
-                                name = entry.title if entry.source == 'custom' else entry.display_name or entry.student_name
-                                caption = f'{entry.starts_at.astimezone(KST):%H:%M} {name}'.strip()
+                                caption = event_caption(entry)
                                 with ui.button(on_click=lambda entry=entry: self.open_event(entry)).props('flat dense no-caps align=left').classes(
-                                        'w-full text-xs').style(f'border-left:3px solid {entry.color}; color:{entry.color}'):
+                                        'w-full text-xs').style(f'border-left:3px solid {entry.color}; color:#000000 !important') as event_button:
+                                    self.bind_event_drag(event_button, entry)
                                     ui.label(caption).classes('flex-1 min-w-0 break-words text-left')
                                     render_event_icons(entry)
                             if len(entries) > limit:
                                 ui.button(f'+{len(entries) - limit}개 더 보기', on_click=lambda day=day: self.choose(day)).props('flat dense').classes('text-xs')
+
+    def bind_week_interactions(self, element, week):
+        dates = json.dumps([day.isoformat() for day in week])
+        element.props(f"data-calendar-days='{dates}'")
+        # One overlay per visible date also previews ranges crossing week boundaries.
+        for column, day in enumerate(week):
+            ui.element('div').props(f'data-calendar-drop-guide={day.isoformat()} aria-hidden=true').classes(
+                'absolute inset-y-0 pointer-events-none z-20 border-2 border-dashed '
+                'app-primary-border rounded-md').style(
+                    f'display:none; left:{column * 100 / len(week)}%; width:{100 / len(week)}%')
+        # Hit-test the week grid so spanning bars and hidden weekends use the same columns.
+        hit_test = f'''
+            const dates = {dates};
+            const rect = event.currentTarget.getBoundingClientRect();
+            const column = Math.max(0, Math.min(dates.length - 1,
+                Math.floor((event.clientX - rect.left) / rect.width * dates.length)));
+        '''
+        element.on('dblclick', lambda e: self.create_on_date(date.fromisoformat(e.args)), js_handler='''event => {
+            const button = event.target.closest('button');
+            if (button && !button.hasAttribute('data-calendar-date')) return;
+            if (button) clearTimeout(button.calendarClickTimer);
+            event.preventDefault();
+        ''' + hit_test + '''emit(dates[column]); }''')
+        element.on('dragover', js_handler='''event => {
+            if (!Array.from(event.dataTransfer.types).includes('application/x-maeumnarae-event')) return;
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+        ''' + hit_test + '''
+            const surface = event.currentTarget.closest('[data-calendar-drop-surface]');
+            const drag = surface.calendarDrag;
+            if (!drag) return;
+            const shift = Date.parse(dates[column]) - Date.parse(drag.origin);
+            const first = Date.parse(drag.first) + shift;
+            const last = Date.parse(drag.last) + shift;
+            surface.querySelectorAll('[data-calendar-drop-guide]').forEach(guide => {
+                const day = Date.parse(guide.dataset.calendarDropGuide);
+                guide.style.display = day >= first && day <= last ? 'block' : 'none';
+            });
+        }''')
+        element.on('dragleave', js_handler='''event => {
+            if (event.relatedTarget && event.currentTarget.contains(event.relatedTarget)) return;
+        ''' + HIDE_DROP_GUIDES + '}')
+        element.on('drop', self.drop_event, js_handler='''event => {
+        ''' + RESET_CALENDAR_DRAG + '''
+            const raw = event.dataTransfer.getData('application/x-maeumnarae-event');
+            if (!raw) return;
+            event.preventDefault();
+        ''' + hit_test + '''
+            try { emit({...JSON.parse(raw), target: dates[column]}); } catch (_) {}
+        }''')
+
+    def bind_event_drag(self, element, entry):
+        if entry.source != 'custom':
+            return
+        element.props('draggable=true').classes('cursor-grab active:cursor-grabbing')
+        first, last = event_dates(entry)
+        period = json.dumps({'first': first.isoformat(), 'last': last.isoformat()})
+        element.on('dragend', js_handler='event => {' + RESET_CALENDAR_DRAG + '}')
+        element.on('dragstart', js_handler='''event => {
+        ''' + RESET_CALENDAR_DRAG + '''
+            const week = event.currentTarget.closest('[data-calendar-days]');
+            const dates = JSON.parse(week.dataset.calendarDays);
+            const rect = week.getBoundingClientRect();
+            const column = Math.max(0, Math.min(dates.length - 1,
+                Math.floor((event.clientX - rect.left) / rect.width * dates.length)));
+            week.closest('[data-calendar-drop-surface]').calendarDrag = {
+                ...''' + period + ''', origin: dates[column]
+            };
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('application/x-maeumnarae-event', JSON.stringify({
+                id: ''' + str(entry.id) + ''', origin: dates[column]
+            }));
+        }''')
+
+    async def drop_event(self, event):
+        if self.moving_event or self.editor_open:
+            return
+        try:
+            entry_id = int(event.args['id'])
+            origin = date.fromisoformat(event.args['origin'])
+            target = date.fromisoformat(event.args['target'])
+            entry = next((e for e in self.events_by_day.get(origin, [])
+                          if e.id == entry_id and e.source == 'custom'), None)
+            if entry is None or target not in visible_days(self.anchor, self.mode.value):
+                return
+        except (KeyError, TypeError, ValueError):
+            return
+        if origin == target:
+            return
+        self.moving_event = True
+        try:
+            await run.io_bound(self.repository.move_event, entry.id, entry.starts_at, (target - origin).days)
+            self.selected = target
+            await self.reload()
+            ui.notify('일정을 이동했습니다.', type='positive')
+        except DatabaseError as error:
+            ui.notify(str(error), type='negative')
+            await self.reload()
+        finally:
+            self.moving_event = False
+
+    async def create_on_date(self, day: date):
+        if self.editor_open or self.moving_event:
+            return
+        self.selected = day
+        self.render_grid()
+        await self.open_event_editor()
 
     async def choose(self, day: date):
         self.selected = day
@@ -303,7 +450,7 @@ class CalendarView:
             show_school_event(entry)
         elif entry.source == 'counseling':
             await self.on_open(entry.id)
-        elif entry.source in ('group', 'consultation', 'special_education'):
+        elif entry.source in ('group', 'consultation', 'special_education', 'education_event'):
             if self.on_open_linked is not None:
                 await self.on_open_linked(entry)
         else:

@@ -31,13 +31,13 @@ class OnboardingView:
     def build(self):
         with ui.column().classes('w-full max-w-4xl mx-auto px-4 py-8 gap-5'):
             ui.label('마음나래 시작 준비').classes('text-2xl font-bold text-slate-800')
-            self.progress = ui.label().classes('text-sm font-semibold text-teal-700')
+            self.progress = ui.label().classes('text-sm font-semibold text-primary')
             self.panels = ui.tab_panels(value=self.step, animated=True, keep_alive=True).props(
                 'transition-prev=slide-right transition-next=slide-left'
             ).classes('w-full rounded-2xl shadow-sm')
             with self.panels:
                 with ui.tab_panel('password'):
-                    ui.icon('lock_outline', size='40px').classes('text-teal-700')
+                    ui.icon('lock_outline', size='40px').classes('text-primary')
                     ui.label('학생들의 이야기를 안전하게').classes('text-xl font-bold')
                     ui.label('상담 자료를 보호할 DB 비밀번호를 4글자 이상으로 설정해 주세요.')
                     self.password = ui.input('DB 비밀번호', password=True, password_toggle_button=True).props('outlined').classes('w-full')
@@ -80,7 +80,7 @@ class OnboardingView:
                             self.button('준비 완료 · 다음', lambda: self.move('welcome'), icon='arrow_forward')
                 with ui.tab_panel('welcome'):
                     with ui.column().classes('w-full items-center text-center py-12 gap-6'):
-                        ui.icon('favorite', size='64px').classes('text-teal-700')
+                        ui.icon('favorite', size='64px').classes('text-primary')
                         ui.label('Welcome! 마음나래에 오신 것을 환영합니다').classes('text-2xl font-bold')
                         ui.label('학생들의 마음에 날개를 더하는 시간, 함께 시작해요.').classes('text-slate-600')
                         ui.label('학교 정보와 자료 가져오기는 설정에서 언제든 이어갈 수 있습니다.').classes('text-sm text-slate-500')

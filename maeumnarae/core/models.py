@@ -422,7 +422,7 @@ class CalendarEventInput(InputModel):
 class CalendarEvent(CalendarEventInput, AuthoredRecord):
     calendar_id: int
     id: int
-    source: Literal['counseling', 'group', 'consultation', 'special_education', 'custom', 'neis'] = 'custom'
+    source: Literal['counseling', 'group', 'consultation', 'special_education', 'education_event', 'custom', 'neis'] = 'custom'
     status: Literal['scheduled', 'completed', 'cancelled'] | None = None
     owner_id: int | None = None
     display_name: str = ''

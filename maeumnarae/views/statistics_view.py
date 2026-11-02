@@ -8,15 +8,28 @@ from maeumnarae.core.database import DatabaseError
 from maeumnarae.core.models import CounselingReport
 from maeumnarae.services.reporting import KST, STATUS_LABELS, date_bounds, report_csv, report_html
 from maeumnarae.repositories.reporting_repo import ReportingRepository
+from maeumnarae.views.display_settings import DEFAULT_PRIMARY, DisplaySettings
 
 
 class StatisticsView:
     """화면과 다운로드가 동일한 집계 결과를 사용하도록 스냅샷을 보존한다."""
 
-    def __init__(self, repository: ReportingRepository):
+    def __init__(self, repository: ReportingRepository, display: DisplaySettings | None = None):
         self.repository = repository
         self.report: CounselingReport | None = None
         self.request = 0
+        self.primary = display.values['primary'] if display else DEFAULT_PRIMARY
+        self.charts: list[ui.echart] = []
+        if display:
+            display.primary_listeners.append(self.update_primary)
+
+    def update_primary(self, color: str) -> None:
+        self.primary = color
+        for chart in self.charts:
+            if not chart.is_deleted:
+                for series in chart.options['series']:
+                    series['itemStyle']['color'] = color
+                chart.update()
 
     def build(self) -> None:
         today = datetime.now(KST).date()
@@ -47,6 +60,7 @@ class StatisticsView:
         self.csv_button.disable()
         self.html_button.disable()
         self.results.clear()
+        self.charts.clear()
         self.message.text = '기간이 변경되었습니다. 통계 조회를 눌러 주세요.'
 
     async def load(self) -> None:
@@ -78,7 +92,7 @@ class StatisticsView:
                                      ('상담 학생 (중복 제외)', f'{report.students}명'), ('완료 상담 시간', f'{report.minutes}분')]:
                     with ui.card().classes('p-5 rounded-2xl shadow-sm'):
                         ui.label(label).classes('text-slate-500')
-                        ui.label(value).classes('text-3xl font-bold text-teal-800')
+                        ui.label(value).classes('text-3xl font-bold text-primary')
             if not report.completed:
                 ui.label('선택 기간에 완료된 상담이 없습니다.').classes('text-slate-500')
             with ui.row().classes('w-full items-start gap-4'):
@@ -88,11 +102,12 @@ class StatisticsView:
                         ui.label(title).classes('text-lg font-bold')
                         labels = [STATUS_LABELS.get(b.label, b.label) if title == '상태별 전체 일정' else b.label for b in buckets]
                         if buckets:
-                            ui.echart({'animation': False, 'xAxis': {'type': 'category', 'data': labels, 'axisLabel': {'interval': 0, 'width': 90, 'overflow': 'truncate'}},
+                            chart = ui.echart({'animation': False, 'xAxis': {'type': 'category', 'data': labels, 'axisLabel': {'interval': 0, 'width': 90, 'overflow': 'truncate'}},
                                 'yAxis': {'type': 'value', 'minInterval': 1},
                                 'grid': {'left': 45, 'right': 15, 'bottom': 60},
-                                'series': [{'type': 'bar', 'data': [b.count for b in buckets], 'itemStyle': {'color': '#24756b'}}],
+                                'series': [{'type': 'bar', 'data': [b.count for b in buckets], 'itemStyle': {'color': self.primary}}],
                                 'dataZoom': [{'type': 'inside'}]}).classes('w-full h-64')
+                            self.charts.append(chart)
                         ui.table(columns=[dict(name='label', label='구분', field='label', align='left'),
                                           dict(name='count', label='건수', field='count')],
                                  rows=[dict(label=label, count=b.count) for label, b in zip(labels, buckets)],

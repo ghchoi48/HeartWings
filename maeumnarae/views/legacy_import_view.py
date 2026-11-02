@@ -174,7 +174,7 @@ class LegacyImportView:
                         ('심리검사', tests), ('특별교육', specials), ('교육/행사', events), ('오류', len(batch.errors))]:
                     with ui.card().classes('shadow-none border p-3 min-w-24'):
                         ui.label(label).classes('text-sm text-slate-500')
-                        ui.label(f'{count:,}').classes('text-xl font-bold ' + ('text-red-700' if label == '오류' and count else 'text-teal-700'))
+                        ui.label(f'{count:,}').classes('text-xl font-bold ' + ('text-red-700' if label == '오류' and count else 'text-primary'))
             if batch.errors:
                 message = ('업로드 한 파일을 다시 확인하세요. 이미 등록한 파일입니다.'
                            if ALREADY_IMPORTED in batch.errors else

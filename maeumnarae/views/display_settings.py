@@ -3,6 +3,7 @@
 import json
 import logging
 import re
+from collections.abc import Callable
 from pathlib import Path
 
 from nicegui import ui
@@ -15,8 +16,8 @@ MODES = {'auto': '자동 (기본값)', 'dark': '다크', 'light': '라이트'}
 
 DEFAULT_PRIMARY = '#24756b'
 PRIMARY_PRESETS = {
-    '청록': DEFAULT_PRIMARY, '파랑': '#2563eb', '보라': '#7c3aed',
-    '장미': '#be185d', '노랑': '#facc15',
+    '청록': DEFAULT_PRIMARY, '파랑': '#3875f6', '보라': '#5f43ce',
+    '장미': '#be185d',
 }
 
 
@@ -36,6 +37,8 @@ def luminance(color: str) -> float:
 
 
 def primary_text_color(color: str) -> str:
+    if normalize_color(color) == PRIMARY_PRESETS['파랑']:
+        return '#ffffff'
     brightness = luminance(color)
     return '#000000' if (brightness + 0.05) / 0.05 >= 1.05 / (brightness + 0.05) else '#ffffff'
 
@@ -72,6 +75,7 @@ class DisplaySettings:
             except (OSError, ValueError, TypeError):
                 logging.getLogger(__name__).warning('화면 설정을 읽을 수 없어 기본값을 사용합니다.')
         self.dark_mode = None
+        self.primary_listeners: list[Callable[[str], None]] = []
 
     def install(self) -> None:
         ui.add_css(font_face_css())
@@ -83,6 +87,14 @@ class DisplaySettings:
             .neis-school-name { color: #000000; }
             body.body--dark .neis-school-name { color: #ffffff; }
             .text-primary:not(.bg-primary) { color: var(--app-primary-accent) !important; }
+            .app-primary-soft, .bg-app-primary-soft {
+                background-color: color-mix(in srgb, var(--q-primary) 12%, white) !important;
+            }
+            body.body--dark .app-primary-soft, body.body--dark .bg-app-primary-soft {
+                background-color: color-mix(in srgb, var(--q-primary) 22%, #1e293b) !important;
+            }
+            .app-primary-ring { --tw-ring-color: var(--q-primary) !important; }
+            .app-primary-border { border-color: var(--q-primary) !important; }
             .bg-primary, .nicegui-header,
             .nicegui-header .q-btn { color: var(--app-primary-text) !important; }
             body { font-family: var(--app-font); font-size: 1rem; }
@@ -92,10 +104,8 @@ class DisplaySettings:
             body.body--dark .bg-white { background-color: #1e293b !important; }
             body.body--dark .bg-slate-50 { background-color: #0f172a !important; }
             body.body--dark .bg-slate-100 { background-color: #334155 !important; }
-            body.body--dark .bg-teal-50 { background-color: #163c3b !important; }
             body.body--dark .text-slate-800, body.body--dark .text-slate-700 { color: #e2e8f0 !important; }
             body.body--dark .text-slate-600, body.body--dark .text-slate-500 { color: #b8c5d6 !important; }
-            body.body--dark .text-teal-800, body.body--dark .text-teal-700 { color: #8fe0ce !important; }
 
             body.body--dark .border-slate-200 { border-color: #475569 !important; }
             body.body--dark .q-editor__content { background: #1e293b; color: #e2e8f0; }
@@ -140,6 +150,8 @@ class DisplaySettings:
             f'document.documentElement.style.setProperty({json.dumps(key)}, {json.dumps(value)});'
             for key, value in variables.items()
         ))
+        for listener in self.primary_listeners:
+            listener(color)
 
     def apply_typography(self) -> None:
         ui.run_javascript(

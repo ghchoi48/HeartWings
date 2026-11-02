@@ -79,7 +79,7 @@ class Meal:
             if not rows:
                 ui.label(f'{day:%m월 %d일} {MEALS[meal]} 급식 정보가 없습니다.').classes('text-sm text-slate-500')
             for row in rows:
-                ui.label(row.get('SCHUL_NM') or settings.school_name).classes('text-sm text-teal-700 font-semibold')
+                ui.label(row.get('SCHUL_NM') or settings.school_name).classes('text-sm text-primary font-semibold')
                 for dish in text_lines(row.get('DDISH_NM', '')):
                     ui.label(dish).classes('text-sm text-slate-700 break-words')
                 if row.get('CAL_INFO'):

@@ -35,7 +35,7 @@ class ScheduledJournals:
             self.body.clear()
             with self.body:
                 with ui.row().classes('items-baseline gap-2'):
-                    ui.label(f'{sum(counts.values()):,}').classes('text-5xl font-bold text-teal-800 tabular-nums')
+                    ui.label(f'{sum(counts.values()):,}').classes('text-5xl font-bold text-primary tabular-nums')
                     ui.label('건').classes('text-slate-500')
                 with ui.grid(columns=2).classes('w-full gap-2'):
                     for label, count in counts.items():
