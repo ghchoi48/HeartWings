@@ -162,7 +162,8 @@ class CalendarWidget:
                     with ui.row().classes('w-full items-center gap-1 flex-nowrap'):
                         ui.element('span').classes('w-2 h-2 rounded-full shrink-0').style(f'background:{entry.color}')
                         ui.label('종일' if entry.all_day else entry.starts_at.astimezone(KST).strftime('%H:%M')).classes('text-xs shrink-0')
-                        ui.label(entry.title).classes('truncate min-w-0').tooltip(entry.title)
+                        name = entry.student_name if entry.source == 'counseling' else entry.title
+                        ui.label(name).classes('truncate min-w-0').tooltip(name)
                         render_event_icons(entry)
 
     async def open_event(self, entry):

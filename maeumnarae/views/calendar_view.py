@@ -11,7 +11,7 @@ from maeumnarae.services.calendar_dates import visible_days, event_dates, events
 from pydantic import ValidationError
 
 from maeumnarae.core.database import DatabaseError
-from maeumnarae.services.calendar_holidays import HOLIDAY_COLOR, korean_holidays, is_day_off
+from maeumnarae.services.calendar_holidays import HOLIDAY_COLOR, korean_holidays
 from maeumnarae.core.models import CalendarInput, CalendarEvent
 from maeumnarae.services.reporting import KST, STATUS_LABELS
 from maeumnarae.repositories.calendar_repo import CalendarRepository
@@ -234,7 +234,8 @@ class CalendarView:
                 for index, label in enumerate(['일', '월', '화', '수', '목', '금', '토']):
                     if (index + 6) % 7 in hidden:
                         continue
-                    ui.label(label).classes('text-center p-2 bg-slate-50 font-semibold ' + ('text-red-500' if index in (0, 6) else 'text-slate-600'))
+                    ui.label(label).classes('text-center p-2 bg-slate-50 font-semibold ' + (
+                        'text-red-500' if index == 0 else 'text-blue-500' if index == 6 else 'text-slate-600'))
             for offset in range(0, len(days), 7):
                 week = [day for day in days[offset:offset + 7] if day.weekday() not in hidden]
                 segments = week_event_segments(week, self.events_by_day)
@@ -248,8 +249,10 @@ class CalendarView:
                         with ui.column().classes('min-w-0 p-2 gap-1').style(f'grid-column:{col + 1}; grid-row:1'):
                             label = f'{day.month}/{day.day}' + (' · 오늘' if day == today else '')
                             button = ui.button(label, on_click=lambda day=day: self.choose(day)).props('flat dense').classes('w-full')
-                            if is_day_off(day, self.holiday_days):
+                            if day.weekday() == 6 or day in self.holiday_days:
                                 button.props('color=red-7')
+                            elif day.weekday() == 5:
+                                button.props('color=blue-7')
                             if day.month != self.anchor.month and self.mode.value == 'month':
                                 button.classes('opacity-50')
                             if day in self.holiday_days and any(item.visible and item.source == 'holidays' for item in self.calendars):
