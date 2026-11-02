@@ -71,6 +71,7 @@ def register_page(path: Path) -> None:
                 school_heading = ui.label('마음나래 · Wee클래스').classes('text-lg font-bold')
         display = DisplaySettings(path.parent / 'display-settings.json')
         display.install()
+        ui.context.client.content.classes('bg-slate-50')
         root = ui.column().classes('app-content w-full flex-1 min-h-0 flex-nowrap overflow-auto bg-slate-50')
 
         def start(database):
