@@ -5,6 +5,7 @@ from datetime import datetime
 from maeumnarae.views.journal_pagination import PAGE_SIZE, load_page
 
 from nicegui import run, ui
+from maeumnarae.views.journal_defaults import default_duration_minutes
 from maeumnarae.views.journal_print_view import list_print_tools
 
 from maeumnarae.views.attachment_view import attachment_button
@@ -328,7 +329,7 @@ class SpecialEducationView(CounselingView):
     def build_editor(self, student: Student, entry: Counseling | None):
         """상담 입력 필드와 WYSIWYG 에디터를 구성한다."""
         initial = entry.model_dump() if entry else dict(title='', category='특별교육', status='scheduled',
-            duration_minutes=50, content_markdown='', follow_up='', starts_at=datetime.now(KST).replace(second=0, microsecond=0))
+            duration_minutes=default_duration_minutes(self.counseling.database, fallback=50), content_markdown='', follow_up='', starts_at=datetime.now(KST).replace(second=0, microsecond=0))
         fields = {}
         local_start = initial['starts_at'].astimezone(KST)
         with ui.dialog().props('persistent') as dialog, ui.card().classes('w-full max-w-6xl p-6 gap-4'):

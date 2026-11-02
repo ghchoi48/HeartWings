@@ -6,6 +6,7 @@ from datetime import date, datetime, timedelta, timezone
 from maeumnarae.views.journal_pagination import PAGE_SIZE, load_page
 
 from nicegui import run, ui
+from maeumnarae.views.journal_defaults import default_duration_minutes
 from maeumnarae.views.journal_print_view import list_print_tools
 
 from maeumnarae.views.attachment_view import attachment_button
@@ -522,7 +523,7 @@ class CounselingView:
     def build_editor(self, student: Student, entry: Counseling | None):
         """상담 입력 필드와 WYSIWYG 에디터를 구성한다."""
         initial = entry.model_dump() if entry else dict(title='', category='개인상담', status='scheduled',
-            duration_minutes=50, content_markdown='', follow_up='', starts_at=datetime.now(KST).replace(second=0, microsecond=0))
+            duration_minutes=default_duration_minutes(self.counseling.database, fallback=50), content_markdown='', follow_up='', starts_at=datetime.now(KST).replace(second=0, microsecond=0))
         fields = {}
         local_start = initial['starts_at'].astimezone(KST)
         target = normalize_target(initial.get('counseling_target') or '학생본인')

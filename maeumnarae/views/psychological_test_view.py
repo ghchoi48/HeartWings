@@ -4,6 +4,7 @@ from datetime import datetime
 from maeumnarae.views.journal_pagination import PAGE_SIZE, load_page
 
 from nicegui import run, ui
+from maeumnarae.views.journal_defaults import default_duration_minutes
 from maeumnarae.views.journal_print_view import list_print_tools
 
 from maeumnarae.views.attachment_view import attachment_button
@@ -196,6 +197,7 @@ class PsychologicalTestView:
             return
         self.clear_editor()
         request = self.editor_request
+        now = datetime.now(KST)
         with self.editor_container:
             ui.label('심리검사 일지 수정' if entry else '새 심리검사 일지').classes('text-2xl font-bold')
             ui.label(student.name).classes('text-slate-500')
@@ -212,9 +214,9 @@ class PsychologicalTestView:
             target = ui.select({'학생': '학생', '보호자(학부모)': '학부모'}, label='대상',
                                value=entry.target if entry else '학생').props('outlined').classes('w-full')
             with ui.row().classes('w-full items-start'):
-                test_date = ui.date_input('검사일 *', value=(entry.test_date if entry else datetime.now(KST).date()).isoformat()).props('outlined').classes('grow min-w-40')
-                test_time = time_input('시각', value=entry.test_time if entry else '09:00').props('outlined').classes('w-40')
-                duration = ui.number('시간(분)', value=entry.duration_minutes if entry else 60,
+                test_date = ui.date_input('검사일 *', value=(entry.test_date if entry else now.date()).isoformat()).props('outlined').classes('grow min-w-40')
+                test_time = time_input('시각', value=entry.test_time if entry else now.strftime('%H:%M')).props('outlined').classes('w-40')
+                duration = ui.number('시간(분)', value=entry.duration_minutes if entry else default_duration_minutes(self.repository.database, fallback=60),
                                      min=1, max=1440, step=1).props('outlined').classes('w-36')
             ui.label('검사 결과 및 소견').classes('font-semibold')
             content = ui.editor(value=editor_html(entry.content, entry.content_format) if entry else '',

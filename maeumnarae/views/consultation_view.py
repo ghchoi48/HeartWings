@@ -5,6 +5,7 @@ from datetime import date, datetime, timedelta, timezone
 from maeumnarae.views.journal_pagination import PAGE_SIZE, load_page
 
 from nicegui import run, ui
+from maeumnarae.views.journal_defaults import default_duration_minutes
 from maeumnarae.views.journal_print_view import list_print_tools
 
 from maeumnarae.views.attachment_view import attachment_button
@@ -274,7 +275,7 @@ class ConsultationView:
 
     def build_log_editor(self, teacher: Teacher, entry: Consultation | None):
         initial = entry.model_dump() if entry else dict(starts_at=datetime.now(KST).replace(second=0, microsecond=0),
-            duration_minutes=30, status='scheduled', consultation_area='', content_html='', follow_up='')
+            duration_minutes=default_duration_minutes(self.consultations.database, fallback=30), status='scheduled', consultation_area='', content_html='', follow_up='')
         local_start = initial['starts_at'].astimezone(KST)
         fields = {}
         with ui.dialog().props('persistent') as dialog, ui.card().classes('w-full max-w-6xl p-6 gap-4'):

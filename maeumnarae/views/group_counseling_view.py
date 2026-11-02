@@ -7,6 +7,7 @@ from collections.abc import Awaitable, Callable
 from maeumnarae.views.journal_pagination import PAGE_SIZE, load_page
 
 from nicegui import run, ui
+from maeumnarae.views.journal_defaults import default_duration_minutes
 from maeumnarae.views.journal_print_view import list_print_tools
 
 from maeumnarae.views.attachment_view import attachment_button
@@ -248,7 +249,7 @@ class GroupCounselingView:
                         with ui.grid(columns=4).classes('w-full gap-4'):
                             fields['starts_on'] = ui.date_input('상담 날짜', value=local_start.date().isoformat()).props('outlined').classes('w-full min-w-0')
                             fields['starts_time'] = time_input('시작 시각 (한국 시각)', value=local_start.time().isoformat()).props('outlined').classes('w-full min-w-0')
-                            fields['duration_minutes'] = ui.number('상담 시간 (분)', value=entry.duration_minutes if entry else 50, min=1, max=1440, step=1).props('outlined').classes('w-full min-w-0')
+                            fields['duration_minutes'] = ui.number('상담 시간 (분)', value=entry.duration_minutes if entry else default_duration_minutes(self.repository.database, fallback=50), min=1, max=1440, step=1).props('outlined').classes('w-full min-w-0')
                             fields['status'] = ui.select(STATUSES, label='상담 상태', value=entry.status if entry else 'scheduled').props('outlined').classes('w-full min-w-0')
                         ui.label('참여 학생 출석 및 참여 태도').classes('font-semibold')
                         attendance_rows = ([row.model_dump() for row in entry.attendance]

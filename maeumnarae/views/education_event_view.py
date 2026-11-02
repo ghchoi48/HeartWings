@@ -2,6 +2,7 @@
 from datetime import datetime
 
 from nicegui import run, ui
+from maeumnarae.views.journal_defaults import default_duration_minutes
 from maeumnarae.views.journal_print_view import print_dialog
 from maeumnarae.services.journal_print_models import PrintRequest
 
@@ -211,8 +212,9 @@ class EducationEventView:
 
     def build_editor(self, entry=None):
         request = self.selection_request
+        now = datetime.now(KST)
         initial = entry.model_dump() if entry else dict(title='', category='교육',
-            event_date=datetime.now(KST).date(), event_time='09:00', duration_minutes=60, location='', audience='', facilitator='', content='')
+            event_date=now.date(), event_time=now.strftime('%H:%M'), duration_minutes=default_duration_minutes(self.repository.database, fallback=60), location='', audience='', facilitator='', content='')
         with self.details:
             ui.label('교육/행사 수정' if entry else '새 교육/행사 등록').classes('text-2xl font-bold')
             fields = {}
