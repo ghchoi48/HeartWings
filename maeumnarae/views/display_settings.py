@@ -82,8 +82,8 @@ class DisplaySettings:
         self.dark_mode = ui.dark_mode({'auto': None, 'dark': True, 'light': False}[self.values['mode']])
         ui.add_css('''
             :root { --app-primary-text: #ffffff; }
-            body { --app-primary-accent: var(--app-primary-light); }
-            body.body--dark { --app-primary-accent: var(--app-primary-dark); }
+            body { --app-primary-accent: var(--app-primary-light); --app-calendar-timed-text: #000000; }
+            body.body--dark { --app-primary-accent: var(--app-primary-dark); --app-calendar-timed-text: #ffffff; }
             .neis-school-name { color: #000000; }
             body.body--dark .neis-school-name { color: #ffffff; }
             .text-primary:not(.bg-primary) { color: var(--app-primary-accent) !important; }

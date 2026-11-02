@@ -159,7 +159,7 @@ class CalendarWidget:
                 ui.label('일정이 없습니다').classes('text-sm')
             for entry in entries:
                 with ui.button(on_click=lambda entry=entry: self.open_event(entry)).props('flat no-caps align=left').classes(
-                        'w-full min-w-0').style('color:#000000 !important' if not entry.all_day else ''):
+                        'w-full min-w-0').style('color:var(--app-calendar-timed-text, #000000) !important'):
                     with ui.row().classes('w-full items-center gap-1 flex-nowrap'):
                         ui.element('span').classes('w-2 h-2 rounded-full shrink-0').style(f'background:{entry.color}')
                         ui.label(event_caption(entry)).classes('truncate min-w-0').tooltip(event_name(entry))

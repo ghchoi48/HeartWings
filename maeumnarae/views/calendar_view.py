@@ -308,7 +308,7 @@ class CalendarView:
                             foreground = '#111827' if sum(v * w for v, w in zip(rgb, (0.299, 0.587, 0.114))) > 150 else '#ffffff'
                             style += f'background:{entry.color} !important; color:{foreground} !important;'
                         else:
-                            style += f'color:#000000 !important; border:1px solid {entry.color};'
+                            style += f'color:var(--app-calendar-timed-text, #000000) !important; border:1px solid {entry.color};'
                         with ui.button(on_click=lambda entry=entry: self.open_event(entry)).props(
                                 'unelevated dense no-caps align=left' if entry.all_day else 'flat dense no-caps align=left').classes(
                                     'min-w-0 text-xs h-7').style(style).tooltip(name) as bar:
@@ -327,7 +327,7 @@ class CalendarView:
                             for entry in entries[:limit]:
                                 caption = event_caption(entry)
                                 with ui.button(on_click=lambda entry=entry: self.open_event(entry)).props('flat dense no-caps align=left').classes(
-                                        'w-full text-xs').style(f'border-left:3px solid {entry.color}; color:#000000 !important') as event_button:
+                                        'w-full text-xs').style(f'border-left:3px solid {entry.color}; color:var(--app-calendar-timed-text, #000000) !important') as event_button:
                                     self.bind_event_drag(event_button, entry)
                                     ui.label(caption).classes('flex-1 min-w-0 break-words text-left')
                                     render_event_icons(entry)
