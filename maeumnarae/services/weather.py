@@ -2,6 +2,7 @@
 import json
 import math
 import ssl
+import sys
 from datetime import date
 from urllib.error import URLError
 from urllib.parse import urlencode
@@ -30,10 +31,25 @@ def coordinates(latitude, longitude):
     return latitude, longitude
 
 
+def _ssl_context():
+    if sys.platform != 'win32':
+        return ssl.create_default_context(cafile=certifi.where())
+
+    # Include Windows-trusted certificates (e.g. a school's HTTPS proxy CA)
+    # as well as the bundled public roots.
+    context = ssl.create_default_context()
+    context.load_verify_locations(cafile=certifi.where())
+    # Python 3.13+ enables strict X.509 format checks. Older enterprise CAs
+    # can lack Authority Key Identifier; retain chain and hostname validation
+    # while using the pre-3.13 format compatibility on Windows.
+    context.verify_flags &= ~ssl.VERIFY_X509_STRICT
+    return context
+
+
 def request(url, params):
     try:
         with urlopen(url + '?' + urlencode(params), timeout=12,
-                     context=ssl.create_default_context(cafile=certifi.where())) as response:
+                     context=_ssl_context()) as response:
             raw = response.read(1_000_001)
         if len(raw) > 1_000_000:
             raise ValueError()

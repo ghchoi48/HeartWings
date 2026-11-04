@@ -1,4 +1,6 @@
 """기기 위치 또는 직접 선택한 지역의 일간·주간 날씨."""
+import json
+
 from nicegui import run, ui
 
 from maeumnarae.core.database import DatabaseError
@@ -10,6 +12,28 @@ GEOLOCATION = '''return await new Promise(resolve => {
         p => resolve({latitude: p.coords.latitude, longitude: p.coords.longitude}),
         () => resolve(null), {enableHighAccuracy: false, timeout: 10000, maximumAge: 300000});
 });'''
+
+
+# Client-only API, called with the device's current geolocation.
+# https://www.bigdatacloud.com/docs/free-api/free-reverse-geocode-to-city-api
+REGION_NAME = '''
+const controller = new AbortController();
+const timer = setTimeout(() => controller.abort(), 5000);
+try {
+    const params = new URLSearchParams({...COORDINATES, localityLanguage: 'ko'});
+    const response = await fetch('https://api.bigdatacloud.net/data/reverse-geocode-client?' + params,
+                                 {signal: controller.signal, credentials: 'omit'});
+    if (!response.ok) return null;
+    const data = await response.json();
+    const parts = [data.principalSubdivision, data.city, data.locality]
+        .filter(value => typeof value === 'string' && value.trim()).map(value => value.trim());
+    return [...new Set(parts)].join(' · ') || null;
+} catch {
+    return null;
+} finally {
+    clearTimeout(timer);
+}
+'''
 
 
 # Keep Material 3 geometry while inheriting the existing application palette.
@@ -56,7 +80,7 @@ body.body--dark .weather-md3, body.body--dark .home-widget[data-kind="weather"] 
 .weather-week { width: 100%; min-width: 0; display: flex; gap: 4px;
     overflow-x: auto; padding-bottom: 8px; }
 .weather-week:focus-visible { outline: 2px solid var(--weather-primary); outline-offset: -2px; }
-.weather-forecast { flex: 1 0 104px; display: flex; flex-direction: column;
+.weather-forecast { flex: 1 0 52px; min-width: 0; display: flex; flex-direction: column;
     align-items: center; gap: 8px; padding: 12px 8px; border-radius: 16px;
     text-align: center; background: var(--weather-surface); }
 .weather-forecast:first-child { background: var(--weather-container); }
@@ -102,7 +126,10 @@ class Weather:
                 ui.icon('location_on', size='20px').classes('weather-accent')
                 self.location_label = ui.label('현재 기기 위치').classes('weather-location')
             self.body = ui.column().classes('w-full gap-2').props('aria-live=polite')
-            ui.link('날씨: Open-Meteo · 지역: GeoNames', 'https://open-meteo.com/', new_tab=True).classes(
+            with ui.row():
+                ui.link('날씨: Open-Meteo · 지역: GeoNames', 'https://open-meteo.com/', new_tab=True).classes(
+                'weather-caption weather-muted')
+                ui.link('현재 위치 지역명: BigDataCloud', 'https://www.bigdatacloud.com/', new_tab=True).classes(
                 'weather-caption weather-muted')
         ui.timer(0, self.load, once=True)
         ui.timer(1800, self.reload)
@@ -166,6 +193,7 @@ class Weather:
         generation = self.generation
         self.data = None
         location = self.preferences['location']
+        device_location = location is None
         self.location_label.text = location['name'] if location else '현재 기기 위치'
         self.message('날씨를 불러오는 중입니다…' if location else '기기 위치를 확인하는 중입니다…', loading=True)
         try:
@@ -185,6 +213,19 @@ class Weather:
             return
         self.data = data
         self.render()
+        if device_location:
+            await self.show_device_region(lat, lon, generation)
+
+    async def show_device_region(self, latitude, longitude, generation):
+        script = REGION_NAME.replace('COORDINATES', json.dumps(
+            {'latitude': latitude, 'longitude': longitude}, allow_nan=False))
+        try:
+            name = await ui.run_javascript(script, timeout=7)
+        except TimeoutError:
+            return
+        if (generation == self.generation and not self.body.is_deleted
+                and isinstance(name, str) and name.strip()):
+            self.location_label.text = name.strip()
 
     def temperatures(self, low, high, *, compact=False):
         with ui.row().classes('weather-temperatures items-center'):
