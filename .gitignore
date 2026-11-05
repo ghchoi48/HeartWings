@@ -13,6 +13,9 @@
 !/requirements/
 !/scripts/
 
+# Keep the entire test suite local and untracked.
+/tests/
+
 # Keep packaging inputs; local audits, tests, and validation reports are not build inputs.
 /packaging/*
 !/packaging/languages/
