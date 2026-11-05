@@ -205,7 +205,7 @@ class CalendarView:
                     if item.source in ('counseling', 'holidays', 'neis', 'google_ics'):
                         ui.badge('연동').props('outline').classes('shrink-0')
         self.list_message.text = '체크한 캘린더의 일정만 표시합니다.'
-        self.add_event.set_enabled(any(item.source == 'custom' for item in self.calendars))
+        self.add_event.set_enabled(any(item.source in ('custom', 'counseling') for item in self.calendars))
 
     async def toggle_calendar(self, calendar_id, visible):
         # 저장 중에는 체크박스를 잠가 빠른 연속 변경이 역순으로 저장되지 않게 한다.
