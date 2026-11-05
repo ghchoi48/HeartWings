@@ -12,7 +12,17 @@
 !/resources/
 !/requirements/
 !/scripts/
-!/tests/
+
+# Keep packaging inputs; local audits, tests, and validation reports are not build inputs.
+/packaging/*
+!/packaging/languages/
+!/packaging/maeumnarae-data.spec
+!/packaging/maeumnarae.spec
+!/packaging/maeumnarae.iss
+!/packaging/prepare_local_pyxlsb.py
+!/packaging/prepare_pyxlsb_sources.py
+!/packaging/release_sources.py
+!/packaging/verify_certifi.py
 
 /requirements/*
 !/requirements/base.txt
