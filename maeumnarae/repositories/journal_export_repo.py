@@ -1,7 +1,9 @@
 """업로드 서식에 필요한 메타데이터만 한 읽기 트랜잭션에서 조회한다."""
 from dataclasses import dataclass
+from datetime import date, datetime
 
 from maeumnarae.core.database import Database
+from maeumnarae.services.reporting import KST
 
 
 @dataclass(frozen=True)
@@ -14,6 +16,22 @@ class JournalSnapshot:
 class JournalExportRepository:
     def __init__(self, database: Database):
         self.database = database
+
+    def school_years(self) -> list[int]:
+        """모든 내보내기 대상 일지의 날짜에서 학년도를 구한다."""
+        with self.database.session() as connection:
+            timestamps = connection.execute('''
+                SELECT starts_at FROM counseling
+                UNION SELECT starts_at FROM special_education_logs
+                UNION SELECT l.starts_at FROM group_counseling_logs l
+                    JOIN counseling_groups g ON g.id=l.group_id
+                UNION SELECT starts_at FROM consultations''').fetchall()
+            days = connection.execute('''
+                SELECT test_date AS day FROM psychological_tests
+                UNION SELECT event_date AS day FROM education_events''').fetchall()
+        dates = [datetime.fromisoformat(row['starts_at']).astimezone(KST).date() for row in timestamps]
+        dates.extend(date.fromisoformat(row['day']) for row in days)
+        return sorted({day.year if day.month >= 3 else day.year - 1 for day in dates}, reverse=True)
 
     def snapshot(self, *, include_students=False) -> JournalSnapshot:
         # 학생 명부는 상담 대장 요청에만 포함한다. 연락처·본문·비밀 메모는 조회하지 않는다.

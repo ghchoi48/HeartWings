@@ -44,8 +44,10 @@ RESET_CALENDAR_DRAG = HIDE_DROP_GUIDES + '''
 '''
 
 
-def event_name(entry: CalendarEvent) -> str:
+def event_name(entry: CalendarEvent, *, hide_names: bool = False) -> str:
     """큰 캘린더와 홈 위젯에서 같은 일정 이름을 표시한다."""
+    if hide_names and entry.source in JOURNAL_ICONS:
+        return ''
     if entry.source == 'special_education':
         return entry.student_name
     if entry.source == 'custom':
@@ -53,8 +55,8 @@ def event_name(entry: CalendarEvent) -> str:
     return entry.display_name or entry.student_name or entry.title
 
 
-def event_caption(entry: CalendarEvent) -> str:
-    name = event_name(entry)
+def event_caption(entry: CalendarEvent, *, hide_names: bool = False) -> str:
+    name = event_name(entry, hide_names=hide_names)
     if entry.all_day:
         return name
     return f'{entry.starts_at.astimezone(KST):%H:%M} {name}'.strip()
@@ -132,6 +134,10 @@ class CalendarView:
                     ui.button('오늘', on_click=self.today).props('outline')
                     ui.button('새로고침', icon='refresh', on_click=self.force_reload).props('flat')
                     ui.space()
+                    self.hide_names = ui.switch(
+                        '이름 감추기', value=False, on_change=lambda: self.render_grid(),
+                    ).props('dense left-label').classes(
+                        'border app-primary-border rounded px-3 py-1 min-h-9 shrink-0 text-primary text-sm font-medium')
                     with ui.button('캘린더 목록', icon='calendar_month').props('outline icon-right=expand_more'):
                         self.calendar_menu = ui.menu().props('anchor="bottom right" self="top right"').classes('rounded-xl shadow-lg')
                         with self.calendar_menu:
@@ -340,8 +346,8 @@ class CalendarView:
                             if day in self.holiday_days and any(item.visible and item.source == 'holidays' for item in self.calendars):
                                 ui.label(self.holiday_days[day]).classes('w-full text-xs break-words').style(f'color:{HOLIDAY_COLOR}')
                     for entry, col, span, lane, first, last in segments:
-                        name = event_name(entry)
-                        caption = event_caption(entry)
+                        name = event_name(entry, hide_names=self.hide_names.value)
+                        caption = event_caption(entry, hide_names=self.hide_names.value)
                         style = (f'grid-column:{col + 1} / span {span}; grid-row:{lane + 2}; '
                                  f'margin:2px {"4px" if last else "0"} 2px {"4px" if first else "0"}; '
                                  f'border-radius:{"6px" if first else "0"} {"6px" if last else "0"} '
@@ -353,7 +359,9 @@ class CalendarView:
                             style += f'color:var(--app-calendar-timed-text, #000000) !important; border:1px solid {entry.color};'
                         with ui.button(on_click=lambda entry=entry: self.open_event(entry)).props(
                                 'unelevated dense no-caps align=left' if entry.all_day else 'flat dense no-caps align=left').classes(
-                                    'min-w-0 text-xs h-7').style(style).tooltip(name) as bar:
+                                    'min-w-0 text-xs h-7').style(style) as bar:
+                            if name:
+                                bar.tooltip(name)
                             bar.props['aria-label'] = caption
                             self.bind_event_drag(bar, entry)
                             if first:
@@ -367,7 +375,7 @@ class CalendarView:
                                        if not e.all_day and event_dates(e)[0] == event_dates(e)[1]]
                             limit = len(entries) if day == self.selected else (10 if self.mode.value == 'week' else 3)
                             for entry in entries[:limit]:
-                                caption = event_caption(entry)
+                                caption = event_caption(entry, hide_names=self.hide_names.value)
                                 with ui.button(on_click=lambda entry=entry: self.open_event(entry)).props('flat dense no-caps align=left').classes(
                                         'w-full text-xs').style(f'border-left:3px solid {entry.color}; color:var(--app-calendar-timed-text, #000000) !important') as event_button:
                                     self.bind_event_drag(event_button, entry)

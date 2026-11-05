@@ -4,7 +4,9 @@ from datetime import date, datetime
 
 from nicegui import run, ui
 
+from maeumnarae.core.database import DatabaseError
 from maeumnarae.core.models import current_school_year
+from maeumnarae.repositories.journal_export_repo import JournalExportRepository
 from maeumnarae.repositories.journal_print_repo import JournalPrintRepository
 from maeumnarae.services.journal_print_models import PrintRequest, KINDS
 from maeumnarae.services.reporting import KST
@@ -178,32 +180,31 @@ def editor_print_button(database, kind, entry, blocked):
 def build_all_print(database):
     with settings_card('모든 일지 PDF 내보내기', 'picture_as_pdf',
                        '선택한 기간의 개인상담·집단상담·특별교육·자문·심리검사·교육/행사 일지를 PDF 한 파일로 내보냅니다.', collapsible=True):
-        period = ui.select({'all': '전체 기간', 'year': '학년도', 'custom': '기간 지정'},
-                           value='all', label='내보낼 기간').props('outlined')
-        year = ui.number('학년도', value=current_school_year(), min=1900, max=9998, step=1).props('outlined')
-        year.bind_visibility_from(period, 'value', backward=lambda value: value == 'year')
-        ui.label('학년도는 3월 1일부터 다음 해 2월 말일까지입니다.').bind_visibility_from(
-            period, 'value', backward=lambda value: value == 'year')
-        with ui.row().classes('w-full items-center') as dates:
-            start = ui.date_input('시작일', value=f'{current_school_year()}-03-01').props('outlined')
-            end = ui.date_input('종료일', value=datetime.now(KST).date().isoformat()).props('outlined')
-        dates.bind_visibility_from(period, 'value', backward=lambda value: value == 'custom')
-        ui.label('지정 기간은 시작일과 종료일을 포함하며, 일지 날짜는 한국 표준시 기준입니다.').bind_visibility_from(
-            period, 'value', backward=lambda value: value == 'custom')
-        ui.label('완료 상태의 일지만 포함합니다. 상태 구분이 없는 심리검사·교육/행사는 포함되며, 비밀 메모와 첨부파일은 제외됩니다.').classes('text-sm text-slate-500')
+        with ui.row().classes('w-full items-end flex-nowrap overflow-x-auto'):
+            period = ui.select({'year': '학년도', 'custom': '기간 직접 입력'},
+                               value='year', label='내보낼 기간').props('outlined').classes('flex-1 min-w-[200px]')
+            year = ui.select({}, label='학년도', with_input=True).props('outlined').classes('flex-1 min-w-[200px]')
+            year.bind_visibility_from(period, 'value', backward=lambda value: value == 'year')
+            start = ui.date_input('시작일', value=f'{current_school_year()}-03-01').props('outlined').classes('flex-1 min-w-[200px]')
+            end = ui.date_input('종료일', value=datetime.now(KST).date().isoformat()).props('outlined').classes('flex-1 min-w-[200px]')
+            start.bind_visibility_from(period, 'value', backward=lambda value: value == 'custom')
+            end.bind_visibility_from(period, 'value', backward=lambda value: value == 'custom')
+            status = ui.select({'completed': '완료만', 'completed_scheduled': '완료 및 예약'},
+                               value='completed', label='내보낼 일지 상태').props('outlined').classes('flex-1 min-w-[200px]')
+        message = ui.label().classes('text-sm text-slate-600')
 
         async def prepare():
             try:
-                options = dict(statuses=('completed',))
+                options = dict(statuses=('completed',) if status.value == 'completed' else ('completed', 'scheduled'))
                 if period.value == 'year':
-                    if year.value is None or int(year.value) != year.value:
+                    if year.value not in year.options:
                         raise ValueError()
                     request = PrintRequest(school_year=int(year.value), **options)
                 elif period.value == 'custom':
                     request = PrintRequest(start_date=date.fromisoformat(start.value or ''),
                                            end_date=date.fromisoformat(end.value or ''), **options)
                 else:
-                    request = PrintRequest(all_records=True, **options)
+                    raise ValueError()
                 request.validate()
             except (ValueError, TypeError, OverflowError):
                 ui.notify('학년도 또는 시작일·종료일을 확인해 주세요. 시작일은 종료일보다 늦을 수 없습니다.', type='warning')
@@ -213,6 +214,30 @@ def build_all_print(database):
                 await print_dialog(database, request, button)
             finally:
                 if not button.is_deleted:
-                    button.enable()
+                    update_controls()
 
         button = ui.button('모든 일지 PDF 내보내기', icon='picture_as_pdf', on_click=prepare)
+
+        def update_controls():
+            year.set_enabled(period.value == 'year' and bool(year.options))
+            start.set_enabled(period.value == 'custom')
+            end.set_enabled(period.value == 'custom')
+            button.set_enabled(period.value == 'custom' or year.value is not None)
+
+        async def load_school_years():
+            try:
+                years = await run.io_bound(JournalExportRepository(database).school_years)
+            except (DatabaseError, ValueError):
+                message.text = '학년도 목록을 불러오지 못했습니다.'
+                return
+            current_year = current_school_year()
+            selected = current_year if current_year in years else (years[0] if years else None)
+            year.set_options({value: f'{value}학년도' for value in years}, value=selected)
+            update_controls()
+            if not years:
+                message.text = '내보낼 일지 기록이 없습니다.'
+
+        period.on_value_change(update_controls)
+        year.on_value_change(update_controls)
+        update_controls()
+        ui.timer(0.01, load_school_years, once=True)

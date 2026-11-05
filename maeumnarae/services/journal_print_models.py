@@ -16,11 +16,15 @@ class PrintRequest:
     all_records: bool = False
     start_date: date | None = None
     end_date: date | None = None
+    student_id: int | None = None
 
     def validate(self):
         has_period = self.start_date is not None or self.end_date is not None
-        if sum((self.school_year is not None, bool(self.refs), self.all_records, has_period)) != 1:
+        if sum((self.school_year is not None, bool(self.refs), self.all_records, has_period,
+                self.student_id is not None)) != 1:
             raise ValueError('학년도 또는 출력할 일지를 선택하세요.')
+        if self.student_id is not None and (type(self.student_id) is not int or self.student_id <= 0):
+            raise ValueError('학생을 확인하세요.')
         if self.school_year is not None and (type(self.school_year) is not int or not 1900 <= self.school_year <= 9998):
             raise ValueError('학년도를 확인하세요.')
         if has_period and (type(self.start_date) is not date or type(self.end_date) is not date or

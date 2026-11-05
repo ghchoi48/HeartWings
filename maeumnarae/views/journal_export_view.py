@@ -1,11 +1,12 @@
 """일지 업로드용 XLSX 생성, 누락 항목 확인 및 다운로드."""
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from nicegui import run, ui
 
 from maeumnarae.core.database import DatabaseError
+from maeumnarae.repositories.journal_export_repo import JournalExportRepository
 from maeumnarae.services.reporting import KST
-from maeumnarae.services.journal_export import ExportOptions, XLSX_MIME, export_journals, export_ledger
+from maeumnarae.services.journal_export import ExportOptions, XLSX_MIME, export_journals, export_ledger, school_year
 from maeumnarae.views.settings_card import settings_card
 
 
@@ -19,24 +20,22 @@ class JournalExportView:
 
     def build(self, *, collapsible: bool = False):
         today = datetime.now(KST).date()
+        current_year = school_year(today)
         title = '내부결재용 상담 대장 내보내기' if self.ledger else 'NEIS 업로드용 파일 내보내기'
         description = ('학생 ID를 포함한 상담 대장과 연결된 학생 정보 파일을 각각 내보냅니다.' if self.ledger else
                        '개인상담·집단상담·특별교육·자문·심리검사·교육/행사를 상담관리 업로드 서식으로 내보냅니다.')
         with settings_card(title, 'file_download', description, collapsible=collapsible):
             with ui.row().classes('w-full items-end flex-nowrap overflow-x-auto'):
-                self.all_dates = ui.checkbox('전체 기간', value=True).classes('shrink-0 whitespace-nowrap')
-                self.start = ui.date_input('일지 시작일', value=str(today.replace(month=3, day=1) if today.month >= 3 else date(today.year - 1, 3, 1))).props('outlined').classes('flex-1 min-w-[200px]')
+                self.period = ui.select({'year': '학년도', 'custom': '기간 직접 입력'},
+                                        value='year', label='내보낼 기간').props('outlined').classes('flex-1 min-w-[200px]')
+                self.year = ui.select({}, label='학년도', with_input=True).props('outlined').classes('flex-1 min-w-[200px]')
+                self.year.bind_visibility_from(self.period, 'value', lambda value: value == 'year')
+                self.start = ui.date_input('일지 시작일', value=str(date(current_year, 3, 1))).props('outlined').classes('flex-1 min-w-[200px]')
                 self.end = ui.date_input('일지 종료일', value=str(today)).props('outlined').classes('flex-1 min-w-[200px]')
+                self.start.bind_visibility_from(self.period, 'value', lambda value: value == 'custom')
+                self.end.bind_visibility_from(self.period, 'value', lambda value: value == 'custom')
                 self.status = ui.select({'completed': '완료만', 'completed_scheduled': '완료 및 예약'},
-                                        value='completed_scheduled', label='내보낼 일지 상태').props('outlined').classes('flex-1 min-w-[200px]')
-            ui.label('학년도는 일지 날짜의 3월~다음 해 2월 기준입니다. 상담분류는 전문상담, 상담사소속은 전문상담교사로 입력합니다.').classes('text-sm text-slate-500')
-            ui.label('개인상담의 상담분야와 교원자문의 자문분야는 상담구분에 저장된 값 그대로 입력합니다.').classes('text-sm text-slate-500')
-            ui.label('상담제목·상담내용은 상담구분과 동일하게 입력하며, 특별교육은 근거 법률에 따라 학교폭력 특별교육 또는 교권보호 특별교육으로 입력합니다. 일지 파일에는 실제 제목·본문·비밀 메모·이름·연락처를 포함하지 않습니다.').classes('text-sm text-slate-500')
-            ui.label('특별교육은 교육 / 프로그램운영 / 기타로 분류합니다. 일지 파일의 학년·성별은 모두 빈칸입니다. 집단 인원은 현재 연결된 참여 학생, 교육/행사 인원은 저장된 참여인원 기준입니다. 상태가 없는 심리검사·교육/행사는 완료만 선택해도 포함됩니다.').classes('text-sm text-slate-500')
-            ui.label('상담매체구분은 개인상담만 저장된 값을 사용하고, 나머지는 면담으로 입력합니다.').classes('text-sm text-slate-500')
-            if self.ledger:
-                ui.label('상담일자 다음에 학생 ID가 들어갑니다. 집단상담은 현재 참여 학생 ID를 쉼표로 나열하고, 자문·교육/행사는 빈칸입니다.').classes('text-sm text-slate-500')
-                ui.label('학생 정보 파일에는 대장에 연결된 학생만 ID당 한 행으로 포함하며, 최신 등록 학적의 학년·반·번호와 성별·이름을 담습니다.').classes('text-sm text-slate-500')
+                                        value='completed', label='내보낼 일지 상태').props('outlined').classes('flex-1 min-w-[200px]')
             with ui.row():
                 self.prepare = ui.button('상담 대장·학생 정보 만들기' if self.ledger else '일지 XLSX 만들기', icon='table_view', on_click=self.generate)
                 self.download_button = ui.button('내부결재용 상담 대장 내보내기' if self.ledger else 'XLSX 다운로드', icon='download', on_click=self.download).props('outline')
@@ -44,10 +43,24 @@ class JournalExportView:
                     self.students_download_button = ui.button('Wee클래스 보관용 학생 정보 대장 내보내기', icon='download', on_click=self.download_students).props('outline')
             self.message = ui.label().classes('text-sm text-slate-600')
             self.issues = ui.column().classes('w-full')
-        self.controls = (self.all_dates, self.start, self.end, self.status)
+        self.controls = (self.period, self.year, self.start, self.end, self.status)
         for control in self.controls:
             control.on_value_change(self.invalidate)
         self.invalidate()
+        ui.timer(0.01, self.load_school_years, once=True)
+
+    async def load_school_years(self):
+        try:
+            years = await run.io_bound(JournalExportRepository(self.database).school_years)
+        except (DatabaseError, ValueError):
+            self.message.text = '학년도 목록을 불러오지 못했습니다.'
+            return
+        current_year = school_year(datetime.now(KST).date())
+        selected = current_year if current_year in years else (years[0] if years else None)
+        self.year.set_options({year: f'{year}학년도' for year in years}, value=selected)
+        self.update_period_controls()
+        if not years:
+            self.message.text = '내보낼 일지 기록이 없습니다.'
 
     def invalidate(self):
         self.result = None
@@ -56,17 +69,28 @@ class JournalExportView:
             self.students_download_button.disable()
         self.issues.clear()
         self.message.text = ''
-        self.start.set_enabled(not self.all_dates.value and not self.busy)
-        self.end.set_enabled(not self.all_dates.value and not self.busy)
+        self.update_period_controls()
+
+    def update_period_controls(self):
+        self.year.set_enabled(self.period.value == 'year' and bool(self.year.options) and not self.busy)
+        self.start.set_enabled(self.period.value == 'custom' and not self.busy)
+        self.end.set_enabled(self.period.value == 'custom' and not self.busy)
+        self.prepare.set_enabled(not self.busy and (self.period.value == 'custom' or self.year.value is not None))
 
     async def generate(self):
         if self.busy:
             return
         self.invalidate()
         try:
+            if self.period.value == 'year':
+                year = int(self.year.value)
+                start = date(year, 3, 1)
+                end = date(year + 1, 3, 1) - timedelta(days=1)
+            else:
+                start = date.fromisoformat(self.start.value or '')
+                end = date.fromisoformat(self.end.value or '')
             options = ExportOptions(
-                start=None if self.all_dates.value else date.fromisoformat(self.start.value or ''),
-                end=None if self.all_dates.value else date.fromisoformat(self.end.value or ''),
+                start=start, end=end,
                 wee_class='Wee클래스', status=self.status.value)
             options.validate()
         except (ValueError, TypeError):
@@ -98,8 +122,7 @@ class JournalExportView:
             self.busy = False
             for control in (*self.controls, self.prepare):
                 control.enable()
-            self.start.set_enabled(not self.all_dates.value)
-            self.end.set_enabled(not self.all_dates.value)
+            self.update_period_controls()
 
     def download(self):
         if self.result is None:

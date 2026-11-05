@@ -15,6 +15,8 @@ from maeumnarae.repositories.student_repo import StudentRepository
 from maeumnarae.repositories.school_settings_repo import SchoolSettingsRepository
 from maeumnarae.views.student_list import StudentList
 from maeumnarae.views.counseling_view import TARGET_LABELS, normalize_target
+from maeumnarae.services.journal_print_models import PrintRequest
+from maeumnarae.views.journal_print_view import print_dialog
 
 KST = timezone(timedelta(hours=9))
 PAGE_SIZE = 10
@@ -153,9 +155,14 @@ class StudentView:
                 with ui.card().classes('w-full rounded-2xl shadow-sm p-6'):
                     with ui.row().classes('w-full items-center justify-between'):
                         ui.label('상담 타임라인').classes('text-xl font-bold')
-                        if self.on_counseling:
-                            ui.button('상담 일지', icon='edit_note',
-                                      on_click=lambda: self.on_counseling(student.id))
+                        with ui.row().classes('items-center gap-2'):
+                            pdf_button = ui.button('PDF', icon='picture_as_pdf', on_click=lambda: print_dialog(
+                                self.counseling.database, PrintRequest(student_id=student.id), pdf_button,
+                                blocked=lambda: self.editor_open)).props('outline')
+                            pdf_button.tooltip('이 학생의 모든 개인상담·특별교육·심리검사 일지를 PDF로 내보내기')
+                            if self.on_counseling:
+                                ui.button('상담 일지', icon='edit_note',
+                                          on_click=lambda: self.on_counseling(student.id))
                     self.timeline = ui.timeline(side='right', layout='dense', color='primary').classes('w-full')
                     self.timeline_message = ui.label().classes('text-sm text-slate-500')
                     self.more = ui.button('이력 더 보기', on_click=self.load_timeline).props('flat')

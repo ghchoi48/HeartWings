@@ -10,6 +10,31 @@ from maeumnarae.core.upload_limits import MAX_BACKUP_BYTES
 from maeumnarae.core.database import Database, DatabaseError, SCHEMA_VERSION
 
 
+def soft_reset_database(database: Database, counselor_name: str) -> None:
+    """상담 기록을 보존하고 인수인계 대상 설정만 초기화한다."""
+    name = counselor_name.strip()
+    if not name or len(name) > 100 or '\x00' in name:
+        raise ValueError('새 상담교사 이름을 1~100자로 입력해 주세요.')
+    from maeumnarae.repositories.home_repo import HomeRepository
+
+    with database._session_lock:
+        # 구 버전의 JSON 위젯 정보도 먼저 이전·정리하여 다시 유입되지 않게 한다.
+        HomeRepository(database)._ensure_storage()
+        with database.session(write=True) as connection:
+            connection.execute('DELETE FROM home_preferences')
+            connection.execute('DELETE FROM home_todos')
+            connection.execute('''INSERT INTO home_widget_state (id, payload)
+                VALUES (1, '{"layout": [], "todos": [], "next_todo_id": 1}')
+                ON CONFLICT(id) DO UPDATE SET payload=excluded.payload''')
+            connection.execute('DELETE FROM google_calendar_subscriptions')
+            connection.execute("DELETE FROM calendar_events WHERE calendar_id IN (SELECT id FROM calendars WHERE source='custom')")
+            connection.execute("DELETE FROM calendars WHERE source='custom'")
+            connection.execute("UPDATE school_settings SET neis_api_key='', counselor_name=? WHERE id=1", (name,))
+        # 열린 다른 화면의 메모 초안이나 설정이 초기화 결과를 덮어쓰지 못하게 한다.
+        database._state.generation += 1
+        database._password = None
+
+
 def reset_database(database: Database) -> None:
     """사용 중인 작업을 마친 후 DB를 삭제하고 기존 인스턴스의 접근을 차단한다."""
     with database._session_lock:

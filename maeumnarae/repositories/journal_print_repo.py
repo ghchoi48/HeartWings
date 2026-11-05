@@ -51,14 +51,20 @@ class JournalPrintRepository:
             enrollments = {}
             participants = {}
             for kind, (columns, source, subject_type) in QUERIES.items():
+                if request.student_id is not None and kind not in ('individual', 'special', 'test'):
+                    continue
                 ids = sorted(key for k, key in selected if k == kind)
-                if not request.has_period and not request.all_records and not ids:
+                if request.student_id is None and not request.has_period and not request.all_records and not ids:
                     continue
                 # ID를 나누어 조회해도 같은 읽기 트랜잭션을 유지한다.
                 batches = [ids[i:i + 400] for i in range(0, len(ids), 400)] if ids else [None]
                 for batch in batches:
                     where = ' WHERE r.id IN (' + ','.join('?' for _ in batch) + ')' if batch else ''
                     params = batch or ()
+                    if request.student_id is not None:
+                        # 모든 기간·사례·상태를 포함하되 해당 학생의 기록만 조회한다.
+                        where = ' WHERE r.student_id=?'
+                        params = (request.student_id,)
                     if request.has_period:
                         start, stop = request.bounds
                         day_sql = ('r.test_date' if kind == 'test' else 'r.event_date' if kind == 'education'
