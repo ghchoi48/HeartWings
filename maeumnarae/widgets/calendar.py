@@ -50,12 +50,21 @@ class CalendarWidget:
             ui.button('오늘', on_click=self.today).props('flat dense')
             ui.space()
             self.add = ui.button('일정 추가', icon='add', on_click=lambda: self.edit()).props('flat dense')
-            self.add.disable()
+            self.update_add_state()
         self.message = ui.label().classes('text-xs')
+        self.message.bind_visibility_from(self.message, 'text', backward=lambda text: bool(text))
         self.body = ui.column().classes('w-full gap-2')
         ui.timer(0, self.reload, once=True)
         ui.timer(0.5, self.refresh_if_changed)
         ui.timer(REFRESH_SECONDS, self.refresh_google)
+
+    def update_add_state(self):
+        unavailable = not any(item.source == 'custom' for item in self.calendars)
+        # 캘린더가 없을 때도 안내를 열 수 있도록 클릭은 허용한다.
+        self.add.set_enabled(not self.loading)
+        self.add.props(f'aria-disabled={str(unavailable).lower()}')
+        self.add.classes(add='opacity-50' if unavailable else '',
+                         remove='' if unavailable else 'opacity-50')
 
     async def force_reload(self):
         await self.reload(force=True)
@@ -120,13 +129,7 @@ class CalendarWidget:
             self.holidays = holidays
             self.loaded_revision = revision
             self.today_date = datetime.now(KST).date()
-            self.add.set_enabled(any(item.source == 'custom' for item in calendars))
-            self.message.text = ('' if any(item.visible for item in calendars) else
-                                 '전체 캘린더에서 표시할 캘린더를 선택해 주세요.')
-            if not any(item.source == 'custom' for item in calendars):
-                self.message.text += ' 전체 캘린더에서 일정 등록용 캘린더를 추가해 주세요.'
-            if school_message:
-                self.message.text += ' ' + school_message
+            self.message.text = school_message
             self.render()
         except DatabaseError as error:
             if request == self.request and not self.body.is_deleted:
@@ -137,6 +140,8 @@ class CalendarWidget:
         finally:
             if request == self.request:
                 self.loading = False
+                if not self.body.is_deleted:
+                    self.update_add_state()
 
     def render(self):
         if self.body.is_deleted:
@@ -194,6 +199,9 @@ class CalendarWidget:
 
     async def edit(self, entry=None):
         if self.editor_open or self.loading or self.body.is_deleted:
+            return
+        if entry is None and not any(item.source == 'custom' for item in self.calendars):
+            ui.notify('일정 추가를 위한 캘린더를 추가해주세요.', type='info')
             return
         self.editor_open = True
 

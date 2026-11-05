@@ -1,22 +1,21 @@
-"""기간별 완료 상담 통계와 집계 보고서 다운로드."""
+"""기간별 완료 상담 통계 조회."""
 
-from datetime import date, datetime
+from calendar import monthrange
+from datetime import date, datetime, timedelta
 
 from nicegui import run, ui
 
 from maeumnarae.core.database import DatabaseError
-from maeumnarae.core.models import CounselingReport
-from maeumnarae.services.reporting import KST, STATUS_LABELS, date_bounds, report_csv, report_html
+from maeumnarae.services.reporting import KST, STATUS_LABELS, date_bounds
 from maeumnarae.repositories.reporting_repo import ReportingRepository
 from maeumnarae.views.display_settings import DEFAULT_PRIMARY, DisplaySettings
 
 
 class StatisticsView:
-    """화면과 다운로드가 동일한 집계 결과를 사용하도록 스냅샷을 보존한다."""
+    """선택한 기간의 상담 집계 결과를 표시한다."""
 
     def __init__(self, repository: ReportingRepository, display: DisplaySettings | None = None):
         self.repository = repository
-        self.report: CounselingReport | None = None
         self.request = 0
         self.primary = display.values['primary'] if display else DEFAULT_PRIMARY
         self.charts: list[ui.echart] = []
@@ -38,27 +37,43 @@ class StatisticsView:
             ui.label('완료 상담의 학생 수·시간·유형별 현황을 살펴보세요.').classes('text-slate-500')
             with ui.card().classes('w-full rounded-2xl shadow-sm p-5'):
                 with ui.row().classes('w-full items-end'):
-                    self.start = ui.input('통계 시작일', value=str(today.replace(day=1))).props('type=date outlined')
-                    self.end = ui.input('통계 종료일', value=str(today)).props('type=date outlined')
+                    self.start = ui.date_input('통계 시작일', value=str(today.replace(day=1))).props('outlined')
+                    self.end = ui.date_input('통계 종료일', value=str(today)).props('outlined')
                     ui.button('통계 조회', icon='search', on_click=self.load)
-                    self.csv_button = ui.button('CSV 내보내기', icon='download', on_click=lambda: self.export('csv')).props('outline')
-                    self.html_button = ui.button('인쇄용 보고서', icon='print', on_click=lambda: self.export('html')).props('outline')
+                with ui.row().classes('w-full gap-2'):
+                    for label, period in [('학년도', 'school_year'), ('지난달', 'last_month'),
+                                          ('이번 달', 'this_month'), ('오늘', 'today')]:
+                        ui.button(label, on_click=lambda _, period=period: self.set_period(period)).props(
+                            'outline dense no-caps').style(
+                            'width: 56px; height: 18px; min-height: 18px; padding: 0; font-size: 10px; line-height: 1;')
                 self.message = ui.label().classes('text-sm text-slate-500')
                 ui.label('종료일 포함 · 상담 시작일 기준(KST) · 유형/월/학년은 완료 상담 기준 · 학년은 현재 학생 정보 기준').classes('text-sm text-slate-500')
-                ui.label('보고서에는 학생 이름·학번·상담 본문이 포함되지 않습니다. 인쇄용 HTML은 브라우저에서 열어 인쇄할 수 있습니다.').classes('text-sm text-slate-500')
             self.results = ui.column().classes('w-full gap-5')
-        self.csv_button.disable()
-        self.html_button.disable()
         self.start.on_value_change(self.invalidate)
         self.end.on_value_change(self.invalidate)
         ui.timer(0.01, self.load, once=True)
 
+    def set_period(self, period: str) -> None:
+        """한국 시간의 오늘을 기준으로 조회 기간을 입력한다."""
+        today = datetime.now(KST).date()
+        if period == 'school_year':
+            year = today.year if today.month >= 3 else today.year - 1
+            start = date(year, 3, 1)
+            end = date(year + 1, 3, 1) - timedelta(days=1)
+        elif period == 'last_month':
+            end = today.replace(day=1) - timedelta(days=1)
+            start = end.replace(day=1)
+        elif period == 'this_month':
+            start = today.replace(day=1)
+            end = today.replace(day=monthrange(today.year, today.month)[1])
+        else:
+            start = end = today
+        self.start.set_value(start.isoformat())
+        self.end.set_value(end.isoformat())
+
     def invalidate(self) -> None:
-        """입력 기간이 바뀌면 이전 결과를 내보내지 못하게 한다."""
+        """입력 기간이 바뀌면 이전 결과와 진행 중인 조회를 무효화한다."""
         self.request += 1
-        self.report = None
-        self.csv_button.disable()
-        self.html_button.disable()
         self.results.clear()
         self.charts.clear()
         self.message.text = '기간이 변경되었습니다. 통계 조회를 눌러 주세요.'
@@ -82,10 +97,7 @@ class StatisticsView:
             return
         if request != self.request:
             return
-        self.report = report
         self.message.text = f'조회 기간: {start} ~ {end} · 전체 {report.total}건'
-        self.csv_button.enable()
-        self.html_button.enable()
         with self.results:
             with ui.element('div').classes('grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full'):
                 for label, value in [('전체 일정', f'{report.total}건'), ('완료 상담', f'{report.completed}건'),
@@ -112,13 +124,3 @@ class StatisticsView:
                                           dict(name='count', label='건수', field='count')],
                                  rows=[dict(label=label, count=b.count) for label, b in zip(labels, buckets)],
                                  row_key='label', pagination=10).classes('w-full').props('flat')
-
-    def export(self, kind: str) -> None:
-        """화면에 표시된 보고서만 내보낸다. 파일은 서버 디스크에 남기지 않는다."""
-        if self.report is None:
-            return
-        name = f'마음나래_상담통계_{self.report.start}_{self.report.end}'
-        if kind == 'csv':
-            ui.download.content(report_csv(self.report), name + '.csv', media_type='text/csv')
-        else:
-            ui.download.content(report_html(self.report), name + '.html', media_type='text/html')

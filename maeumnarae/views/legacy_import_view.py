@@ -1,6 +1,7 @@
 """XLSB 이관 옵션, 미리보기 및 명시적 저장."""
 
 from maeumnarae.views.settings_card import settings_card
+from maeumnarae.views.time_inputs import storage_time, time_input
 
 from maeumnarae.core.secure_upload import SecureUpload
 
@@ -60,7 +61,7 @@ class LegacyImportView:
             self.save_button.disable()
             self.year.on_value_change(self.clear)
             self.add_periods(list(dict.fromkeys(
-                [str(n) for n in range(1, 8)] + ['점심시간', '쉬는시간', '방과후'] + list(self.saved_periods)
+                ['일과전'] + [str(n) for n in range(1, 8)] + ['점심시간', '쉬는시간', '방과후'] + list(self.saved_periods)
             )))
 
     def add_periods(self, periods):
@@ -68,7 +69,7 @@ class LegacyImportView:
             for key in periods:
                 if key and key not in self.period_inputs:
                     label = f'{key} 교시' if key.isdigit() else key
-                    control = ui.input(f'{label} 시작 시간', value=self.saved_periods.get(key, ''), placeholder='HH:MM').props('type=time').classes('w-full')
+                    control = time_input(f'{label} 시작 시간', value=self.saved_periods.get(key, '')).classes('w-full')
                     control.on_value_change(self.period_changed)
                     self.period_inputs[key] = control
 
@@ -77,7 +78,7 @@ class LegacyImportView:
         if self.repository.database is None:
             return
         try:
-            periods = {key: control.value for key, control in self.period_inputs.items()}
+            periods = {key: storage_time(control.value) for key, control in self.period_inputs.items()}
             self.repository.save_period_times(periods)
             self.saved_periods = periods
         except (ValueError, DatabaseError, OSError) as error:
@@ -139,7 +140,7 @@ class LegacyImportView:
         self.clear()
         self.set_busy(True)
         try:
-            periods = {key: control.value for key, control in self.period_inputs.items()}
+            periods = {key: storage_time(control.value) for key, control in self.period_inputs.items()}
             self.batch = await run.io_bound(self.repository.preview, self.content, self.year.value, periods,
                 corrections=self.corrections, destinations=self.destinations, excluded=self.excluded, special_laws=self.special_laws)
             self.render_results()

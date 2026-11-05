@@ -156,6 +156,6 @@ def load_google_events(database, calendars, start, end, force=False):
                     result.extend(events_from_ics(row['ics'], row, start, end))
                 except GoogleCalendarError as error:
                     messages.append(f"{row['name']}: {error}")
-            last = datetime.fromisoformat(row['fetched_at']).astimezone(KST).strftime('%m/%d %H:%M') if row['fetched_at'] else '없음'
-            messages.append(f"{row['name']} · 마지막 갱신 {last}" + (f" · {row['error']} (마지막 정상 일정 표시)" if row['error'] else ''))
+            if row['error']:
+                messages.append(f"{row['name']} · {row['error']} (마지막 정상 일정 표시)")
     return result, ' · '.join(messages)
