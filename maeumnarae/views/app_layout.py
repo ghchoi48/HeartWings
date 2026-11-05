@@ -92,6 +92,7 @@ class AppLayout:
                                           TeacherRepository(self.students.database),
                                           lambda: self.navigate('students'), school=self.school,
                                           on_calendar=lambda: self.navigate('calendar'),
+                                          is_active=lambda: self.active_page == 'home',
                                           on_open_schedule=self.open_schedule, on_open_linked=self.open_linked_schedule)
                 self.home_view.build()
             self.panels['students'] = ui.column().classes('w-full')
@@ -215,8 +216,12 @@ class AppLayout:
                 self.special_education_view.build()
         if page == 'calendar' and self.calendar_view is None:
             with self.panels['calendar']:
-                self.calendar_view = CalendarView(self.reporting, self.open_schedule, self.open_linked_schedule)
+                self.calendar_view = CalendarView(self.reporting, self.open_schedule, self.open_linked_schedule,
+                                                  is_active=lambda: self.active_page == 'calendar')
                 self.calendar_view.build()
+        elif page == 'calendar' and self.calendar_view is not None:
+            with self.panels['calendar']:
+                ui.timer(0, self.calendar_view.reload, once=True)
         if page == 'consultation' and self.consultation_view is None:
             with self.panels['consultation']:
                 self.consultation_view = ConsultationView(TeacherRepository(self.students.database))
@@ -232,7 +237,7 @@ class AppLayout:
         if page == 'home' and hasattr(self, 'home_view'):
             with self.panels['home']:
                 for widget in self.home_view.widget_views:
-                    if widget.kind == 'meal':
+                    if widget.kind in ('meal', 'calendar'):
                         ui.timer(0, widget.reload, once=True)
         self.active_page = page
         for name, panel in self.panels.items():

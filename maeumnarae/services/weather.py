@@ -1,14 +1,12 @@
 """Open-Meteo 지역 검색 및 현재·7일 예보 조회."""
 import json
 import math
-import ssl
-import sys
 from datetime import date
 from urllib.error import URLError
 from urllib.parse import urlencode
 from urllib.request import urlopen
 
-import certifi
+from maeumnarae.services.tls import ssl_context as _ssl_context
 
 
 # 두 글자 검색은 정확히 일치하는 지명만 반환하므로 국내 통용명을 공식 지명으로 확장한다.
@@ -29,21 +27,6 @@ def coordinates(latitude, longitude):
             or not -90 <= latitude <= 90 or not -180 <= longitude <= 180):
         raise ValueError('올바른 지역 좌표가 아닙니다.')
     return latitude, longitude
-
-
-def _ssl_context():
-    if sys.platform != 'win32':
-        return ssl.create_default_context(cafile=certifi.where())
-
-    # Include Windows-trusted certificates (e.g. a school's HTTPS proxy CA)
-    # as well as the bundled public roots.
-    context = ssl.create_default_context()
-    context.load_verify_locations(cafile=certifi.where())
-    # Python 3.13+ enables strict X.509 format checks. Older enterprise CAs
-    # can lack Authority Key Identifier; retain chain and hostname validation
-    # while using the pre-3.13 format compatibility on Windows.
-    context.verify_flags &= ~ssl.VERIFY_X509_STRICT
-    return context
 
 
 def request(url, params):

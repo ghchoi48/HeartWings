@@ -7,6 +7,7 @@ from maeumnarae.core.models import Calendar, CalendarInput, CalendarEvent, Calen
 from maeumnarae.repositories._support import now_text, utc_text, values
 from maeumnarae.services.reporting import KST
 from maeumnarae.repositories.reporting_repo import ReportingRepository
+from maeumnarae.repositories.google_calendar_repo import GoogleCalendarRepository
 from maeumnarae.services.school_calendar import NEIS_CALENDAR_ID, NEIS_COLOR, NEIS_NAME
 
 
@@ -22,7 +23,7 @@ class CalendarRepository:
                          for item in calendars]
             visible = connection.execute("SELECT visible FROM calendar_preferences WHERE name='holidays'").fetchone()['visible']
             neis = connection.execute("SELECT visible FROM calendar_preferences WHERE name='neis'").fetchone()
-            return calendars + [Calendar(id=HOLIDAY_CALENDAR_ID, name='대한민국 공휴일', color=HOLIDAY_COLOR,
+            return calendars + GoogleCalendarRepository(self.database).calendars() + [Calendar(id=HOLIDAY_CALENDAR_ID, name='대한민국 공휴일', color=HOLIDAY_COLOR,
                                          source='holidays', visible=bool(visible)),
                                 Calendar(id=NEIS_CALENDAR_ID, name=NEIS_NAME, color=NEIS_COLOR,
                                          source='neis', visible=bool(neis['visible']) if neis else False)]
@@ -53,6 +54,9 @@ class CalendarRepository:
             connection.execute('DELETE FROM calendars WHERE id=?', (calendar_id,))
 
     def set_visible(self, calendar_id: int, visible: bool):
+        if calendar_id <= -3:
+            GoogleCalendarRepository(self.database).set_visible(-calendar_id - 2, visible)
+            return
         with self.database.session(write=True) as connection:
             if calendar_id == NEIS_CALENDAR_ID:
                 connection.execute("INSERT INTO calendar_preferences (name, visible) VALUES ('neis', ?) "

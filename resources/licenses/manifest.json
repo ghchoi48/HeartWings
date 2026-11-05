@@ -10057,6 +10057,44 @@
       ],
       "note": "orjson macOS arm64 도구 체인 출처 및 범위는 ORJSON_TOOLCHAIN_AUDIT.md 참고.",
       "asset_audit": true
+    },
+    {
+      "name": "icalendar",
+      "version": "6.3.2",
+      "license": "BSD-2-Clause",
+      "source": "https://github.com/collective/icalendar",
+      "text_file": "libraries/icalendar.txt",
+      "license_origin": "icalendar-6.3.2.dist-info/licenses/LICENSE.rst",
+      "license_source": "https://pypi.org/project/icalendar/6.3.2/",
+      "license_sha256": "c6107ef0355ab8e081ce86f16c6aa3f99068963c676530d83a33809c93ceb5f4"
+    },
+    {
+      "name": "recurring-ical-events",
+      "version": "3.8.2",
+      "license": "LGPL-3.0-or-later",
+      "source": "https://github.com/niccokunzmann/python-recurring-ical-events",
+      "text_file": "libraries/recurring-ical-events.txt",
+      "license_origin": "recurring_ical_events-3.8.2.dist-info/licenses/LICENSE",
+      "license_source": "https://pypi.org/project/recurring-ical-events/3.8.2/",
+      "license_sha256": "e3a994d82e644b03a792a930f574002658412f62407f5fee083f2555c5f23118",
+      "source_file": "sources/recurring_ical_events-3.8.2.tar.gz",
+      "source_sha256": "e731af31d0b7dec5cd47a1defacd8549e2f36fab1c1995e8b9f042822a0acf8e",
+      "source_archive": "https://pypi.org/project/recurring-ical-events/3.8.2/#files",
+      "note": "LGPL-3.0-or-later. Original source is bundled. See GOOGLE_CALENDAR_SOURCES.md for rebuilding with modified libraries. GPL and LGPL texts are included in the source archive and pyxlsb/COPYING files."
+    },
+    {
+      "name": "x-wr-timezone",
+      "version": "2.0.1",
+      "license": "LGPL-3.0-or-later",
+      "source": "https://github.com/niccokunzmann/x-wr-timezone",
+      "text_file": "libraries/x-wr-timezone.txt",
+      "license_origin": "x_wr_timezone-2.0.1.dist-info/LICENSE",
+      "license_source": "https://pypi.org/project/x-wr-timezone/2.0.1/",
+      "license_sha256": "e3a994d82e644b03a792a930f574002658412f62407f5fee083f2555c5f23118",
+      "source_file": "sources/x_wr_timezone-2.0.1.tar.gz",
+      "source_sha256": "9166c40e6ffd4c0edebabc354e1a1e2cffc1bb473f88007694793757685cc8c3",
+      "source_archive": "https://pypi.org/project/x-wr-timezone/2.0.1/#files",
+      "note": "LGPL-3.0-or-later. Original source is bundled. See GOOGLE_CALENDAR_SOURCES.md for rebuilding with modified libraries. GPL and LGPL texts are included in the source archive and pyxlsb/COPYING files."
     }
   ],
   "fonts": [

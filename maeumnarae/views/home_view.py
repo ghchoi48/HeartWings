@@ -28,11 +28,12 @@ WELCOME_MESSAGES = (
 
 
 class HomeView:
-    def __init__(self, repository, teachers, on_students, school=None, *, on_calendar=None, on_open_schedule=None, on_open_linked=None):
+    def __init__(self, repository, teachers, on_students, school=None, *, on_calendar=None, on_open_schedule=None, on_open_linked=None, is_active=None):
         self.repository = repository
         self.teachers = teachers
         self.on_students = on_students
-        self.calendar_callbacks = dict(on_calendar=on_calendar, on_open=on_open_schedule, on_open_linked=on_open_linked)
+        self.calendar_callbacks = dict(on_calendar=on_calendar, on_open=on_open_schedule, on_open_linked=on_open_linked,
+                                       is_active=is_active)
         self.school = school
         self.welcome_message = choice(WELCOME_MESSAGES)
         self.layout = []

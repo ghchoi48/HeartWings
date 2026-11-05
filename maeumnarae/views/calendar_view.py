@@ -18,6 +18,9 @@ from maeumnarae.services.reporting import KST, STATUS_LABELS
 from maeumnarae.repositories.calendar_repo import CalendarRepository
 from maeumnarae.repositories.reporting_repo import ReportingRepository
 from maeumnarae.services.school_calendar import load_school_events, SOURCE_URL
+from maeumnarae.services.google_calendar import load_google_events, REFRESH_SECONDS
+from maeumnarae.repositories.google_calendar_repo import GoogleCalendarRepository
+from maeumnarae.views.google_calendar_editor import edit_google_calendar, show_google_event
 
 
 JOURNAL_ICONS = {
@@ -58,6 +61,8 @@ def event_caption(entry: CalendarEvent) -> str:
 
 def render_event_icons(entry: CalendarEvent) -> None:
     """상태와 일지 종류를 나란히 표시한다."""
+    if entry.source == 'google_ics':
+        ui.icon('link', size='16px').tooltip('구글 캘린더 · 읽기 전용')
     if entry.status is not None:
         ui.icon({'scheduled': 'schedule', 'completed': 'check_circle',
                  'cancelled': 'cancel'}[entry.status], size='16px').classes('shrink-0 ml-1').props(
@@ -70,7 +75,7 @@ def render_event_icons(entry: CalendarEvent) -> None:
 
 def week_event_segments(days, events_by_day):
     """날짜를 가로지르는 막대에 겹치지 않는 행을 배정한다."""
-    entries = {(e.source, e.id): e for day in days for e in events_by_day.get(day, [])
+    entries = {(e.calendar_id, e.source, e.id): e for day in days for e in events_by_day.get(day, [])
                if e.all_day or event_dates(e)[0] != event_dates(e)[1]}
     occupied = []
     segments = []
@@ -100,10 +105,11 @@ def show_school_event(entry):
 
 class CalendarView:
     def __init__(self, repository: ReportingRepository, on_open: Callable[[int], Awaitable[None]],
-                 on_open_linked: Callable[[CalendarEvent], Awaitable[None]] | None = None):
+                 on_open_linked: Callable[[CalendarEvent], Awaitable[None]] | None = None, *, is_active=None):
         self.repository = CalendarRepository(repository.database)
         self.on_open = on_open
         self.on_open_linked = on_open_linked
+        self.is_active = is_active or (lambda: True)
         self.anchor = datetime.now(KST).date()
         self.selected = self.anchor
         self.count_request = 0
@@ -123,7 +129,7 @@ class CalendarView:
                     self.heading = ui.label().classes('text-xl font-bold')
                     self.next_button = ui.button('다음 달', icon='chevron_right', on_click=lambda: self.shift(1)).props('flat dense')
                     ui.button('오늘', on_click=self.today).props('outline')
-                    ui.button('새로고침', icon='refresh', on_click=self.reload).props('flat')
+                    ui.button('새로고침', icon='refresh', on_click=self.force_reload).props('flat')
                     ui.space()
                     with ui.button('캘린더 목록', icon='calendar_month').props('outline icon-right=expand_more'):
                         self.calendar_menu = ui.menu().props('anchor="bottom right" self="top right"').classes('rounded-xl shadow-lg')
@@ -137,6 +143,7 @@ class CalendarView:
                                 self.hide_sunday = ui.checkbox('일요일 감추기', on_change=lambda: self.render_grid())
                                 ui.separator()
                                 ui.button('캘린더 추가', icon='add', on_click=lambda: self.open_calendar_editor()).props('outline').classes('w-full')
+                                ui.button('구글 캘린더 연결', icon='link', on_click=lambda: self.open_google_editor()).props('outline').classes('w-full')
                     self.mode = ui.toggle({'month': '월간', 'week': '주간'}, value='month', on_change=self.change_mode)
                     self.add_event = ui.button('일정 추가', icon='add', on_click=lambda: self.open_event_editor())
                     self.add_event.disable()
@@ -145,6 +152,29 @@ class CalendarView:
                     self.grid = ui.column().classes('w-full gap-0').style('min-width:700px')
         ui.timer(0.01, self.reload, once=True)
         ui.timer(0.5, self.refresh_if_changed)
+        ui.timer(REFRESH_SECONDS, self.refresh_google)
+
+    async def force_reload(self):
+        await self.reload(force=True)
+
+    async def refresh_google(self):
+        if (not self.is_active() or self.grid.is_deleted or self.repository.database.is_locked or self.editor_open
+                or self.refreshing or not any(c.source == 'google_ics' and c.visible for c in self.calendars)):
+            return
+        await self.reload(force=True)
+
+    async def open_google_editor(self, item=None):
+        if self.editor_open:
+            return
+        self.calendar_menu.close()
+        self.editor_open = True
+        try:
+            if await edit_google_calendar(self.repository.database, item):
+                await self.reload()
+        except DatabaseError as error:
+            ui.notify(str(error), type='negative')
+        finally:
+            self.editor_open = False
 
     def render_calendars(self):
         self.calendar_list.clear()
@@ -160,7 +190,12 @@ class CalendarView:
                             'flat round dense aria-label="캘린더 수정"').tooltip('캘린더 수정')
                         ui.button(icon='delete_outline', on_click=lambda item=item: self.delete_calendar(item)).props(
                             'flat round dense color=negative aria-label="캘린더 삭제"').tooltip('캘린더 삭제')
-                    if item.source in ('counseling', 'holidays', 'neis'):
+                    if item.source == 'google_ics':
+                        ui.button(icon='edit', on_click=lambda item=item: self.open_google_editor(item)).props(
+                            'flat round dense aria-label="구글 캘린더 연결 수정"').tooltip('연결 수정')
+                        ui.button(icon='link_off', on_click=lambda item=item: self.delete_calendar(item)).props(
+                            'flat round dense color=negative aria-label="구글 캘린더 연결 해제"').tooltip('연결 해제')
+                    if item.source in ('counseling', 'holidays', 'neis', 'google_ics'):
                         ui.badge('연동').props('outline').classes('shrink-0')
         self.list_message.text = '체크한 캘린더의 일정만 표시합니다.'
         self.add_event.set_enabled(any(item.source == 'custom' for item in self.calendars))
@@ -184,7 +219,7 @@ class CalendarView:
 
     async def refresh_if_changed(self) -> None:
         """다른 화면에서 커밋한 변경을 반영하고 편집 중에는 갱신을 미룬다."""
-        if self.refreshing or self.editor_open or self.loaded_revision == self.repository.database.write_revision:
+        if not self.is_active() or self.grid.is_deleted or self.repository.database.is_locked or self.refreshing or self.editor_open or self.loaded_revision == self.repository.database.write_revision:
             return
         self.refreshing = True
         try:
@@ -213,7 +248,9 @@ class CalendarView:
         self.anchor = self.selected = day
         await self.reload()
 
-    async def reload(self) -> None:
+    async def reload(self, *, force=False) -> None:
+        if not self.is_active() or self.grid.is_deleted or self.repository.database.is_locked:
+            return
         self.count_request += 1
         request = self.count_request
         days = visible_days(self.anchor, self.mode.value)
@@ -227,7 +264,7 @@ class CalendarView:
         self.message.text = '일정을 불러오는 중입니다…'
         try:
             calendars = await run.io_bound(self.repository.list)
-            if request != self.count_request:
+            if request != self.count_request or not self.is_active() or self.grid.is_deleted:
                 return
             selected_ids = [item.id for item in calendars if item.visible]
             event_calendar_ids = [item.id for item in calendars if item.visible and item.source != 'holidays']
@@ -236,12 +273,15 @@ class CalendarView:
             school_events, school_message = await run.io_bound(
                 load_school_events, self.repository.database, calendars, days[0], days[-1])
             events.extend(school_events)
+            google_events, google_message = await run.io_bound(
+                load_google_events, self.repository.database, calendars, days[0], days[-1], force)
+            events.extend(google_events)
         except DatabaseError as error:
-            if request == self.count_request:
+            if request == self.count_request and not self.grid.is_deleted and not self.repository.database.is_locked:
                 self.message.text = str(error)
                 self.render_calendars()
             return
-        if request != self.count_request:
+        if request != self.count_request or not self.is_active() or self.grid.is_deleted or self.repository.database.is_locked:
             return
         self.loaded_revision = revision
         self.calendars = calendars
@@ -252,6 +292,8 @@ class CalendarView:
         self.message.text = f'선택한 캘린더 {len(selected_ids)}개 · 표시 기간 일정 {len(events)}건' if selected_ids else '캘린더 목록 버튼에서 표시할 캘린더를 선택해 주세요.'
         if school_message:
             self.message.text += ' · ' + school_message
+        if google_message:
+            self.message.text += ' · ' + google_message
 
     def render_grid(self):
         self.grid.clear()
@@ -446,7 +488,9 @@ class CalendarView:
         self.render_grid()
 
     async def open_event(self, entry):
-        if entry.source == 'neis':
+        if entry.source == 'google_ics':
+            show_google_event(entry)
+        elif entry.source == 'neis':
             show_school_event(entry)
         elif entry.source == 'counseling':
             await self.on_open(entry.id)
@@ -511,7 +555,7 @@ class CalendarView:
                 dialog.delete()
 
     async def delete_calendar(self, item):
-        if self.editor_open or item.source != 'custom':
+        if self.editor_open or item.source not in ('custom', 'google_ics'):
             return
         self.calendar_menu.close()
         self.editor_open = True
@@ -519,13 +563,15 @@ class CalendarView:
         try:
             with ui.context.client.content:
                 with ui.dialog().props('persistent') as dialog, ui.card().classes('w-full max-w-md p-6'):
-                    ui.label('캘린더 삭제').classes('text-xl font-bold')
-                    ui.label(f'“{item.name}” 캘린더를 삭제할까요?').classes('break-words')
-                    ui.label('이 캘린더에 등록된 일정도 모두 삭제되며 되돌릴 수 없습니다.').classes('text-red-700')
+                    google = item.source == 'google_ics'
+                    ui.label('구글 캘린더 연결 해제' if google else '캘린더 삭제').classes('text-xl font-bold')
+                    ui.label(f'“{item.name}” 캘린더를 {"연결 해제" if google else "삭제"}할까요?').classes('break-words')
+                    ui.label('앱의 연결 정보와 캐시만 삭제합니다. 구글의 일정은 유지됩니다.' if google else
+                             '이 캘린더에 등록된 일정도 모두 삭제되며 되돌릴 수 없습니다.').classes('text-red-700')
                     message = ui.label().classes('text-sm text-red-700')
                     with ui.row().classes('w-full justify-end'):
                         cancel = ui.button('취소', on_click=lambda: dialog.submit(False)).props('flat')
-                        confirm = ui.button('삭제', icon='delete_outline').props('color=negative')
+                        confirm = ui.button('연결 해제' if google else '삭제', icon='link_off' if google else 'delete_outline').props('color=negative')
             deleting = False
 
             async def remove():
@@ -536,7 +582,10 @@ class CalendarView:
                 cancel.disable()
                 confirm.disable()
                 try:
-                    await run.io_bound(self.repository.delete, item.id)
+                    if item.source == 'google_ics':
+                        await run.io_bound(GoogleCalendarRepository(self.repository.database).delete, -item.id - 2)
+                    else:
+                        await run.io_bound(self.repository.delete, item.id)
                     dialog.submit(True)
                 except DatabaseError as error:
                     message.text = str(error)
@@ -548,7 +597,7 @@ class CalendarView:
             confirm.on_click(remove)
             if await dialog:
                 await self.reload()
-                ui.notify('캘린더를 삭제했습니다.', type='positive')
+                ui.notify('구글 캘린더 연결을 해제했습니다.' if item.source == 'google_ics' else '캘린더를 삭제했습니다.', type='positive')
         finally:
             self.editor_open = False
             if dialog is not None and not dialog.is_deleted:

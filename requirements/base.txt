@@ -4,6 +4,9 @@ pydantic>=2.10,<3
 nh3>=0.3,<0.4
 markdown2>=2.4,<3
 holidays>=0.107,<1
+icalendar==6.3.2
+recurring-ical-events==3.8.2
+x-wr-timezone==2.0.1
 # Keep in sync with resources/licenses/manifest.json and bundled MPL source.
 certifi==2026.7.22
 openpyxl>=3.1.5,<4

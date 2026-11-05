@@ -8,6 +8,7 @@
 `manifest.json`의 `libraries`와 `fonts` 항목은 설정 → 프로그램 정보에 표시됩니다.
 이 폴더 전체와 루트 `LICENSE`는 데스크톱 및 CLI PyInstaller 설정에 포함됩니다.
 배포 및 소스 제공 안내는 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)를 확인하세요.
+구글 캘린더 ICS 라이브러리의 동봉 소스와 수정본 재빌드 안내는 [GOOGLE_CALENDAR_SOURCES.md](GOOGLE_CALENDAR_SOURCES.md)에 있습니다.
 
 ## 수록 범위와 버전
 

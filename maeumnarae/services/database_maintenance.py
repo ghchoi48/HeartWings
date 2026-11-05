@@ -43,11 +43,12 @@ def database_info(database: Database) -> dict:
         }
 
 
-def _verify(database: Database) -> None:
+def _verify(database: Database, *, allow_legacy: bool = False) -> None:
     with database.session() as connection:
         version = connection.execute('PRAGMA user_version').fetchone()[0]
         tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-        if version != SCHEMA_VERSION or not {'students', 'counseling'} <= tables:
+        supported_versions = {1, SCHEMA_VERSION} if allow_legacy else {SCHEMA_VERSION}
+        if version not in supported_versions or not {'students', 'counseling'} <= tables:
             raise DatabaseError('지원하는 마음나래 DB 파일이 아닙니다.')
         if [row[0] for row in connection.execute('PRAGMA integrity_check')] != ['ok']:
             raise DatabaseError('DB 파일의 무결성 검사에 실패했습니다.')
@@ -108,7 +109,7 @@ def restore_backup(database: Database, content: bytes, password: str) -> Path:
                 candidate_path.write_bytes(content)
                 os.chmod(candidate_path, 0o600)
                 candidate = Database(password, candidate_path)
-                _verify(candidate)
+                _verify(candidate, allow_legacy=True)
                 candidate.initialize()
                 _verify(candidate)
                 # 업로드 DB의 journal 설정과 관계없이 단일 파일을 만든다.

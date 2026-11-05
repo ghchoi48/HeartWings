@@ -9,6 +9,8 @@ from maeumnarae.services.calendar_dates import visible_days, events_by_date, shi
 from maeumnarae.services.calendar_holidays import korean_holidays
 from maeumnarae.services.reporting import KST
 from maeumnarae.services.school_calendar import load_school_events
+from maeumnarae.services.google_calendar import load_google_events, REFRESH_SECONDS
+from maeumnarae.views.google_calendar_editor import show_google_event
 from maeumnarae.views.calendar_event_editor import open_event_editor
 from maeumnarae.views.calendar_view import event_caption, event_name, render_event_icons, show_school_event
 
@@ -19,11 +21,12 @@ class CalendarWidget:
     icon = 'calendar_month'
 
     def __init__(self, home, teachers, instance_id=None, on_change=None, *,
-                 on_calendar=None, on_open=None, on_open_linked=None):
+                 on_calendar=None, on_open=None, on_open_linked=None, is_active=None):
         self.repository = CalendarRepository(home.database)
         self.on_calendar = on_calendar
         self.on_open = on_open
         self.on_open_linked = on_open_linked
+        self.is_active = is_active or (lambda: True)
         self.anchor = self.selected = self.today_date = datetime.now(KST).date()
         self.calendars = []
         self.events = {}
@@ -36,7 +39,7 @@ class CalendarWidget:
     def build_header_actions(self):
         ui.button('전체 캘린더', icon='open_in_new', on_click=self.on_calendar).props(
             'flat dense').classes('shrink-0').set_enabled(self.on_calendar is not None)
-        ui.button(icon='refresh', on_click=self.reload).props(
+        ui.button(icon='refresh', on_click=self.force_reload).props(
             'flat round dense aria-label="캘린더 새로고침"').classes('shrink-0').tooltip('새로고침')
 
     def build(self):
@@ -52,9 +55,19 @@ class CalendarWidget:
         self.body = ui.column().classes('w-full gap-2')
         ui.timer(0, self.reload, once=True)
         ui.timer(0.5, self.refresh_if_changed)
+        ui.timer(REFRESH_SECONDS, self.refresh_google)
+
+    async def force_reload(self):
+        await self.reload(force=True)
+
+    async def refresh_google(self):
+        if (not self.is_active() or self.body.is_deleted or self.repository.database.is_locked or self.loading or self.editor_open
+                or not any(c.source == 'google_ics' and c.visible for c in self.calendars)):
+            return
+        await self.reload(force=True)
 
     async def refresh_if_changed(self):
-        if self.body.is_deleted or self.loading or self.editor_open:
+        if not self.is_active() or self.body.is_deleted or self.repository.database.is_locked or self.loading or self.editor_open:
             return
         if (self.loaded_revision != self.repository.database.write_revision
                 or self.today_date != datetime.now(KST).date()):
@@ -76,8 +89,8 @@ class CalendarWidget:
         else:
             self.render()
 
-    async def reload(self):
-        if self.body.is_deleted:
+    async def reload(self, *, force=False):
+        if not self.is_active() or self.body.is_deleted or self.repository.database.is_locked:
             return
         self.request += 1
         request = self.request
@@ -95,10 +108,12 @@ class CalendarWidget:
                     item.visible and item.source == 'holidays' for item in calendars) else {}
                 school_events, school_message = load_school_events(self.repository.database, calendars, days[0], days[-1])
                 events.extend(school_events)
-                return calendars, events, holidays, school_message
+                google_events, google_message = load_google_events(self.repository.database, calendars, days[0], days[-1], force)
+                events.extend(google_events)
+                return calendars, events, holidays, ' · '.join(m for m in (school_message, google_message) if m)
 
             calendars, events, holidays, school_message = await run.io_bound(load)
-            if request != self.request or self.body.is_deleted:
+            if request != self.request or not self.is_active() or self.body.is_deleted or self.repository.database.is_locked:
                 return
             self.calendars = calendars
             self.events = events_by_date(events, days)
@@ -166,7 +181,9 @@ class CalendarWidget:
                         render_event_icons(entry)
 
     async def open_event(self, entry):
-        if entry.source == 'neis':
+        if entry.source == 'google_ics':
+            show_google_event(entry)
+        elif entry.source == 'neis':
             show_school_event(entry)
         elif entry.source == 'custom':
             await self.edit(entry)

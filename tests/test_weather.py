@@ -3,7 +3,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 from urllib.error import URLError
 
-from maeumnarae.services import weather
+from maeumnarae.services import weather, tls
 
 
 class WeatherConnectionTests(unittest.TestCase):
@@ -11,8 +11,8 @@ class WeatherConnectionTests(unittest.TestCase):
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         context.verify_flags |= ssl.VERIFY_X509_STRICT
         original_flags = context.verify_flags
-        with patch.object(weather.sys, 'platform', 'win32'), \
-                patch.object(weather.ssl, 'create_default_context', return_value=context) as create:
+        with patch.object(tls.sys, 'platform', 'win32'), \
+                patch.object(tls.ssl, 'create_default_context', return_value=context) as create:
             result = weather._ssl_context()
         create.assert_called_once_with()
         self.assertGreater(len(result.get_ca_certs()), 0)
@@ -21,10 +21,10 @@ class WeatherConnectionTests(unittest.TestCase):
         self.assertEqual(result.verify_flags, original_flags & ~ssl.VERIFY_X509_STRICT)
 
     def test_macos_keeps_existing_certificate_policy(self):
-        with patch.object(weather.sys, 'platform', 'darwin'), \
-                patch.object(weather.ssl, 'create_default_context') as create:
+        with patch.object(tls.sys, 'platform', 'darwin'), \
+                patch.object(tls.ssl, 'create_default_context') as create:
             self.assertIs(weather._ssl_context(), create.return_value)
-        create.assert_called_once_with(cafile=weather.certifi.where())
+        create.assert_called_once_with(cafile=tls.certifi.where())
 
     def test_request_uses_context_and_reads_json(self):
         response = MagicMock()

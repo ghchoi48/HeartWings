@@ -10,7 +10,19 @@ from threading import Lock, RLock
 from weakref import WeakValueDictionary
 from maeumnarae.core.models import SchoolSettings, current_school_year
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
+GOOGLE_CALENDAR_SCHEMA = """CREATE TABLE IF NOT EXISTS google_calendar_subscriptions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    color TEXT NOT NULL,
+    url TEXT NOT NULL UNIQUE,
+    visible INTEGER NOT NULL DEFAULT 1,
+    revision INTEGER NOT NULL DEFAULT 1,
+    ics BLOB,
+    checked_at TEXT,
+    fetched_at TEXT,
+    error TEXT NOT NULL DEFAULT ''
+)"""
 WIDGET_SCHEMA = """CREATE TABLE IF NOT EXISTS home_widget_state (
     id INTEGER PRIMARY KEY CHECK(id = 1), payload TEXT NOT NULL
 )"""
@@ -48,7 +60,7 @@ def default_database_path() -> Path:
     return base / 'maeumnarae' / 'data' / 'maeumnarae.db'
 
 
-# 신규 DB는 현재 구조를 버전 1로 직접 생성한다.
+# 신규 DB는 현재 스키마 버전의 구조를 직접 생성한다.
 SCHEMA = (
     WIDGET_SCHEMA,
     """CREATE TABLE counseling (
@@ -492,6 +504,10 @@ class Database:
         except (ImportError, OSError):
             raise DatabaseError('SQLCipher 드라이버를 불러올 수 없습니다. 설치 안내를 확인하세요.') from None
 
+    @property
+    def is_locked(self):
+        return self._password is None or self._generation != self._state.generation
+
     def _connect(self):
         """키 적용 직후 실제 페이지 읽기로 암호와 암호화 지원을 확인한다."""
         if self._password is None or self._generation != self._state.generation:
@@ -593,28 +609,38 @@ class Database:
         finally:
             connection.close()
 
+    def _migrate_v1_to_v2(self, connection) -> None:
+        """버전 1의 구조 보완과 Google 캘린더 구독 저장소를 적용한다."""
+        connection.execute(GOOGLE_CALENDAR_SCHEMA)
+        connection.execute(WIDGET_SCHEMA)
+        columns = {row['name'] for row in connection.execute('PRAGMA table_info(group_counseling_logs)')}
+        if columns and 'attendance' not in columns:
+            connection.execute("ALTER TABLE group_counseling_logs ADD COLUMN attendance TEXT NOT NULL DEFAULT '[]'")
+        school_schema = connection.execute(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='school_settings'"
+        ).fetchone()
+        if school_schema and 'Wee센터' not in school_schema[0]:
+            # CHECK 제약을 확장하되 설정값과 최초 작성자 스냅샷은 그대로 보존한다.
+            connection.execute('CREATE TEMP TABLE school_settings_copy AS SELECT * FROM school_settings')
+            connection.execute('DROP TABLE school_settings')
+            connection.execute(next(sql for sql in SCHEMA if sql.startswith('CREATE TABLE school_settings (')))
+            connection.execute('INSERT INTO school_settings SELECT * FROM school_settings_copy')
+            connection.execute('DROP TABLE school_settings_copy')
+            connection.execute(next(sql for sql in SCHEMA if sql.startswith('CREATE TRIGGER "school_settings_snapshot_author"')))
+
     def initialize(self, school: SchoolSettings | None = None, *, onboarding: bool = False) -> None:
-        """버전 1 구조를 생성하고 출석 저장 및 Wee센터 지원을 보완한다."""
+        """최신 구조를 생성하거나 기존 DB를 한 트랜잭션에서 업그레이드한다."""
         if not self.path.exists() or self.path.stat().st_size == 0:
             validate_new_password(self._password or '')
         with self._session_lock, self._transaction(write=True) as connection:
             version = connection.execute('PRAGMA user_version').fetchone()[0]
             if version == SCHEMA_VERSION:
-                connection.execute(WIDGET_SCHEMA)
-                columns = {row['name'] for row in connection.execute('PRAGMA table_info(group_counseling_logs)')}
-                if columns and 'attendance' not in columns:
-                    connection.execute("ALTER TABLE group_counseling_logs ADD COLUMN attendance TEXT NOT NULL DEFAULT '[]'")
-                school_schema = connection.execute(
-                    "SELECT sql FROM sqlite_master WHERE type='table' AND name='school_settings'"
-                ).fetchone()
-                if school_schema and 'Wee센터' not in school_schema[0]:
-                    # CHECK 제약을 확장하되 설정값과 최초 작성자 스냅샷은 그대로 보존한다.
-                    connection.execute('CREATE TEMP TABLE school_settings_copy AS SELECT * FROM school_settings')
-                    connection.execute('DROP TABLE school_settings')
-                    connection.execute(next(sql for sql in SCHEMA if sql.startswith('CREATE TABLE school_settings (')))
-                    connection.execute('INSERT INTO school_settings SELECT * FROM school_settings_copy')
-                    connection.execute('DROP TABLE school_settings_copy')
-                    connection.execute(next(sql for sql in SCHEMA if sql.startswith('CREATE TRIGGER "school_settings_snapshot_author"')))
+                return
+            if version == 1:
+                self._migrate_v1_to_v2(connection)
+                if connection.execute('PRAGMA foreign_key_check').fetchone():
+                    raise DatabaseError('DB 업그레이드 중 연결 관계의 무결성 검사에 실패했습니다.')
+                connection.execute('PRAGMA user_version = 2')
                 return
             if version != 0 or connection.execute(
                 "SELECT 1 FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' LIMIT 1"
@@ -624,6 +650,7 @@ class Database:
             school = SchoolSettings.model_validate(school.model_dump()) if school is not None else SchoolSettings()
             for statement in SCHEMA:
                 connection.execute(statement)
+            connection.execute(GOOGLE_CALENDAR_SCHEMA)
             if onboarding:
                 connection.execute('CREATE TABLE onboarding_state (id INTEGER PRIMARY KEY CHECK(id=1), step TEXT NOT NULL)')
                 connection.execute("INSERT INTO onboarding_state VALUES (1, 'school')")

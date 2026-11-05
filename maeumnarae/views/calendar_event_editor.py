@@ -9,6 +9,8 @@ from maeumnarae.views.time_inputs import parse_time, time_input
 
 
 async def open_event_editor(repository, calendars, selected, on_change, entry=None):
+    if entry is not None and entry.source != 'custom':
+        return
     options = {item.id: item.name for item in calendars if item.source == 'custom'}
     if not options:
         ui.notify('먼저 일정 등록용 캘린더를 추가해 주세요.', type='info')
