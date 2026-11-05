@@ -2,57 +2,26 @@
 
 import json
 import logging
-import re
 from collections.abc import Callable
 from pathlib import Path
 
 from nicegui import ui
 
+from maeumnarae.core.colors import (
+    contrasting_text_color, normalize_color, readable_accent,
+)
 from maeumnarae.core.settings_store import SettingsStore
 from maeumnarae.core.desktop import update_native_icon
 from maeumnarae.core.app_fonts import FONTS, FONT_FAMILIES, font_face_css
 
 MODES = {'auto': '자동 (기본값)', 'dark': '다크', 'light': '라이트'}
 
-DEFAULT_PRIMARY = '#24756b'
+DEFAULT_PRIMARY = '#349E49'
 PRIMARY_PRESETS = {
-    '청록': DEFAULT_PRIMARY, '파랑': '#3875f6', '보라': '#5f43ce',
+    'Wee Green': DEFAULT_PRIMARY,
+    '청록': '#24756b', '파랑': '#3875f6', '보라': '#5f43ce',
     '장미': '#be185d',
 }
-
-
-def normalize_color(value) -> str | None:
-    if not isinstance(value, str):
-        return None
-    value = value.strip().lower()
-    if re.fullmatch(r'#[0-9a-f]{3}', value):
-        value = '#' + ''.join(channel * 2 for channel in value[1:])
-    return value if re.fullmatch(r'#[0-9a-f]{6}', value) else None
-
-
-def luminance(color: str) -> float:
-    channels = [int(color[i:i + 2], 16) / 255 for i in (1, 3, 5)]
-    linear = [c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in channels]
-    return sum(c * weight for c, weight in zip(linear, (0.2126, 0.7152, 0.0722)))
-
-
-def primary_text_color(color: str) -> str:
-    if normalize_color(color) == PRIMARY_PRESETS['파랑']:
-        return '#ffffff'
-    brightness = luminance(color)
-    return '#000000' if (brightness + 0.05) / 0.05 >= 1.05 / (brightness + 0.05) else '#ffffff'
-
-
-def readable_accent(color: str, background: str) -> str:
-    """배경 없는 강조 글씨는 화면 배경과 4.5:1 이상의 대비를 확보한다."""
-    target = 0 if luminance(background) > 0.5 else 255
-    channels = [int(color[i:i + 2], 16) for i in (1, 3, 5)]
-    for step in range(101):
-        candidate = '#' + ''.join(f'{round(c + (target - c) * step / 100):02x}' for c in channels)
-        low, high = sorted((luminance(candidate), luminance(background)))
-        if (high + 0.05) / (low + 0.05) >= 4.5:
-            return candidate
-    return candidate
 
 
 class DisplaySettings:
@@ -142,7 +111,7 @@ class DisplaySettings:
         color = self.values['primary']
         ui.colors(primary=color)
         variables = {
-            '--app-primary-text': primary_text_color(color),
+            '--app-primary-text': contrasting_text_color(color),
             '--app-primary-light': readable_accent(color, '#ffffff'),
             '--app-primary-dark': readable_accent(color, '#1e293b'),
         }
@@ -224,6 +193,6 @@ class DisplaySettings:
             with ui.row().classes('gap-2'):
                 for name, color in PRIMARY_PRESETS.items():
                     ui.button(name, color=None, on_click=lambda color=color: pick_color(color)).style(
-                        f'background-color: {color}; color: {primary_text_color(color)};'
+                        f'background-color: {color}; color: {contrasting_text_color(color)};'
                     ).props(f'aria-label="기본 색상 {name}"')
         ui.label('변경 사항은 즉시 적용되고 자동으로 저장됩니다.').classes('text-sm text-slate-500')

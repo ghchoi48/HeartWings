@@ -11,6 +11,7 @@ from maeumnarae.services.calendar_dates import visible_days, event_dates, events
 
 from pydantic import ValidationError
 
+from maeumnarae.core.colors import contrasting_text_color
 from maeumnarae.core.database import DatabaseError
 from maeumnarae.services.calendar_holidays import HOLIDAY_COLOR, korean_holidays
 from maeumnarae.core.models import CalendarInput, CalendarEvent
@@ -346,8 +347,7 @@ class CalendarView:
                                  f'border-radius:{"6px" if first else "0"} {"6px" if last else "0"} '
                                  f'{"6px" if last else "0"} {"6px" if first else "0"};')
                         if entry.all_day:
-                            rgb = [int(entry.color[i:i + 2], 16) for i in (1, 3, 5)]
-                            foreground = '#111827' if sum(v * w for v, w in zip(rgb, (0.299, 0.587, 0.114))) > 150 else '#ffffff'
+                            foreground = contrasting_text_color(entry.color)
                             style += f'background:{entry.color} !important; color:{foreground} !important;'
                         else:
                             style += f'color:var(--app-calendar-timed-text, #000000) !important; border:1px solid {entry.color};'

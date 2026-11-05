@@ -15,7 +15,7 @@ from maeumnarae.repositories.student_repo import StudentRepository
 from maeumnarae.repositories.reporting_repo import ReportingRepository
 from maeumnarae.views.app_layout import AppLayout
 from maeumnarae.core.desktop import ICON_PATH, configure_logging, configure_native
-from maeumnarae.views.display_settings import DisplaySettings
+from maeumnarae.views.display_settings import DEFAULT_PRIMARY, DisplaySettings
 from maeumnarae.core.app_fonts import register_fonts
 from maeumnarae.views.update_notification import StartupUpdateCheck
 
@@ -35,7 +35,7 @@ def register_page(path: Path) -> None:
     @ui.page('/')
     def index():
         first_run = not path.exists()
-        ui.colors(primary='#24756b', secondary='#64748b')
+        ui.colors(primary=DEFAULT_PRIMARY, secondary='#64748b')
         ui.add_css('''
             html, body { overflow: hidden; }
             .q-page-container { height: 100dvh; overflow: hidden; }
