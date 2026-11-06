@@ -138,3 +138,21 @@ Windows 설치 프로그램의 Inno Setup 번역 원문과 기존 라이선스�
   [별도 점검 기록](ORJSON_TOOLCHAIN_AUDIT.md)에 따라 보완했으며, 새 빌드의 wheel이 달라지면 재확인
 - LGPL/MPL 대상 소스의 실제 제공, 수정 내역, 재결합·재빌드 절차
 - 설치된 앱과 CLI 번들에서 고지 원문과 소스 안내에 접근할 수 있는지 여부
+
+## 로컬 AI
+
+- **llama.cpp / GGML b12144:** MIT. 지원 플랫폼에 공식 엔진과 동적 라이브러리를 동봉합니다.
+  원문: `libraries/llama-cpp.txt`, 고정 소스: https://github.com/ggml-org/llama.cpp/tree/b12144
+- **EXAONE 4.0 1.2B:** 기본 추천 모델이며 가중치는 별도 다운로드입니다.
+  EXAONE AI Model License Agreement 1.2 - NC 원문은 `libraries/exaone4-model.txt`에 포함합니다.
+  비상업적 연구·교육 목적의 이용 조건을 확인하세요. 서버용 채팅 템플릿은 공식 저장소의
+  revision `162446400ea4596377a3ce1d3ddffa32971af0a6`에서 가져왔습니다.
+- **EXAONE 3.5 2.4B Instruct:** 추천 목록에서는 제외하며 기존 설치 모델의 고지를 유지합니다.
+  EXAONE AI Model License Agreement 1.1 - NC 원문은 `libraries/exaone-model.txt`에 포함합니다.
+  연구·평가·테스트 중심의 이용 조건이며 일반 상담 실무 이용 허용을 의미하지 않습니다.
+- **Qwen3 4B GGUF:** Apache-2.0 모델의 별도 다운로드입니다.
+  모델별 고정 revision과 원문 링크는 `resources/ai/models.json` 및 AI 설정 화면에 표시합니다.
+- **httpx:** 기존 동봉 BSD-3-Clause 고지를 사용하며 로컬 HTTP/SSE와 모델 다운로드에 직접 사용합니다.
+
+Windows 엔진의 `libomp.dll`에는 LLVM OpenMP 고지(`libraries/llvm-openmp.txt`)가,
+엔진의 JSON 구성요소에는 nlohmann/json 고지(`llama-cpp/LICENSE-jsonhpp`)가 적용됩니다.

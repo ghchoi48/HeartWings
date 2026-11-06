@@ -1,0 +1,68 @@
+{
+  "definitions": [
+    {
+      "version": 1,
+      "style": "객관적이고 간결한 한국어. 상담기록 문체로 작성합니다.",
+      "id": "builtin_summary",
+      "name": "상담 메모 요약",
+      "description": "메모의 핵심 진술과 상담자의 개입을 정리합니다.",
+      "instruction": "원문에 있는 내용만 간결하게 요약하세요.",
+      "fields": [
+        {
+          "id": "statement",
+          "name": "학생 진술",
+          "instruction": "학생이 이야기한 어려움과 감정을 요약하세요.",
+          "evidence_required": true
+        },
+        {
+          "id": "intervention",
+          "name": "상담자 개입",
+          "instruction": "상담자가 실제 수행한 개입만 정리하세요.",
+          "evidence_required": true
+        }
+      ]
+    },
+    {
+      "version": 1,
+      "style": "객관적이고 간결한 한국어. 상담기록 문체로 작성합니다.",
+      "id": "builtin_draft",
+      "name": "상담일지 초안",
+      "description": "상담내용, 개입, 후속계획으로 초안을 작성합니다.",
+      "instruction": "학생 진술, 실제 개입, 명시된 계획을 구분하세요.",
+      "fields": [
+        {
+          "id": "summary",
+          "name": "상담내용",
+          "instruction": "학생 진술과 상담 주제를 정리하세요.",
+          "evidence_required": true
+        },
+        {
+          "id": "intervention",
+          "name": "상담자 개입",
+          "instruction": "실제로 수행한 상담자의 개입을 작성하세요.",
+          "evidence_required": true
+        },
+        {
+          "id": "follow_up",
+          "name": "후속계획",
+          "instruction": "원문에 명시된 향후 계획만 작성하세요. 없으면 확인 필요로 표시하세요.",
+          "evidence_required": true
+        }
+      ]
+    }
+  ],
+  "examples": [
+    {
+      "name": "시험 부담 (가상)",
+      "note": "학생이 최근 시험 부담으로 잠을 잘 자지 못한다고 이야기함. 부모님의 기대가 부담스럽다고 표현함. 학습 계획과 수면 습관을 함께 점검함."
+    },
+    {
+      "name": "친구 관계 (가상)",
+      "note": "학생이 친구와 다툰 뒤 대화하기 어렵다고 말함. 상담자는 학생의 감정을 듣고 자신의 마음을 표현하는 문장을 함께 연습함. 다음 상담에서 친구와의 대화 경험을 점검하기로 함."
+    },
+    {
+      "name": "정보 부족 (가상)",
+      "note": "학생이 학교생활에 대해 이야기하고 싶다고 말함."
+    }
+  ]
+}

@@ -14,3 +14,6 @@ defusedxml>=0.7.1,<1
 # Official release baseline; modified local builds remain permitted.
 pyxlsb==1.0.10
 reportlab>=4.4,<5
+
+# Local llama-server HTTP/SSE and verified model downloads.
+httpx>=0.28,<0.29

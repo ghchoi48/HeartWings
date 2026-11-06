@@ -2,6 +2,10 @@
 
 import sys
 
+if __name__ == '__main__' and '--ai-engine-guard' in sys.argv:
+    from maeumnarae.services.ai.guard import main as guard_main
+    raise SystemExit(guard_main())
+
 # 배포 검증은 GUI/DB/서버를 시작하지 않고 실제 번들의 모듈·리소스를 사용한다.
 if __name__ == '__main__' and '--verify-distribution' in sys.argv:
     from maeumnarae.core.distribution_check import main as verify_distribution

@@ -1,8 +1,9 @@
-"""일반, 화면, 시스템, DB, 프로그램 정보 탭으로 구성한 설정 화면."""
+"""일반, 화면, AI, 시스템, DB, 프로그램 정보 탭으로 구성한 설정 화면."""
 
 from collections.abc import Callable
 
 from nicegui import ui
+from maeumnarae.views.ai_settings_view import AISettingsView
 
 from maeumnarae.core.database import Database
 from maeumnarae.core.models import SchoolSettings
@@ -23,9 +24,11 @@ def build_settings(display: DisplaySettings | None = None,
                    database: Database | None = None,
                    on_school_change: Callable[[SchoolSettings], None] | None = None,
                    on_roster_import=None,
-                   auto_lock: AutoLock | None = None) -> None:
+                   auto_lock: AutoLock | None = None,
+                   ai_service=None) -> AISettingsView | None:
     """설정 종류별 탭을 만들고 기존 설정 컨트롤을 배치한다."""
     display = display or DisplaySettings()
+    ai_view = None
     with ui.column().classes('w-full max-w-7xl mx-auto gap-6 p-4 md:p-8'):
         with ui.column().classes('gap-2'):
             ui.label('설정').classes('text-3xl font-bold text-slate-800')
@@ -33,6 +36,7 @@ def build_settings(display: DisplaySettings | None = None,
         with ui.tabs().props('align=left outside-arrows mobile-arrows').classes('w-full') as tabs:
             ui.tab('general', label='일반', icon='tune')
             ui.tab('display', label='화면', icon='palette')
+            ui.tab('ai', label='AI', icon='auto_awesome')
             ui.tab('system', label='시스템', icon='settings')
             ui.tab('db', label='DB', icon='storage')
             ui.tab('about', label='프로그램 정보', icon='info_outline')
@@ -47,6 +51,10 @@ def build_settings(display: DisplaySettings | None = None,
                 with settings_card('화면 설정', 'palette',
                                    '보기 편한 화면으로 맞춤 설정하세요.', '즉시 적용'):
                     display.build_controls()
+            with ui.tab_panel('ai').classes('p-0'):
+                if ai_service is not None and database is not None:
+                    ai_view = AISettingsView(ai_service, database)
+                    ai_view.build()
             with ui.tab_panel('system').classes('p-0'):
                 if auto_lock is not None:
                     with settings_card('자동 잠금', 'timer',
@@ -64,3 +72,7 @@ def build_settings(display: DisplaySettings | None = None,
                 with settings_card('프로그램 정보', 'info_outline',
                                    '마음나래 프로그램을 소개합니다.'):
                     build_about()
+
+    if ai_view is not None:
+        tabs.on_value_change(lambda e: ai_view.leave() if e.value != 'ai' else None)
+    return ai_view

@@ -1,0 +1,14 @@
+{
+  "version": "b12144",
+  "source": "https://github.com/ggml-org/llama.cpp/tree/b12144",
+  "platforms": {
+    "macos-arm64": {
+      "url": "https://github.com/ggml-org/llama.cpp/releases/download/b12144/llama-b12144-bin-macos-arm64.tar.gz",
+      "sha256": "2045e1d2dd7f06beed9a9a7594db1bb1c42e5b92bffcb3bd503679c8d7b6c8a9"
+    },
+    "windows-x64": {
+      "url": "https://github.com/ggml-org/llama.cpp/releases/download/b12144/llama-b12144-bin-win-cpu-x64.zip",
+      "sha256": "569990fcbacbe305aef41490f71df70088474a59d514ae3b1ee65c130ee74555"
+    }
+  }
+}

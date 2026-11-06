@@ -14,7 +14,9 @@ source_tools = runpy.run_path(str(root / 'packaging' / 'prepare_pyxlsb_sources.p
 source_tools['prepare'](root, Path(pyxlsb.__file__).parent, pyxlsb.__version__)
 app_icon = root / 'resources' / 'icons' / ('icon.icns' if sys.platform == 'darwin' else 'icon.ico')
 datas = [(str(Path(nicegui.__file__).parent), 'nicegui')]
-datas += [(str(root / 'resources'), 'resources'), (str(root / 'LICENSE'), '.')]
+datas += [(str(p), str(p.parent.relative_to(root))) for p in (root / 'resources').rglob('*')
+          if p.is_file() and not p.is_relative_to(root / 'resources/ai/runtime')]
+datas += [(str(root / 'LICENSE'), '.')]
 datas += collect_data_files('webview')
 datas += collect_data_files('holidays')
 datas += copy_metadata('holidays')
@@ -22,7 +24,8 @@ datas += collect_data_files('tzdata')
 datas += copy_metadata('icalendar') + copy_metadata('recurring-ical-events') + copy_metadata('x-wr-timezone')
 datas += copy_metadata('nicegui') + copy_metadata('pywebview')
 datas += copy_metadata('sqlcipher3')
-binaries = collect_dynamic_libs('sqlcipher3')
+ai_engine = runpy.run_path(str(root / 'scripts/prepare_ai_engine.py'))
+binaries = collect_dynamic_libs('sqlcipher3') + ai_engine['verify'](root)
 hidden = ['sqlcipher3.dbapi2', 'sqlcipher3._sqlite3', 'webview', 'webview.dom',
           'nicegui.native.native_mode', 'multiprocessing', 'uvicorn.logging']
 if sys.platform == 'darwin':

@@ -13,8 +13,13 @@
 !/requirements/
 !/scripts/
 
-# Keep the entire test suite local and untracked.
-/tests/
+# Keep existing local tests untracked; ship the new AI regression tests.
+!/tests/
+/tests/*
+!/tests/test_ai.py
+!/tests/test_ai_ui.py
+!/tests/test_ai_harness.py
+!/tests/test_ai_harness_ui.py
 
 # Keep packaging inputs; local audits, tests, and validation reports are not build inputs.
 /packaging/*
@@ -53,3 +58,7 @@ Desktop.ini
 *.log
 *.tmp
 *.bak
+
+# Local AI runtime artifacts are downloaded from pinned, verified releases.
+/resources/ai/runtime/
+!/scripts/prepare_ai_engine.py

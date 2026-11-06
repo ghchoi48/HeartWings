@@ -32,6 +32,8 @@ def collect_inputs(root: Path) -> dict[str, bytes]:
     for folder in SOURCE_ROOTS:
         for path in sorted((root / folder).rglob('*')):
             relative = path.relative_to(root)
+            if path.is_relative_to(root / 'resources/ai/runtime'):
+                continue  # 고정 아카이브에서 준비하는 실행 바이너리는 소스가 아니다.
             if any(part in EXCLUDED_DIRS or part.startswith('.') for part in relative.parts[1:]):
                 continue
             if path.is_symlink():

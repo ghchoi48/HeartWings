@@ -160,3 +160,35 @@ python packaging/check_release.py dist/release/maeumnarae-1.1.0-darwin-arm64-rel
 파일명은 실제 버전·OS·CPU에 맞게 바꿉니다. 이 명령은 소스/바이너리 해시,
 환경에 기록된 pyxlsb 버전, 실제 실행 버전, 기존 이관 지문 및 실행 파일의 동봉 소스와
 릴리스 소스의 일치를 확인합니다. `gui: not_checked`는 별도 화면 확인이 필요하다는 뜻입니다.
+
+## 로컬 AI 엔진 준비와 검증
+
+지원 플랫폼에서 PyInstaller 실행 전에 다음 명령으로 고정된 공식 엔진을 준비합니다.
+
+```bash
+python scripts/prepare_ai_engine.py
+python scripts/prepare_ai_engine.py --verify
+python scripts/build_desktop.py
+```
+
+`resources/ai/engines.json`은 llama.cpp 버전과 Windows x64 CPU/macOS arm64 아카이브의
+SHA-256을 고정합니다. 준비 스크립트는 검증 후 `resources/ai/runtime/<플랫폼>/`에
+실행 파일과 동적 라이브러리를 설치합니다. 이 생성 파일들은 Git 및 배포 소스 ZIP에서
+제외하지만 PyInstaller 앱에는 포함합니다. 지원 플랫폼의 파일 누락·변조는 빌드를
+실패시킵니다. Linux·Intel Mac 빌드는 AI 엔진 없이 기존 기능만 제공합니다.
+
+모델 가중치는 설치 파일에 포함하지 않습니다. `resources/ai/models.json`에 공식
+revision·크기·SHA-256·라이선스·실행 프로필을 함께 고정합니다. 모델/엔진 업데이트 시
+두 지원 플랫폼에서 생성·취소·DB 잠금·앱 종료·오프라인 실행을 다시 검증하세요.
+macOS 배포 서명·공증에는 동봉된 엔진과 dylib도 포함해야 합니다.
+
+```bash
+python -m unittest discover -s tests -p 'test_ai*.py' -v
+```
+
+자동화 테스트는 실제 모델을 내려받지 않습니다. 실기기 검증은 설정 → AI에서 EXAONE
+다운로드 → 선택 → 한국어 테스트 생성 → 중지/Off → 재시작으로 수행합니다.
+8GB 장치의 메모리·응답속도 및 Windows CPU 검증은 해당 장치에서 별도로 확인해야 합니다.
+추론 엔진은 임시 인증키가 적용된 루프백으로만 실행되며 Python 서버가 호출합니다.
+감시 프로세스는 부모 파이프가 닫히면 엔진을 종료합니다. 엔진 stdout/stderr와 입력·출력은
+로그로 저장하지 않습니다.

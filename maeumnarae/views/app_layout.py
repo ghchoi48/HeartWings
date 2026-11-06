@@ -36,7 +36,9 @@ class AppLayout:
     def __init__(self, students: StudentRepository, counseling: CounselingRepository, reporting: ReportingRepository,
                  on_lock: Callable[[], Awaitable[None]] | None = None,
                  display: DisplaySettings | None = None,
-                 on_school_change: Callable[[SchoolSettings], None] | None = None):
+                 on_school_change: Callable[[SchoolSettings], None] | None = None,
+                 ai_service=None):
+        self.ai_service = ai_service
         self.students = students
         self.counseling = counseling
         self.reporting = reporting
@@ -103,8 +105,8 @@ class AppLayout:
             self.panels['education_events'] = ui.column().classes('w-full')
             self.panels['settings'] = ui.column().classes('w-full')
             with self.panels['settings']:
-                build_settings(self.display, self.school, self.students.database, self.on_school_change,
-                               self.refresh_roster, auto_lock=self.auto_lock)
+                self.ai_settings_view = build_settings(self.display, self.school, self.students.database, self.on_school_change,
+                               self.refresh_roster, auto_lock=self.auto_lock, ai_service=self.ai_service)
             self.panels['calendar'] = ui.column().classes('w-full')
             self.panels['statistics'] = ui.column().classes('w-full')
         self.navigate('home')
@@ -112,6 +114,8 @@ class AppLayout:
             ui.timer(0.5, self.refresh_students)
 
     async def lock_database(self) -> None:
+        if self.ai_service is not None:
+            await self.ai_service.detach(self.panels['home'].client.id, lock=True)
         invalidate_prints(self.panels['home'].client)
         if self.on_lock is not None:
             await self.on_lock()
@@ -176,6 +180,8 @@ class AppLayout:
         invalidate_prints(self.panels['home'].client)
         if page not in self.panels:
             raise ValueError(f'지원하지 않는 화면: {page}')
+        if self.active_page == 'settings' and page != 'settings' and self.ai_settings_view is not None:
+            self.ai_settings_view.leave()
         if page == 'students' and self.student_view is None:
             with self.panels['students']:
                 self.student_view = StudentView(self.students, self.counseling, self.school, self.open_student_counseling)

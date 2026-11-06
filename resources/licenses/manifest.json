@@ -10095,6 +10095,41 @@
       "source_sha256": "9166c40e6ffd4c0edebabc354e1a1e2cffc1bb473f88007694793757685cc8c3",
       "source_archive": "https://pypi.org/project/x-wr-timezone/2.0.1/#files",
       "note": "LGPL-3.0-or-later. Original source is bundled. See GOOGLE_CALENDAR_SOURCES.md for rebuilding with modified libraries. GPL and LGPL texts are included in the source archive and pyxlsb/COPYING files."
+    },
+    {
+      "name": "llama.cpp / GGML",
+      "version": "b12144",
+      "license": "MIT",
+      "source": "https://github.com/ggml-org/llama.cpp/tree/b12144",
+      "text_file": "libraries/llama-cpp.txt",
+      "note": "Windows x64 CPU 및 macOS arm64 엔진을 동봉합니다. 버전과 공식 배포 체크섬은 resources/ai/engines.json에 고정합니다."
+    },
+    {
+      "name": "EXAONE 3.5 2.4B Instruct (기존 설치 모델)",
+      "license": "EXAONE AI Model License Agreement 1.1 - NC",
+      "source": "https://huggingface.co/LGAI-EXAONE/EXAONE-3.5-2.4B-Instruct-GGUF",
+      "text_file": "libraries/exaone-model.txt",
+      "note": "추천 목록에서 제외되었습니다. 기존 설치 모델의 라이선스 고지를 유지합니다."
+    },
+    {
+      "name": "LLVM OpenMP (llama.cpp Windows 엔진)",
+      "license": "Apache-2.0 with LLVM exceptions",
+      "source": "https://github.com/llvm/llvm-project/tree/main/openmp",
+      "text_file": "libraries/llvm-openmp.txt",
+      "note": "공식 Windows CPU 배포본에 포함된 libomp.dll의 라이선스 고지입니다."
+    },
+    {
+      "name": "nlohmann/json (llama.cpp 엔진)",
+      "license": "MIT",
+      "source": "https://github.com/ggml-org/llama.cpp/blob/b12144/licenses/LICENSE-jsonhpp",
+      "text_file": "llama-cpp/LICENSE-jsonhpp"
+    },
+    {
+      "name": "EXAONE 4.0 1.2B (별도 다운로드 모델)",
+      "license": "EXAONE AI Model License Agreement 1.2 - NC",
+      "source": "https://huggingface.co/LGAI-EXAONE/EXAONE-4.0-1.2B-GGUF",
+      "text_file": "libraries/exaone4-model.txt",
+      "note": "가중치는 앱에 동봉하지 않습니다. 비상업적 연구·교육 목적의 이용 조건을 확인하세요. 공식 서버용 채팅 템플릿은 모델과 동일한 고정 revision에서 가져왔습니다."
     }
   ],
   "fonts": [

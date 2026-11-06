@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 from nicegui import app, native, run, ui
+from maeumnarae.services.ai.service import AIService
 from maeumnarae.repositories.onboarding_repo import OnboardingRepository
 from maeumnarae.repositories.school_settings_repo import SchoolSettingsRepository
 from maeumnarae.views.onboarding_view import OnboardingView
@@ -28,6 +29,8 @@ def register_page(path: Path) -> None:
     app.add_static_files('/app-cursors', str(cursor_dir))
 
 
+    ai_service = AIService(path.parent)
+    app.on_shutdown(ai_service.close)
     update_check = StartupUpdateCheck()
     for name in ('icon.ico', 'icon-dark.ico', 'logo.png', 'logo-dark.png'):
         app.add_static_file(url_path=f'/app-assets/{name}', local_file=ICON_PATH.with_name(name))
@@ -83,7 +86,7 @@ def register_page(path: Path) -> None:
 
             AppLayout(StudentRepository(database), CounselingRepository(database),
                       ReportingRepository(database), on_lock=lock_database,
-                      display=display,
+                      display=display, ai_service=ai_service,
                       on_school_change=lambda settings: school_heading.set_text(
                           settings.header_title,
                       )).build(root, drawer, header)

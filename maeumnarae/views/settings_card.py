@@ -1,6 +1,6 @@
 """설정 화면에서 사용하는 공통 카드 레이아웃."""
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 
 from nicegui import ui
@@ -8,7 +8,8 @@ from nicegui import ui
 
 @contextmanager
 def settings_card(title: str, icon: str, description: str,
-                  badge: str | None = None, *, collapsible: bool = False) -> Iterator[None]:
+                  badge: str | None = None, *, collapsible: bool = False,
+                  header_actions: Callable[[], None] | None = None) -> Iterator[None]:
     if collapsible:
         with ui.card().classes(
             'w-full min-w-0 rounded-2xl border border-slate-200 shadow-sm bg-white p-0 overflow-hidden'
@@ -32,10 +33,14 @@ def settings_card(title: str, icon: str, description: str,
                 ):
                     ui.icon(icon, size='26px')
                 ui.label(title).classes('text-xl font-bold text-slate-800')
-            if badge:
-                ui.label(badge).classes(
-                    'rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-500'
-                )
+            if badge or header_actions:
+                with ui.row().classes('items-center gap-2'):
+                    if badge:
+                        ui.label(badge).classes(
+                            'rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-500'
+                        )
+                    if header_actions:
+                        header_actions()
         ui.label(description).classes('text-sm text-slate-500')
         ui.separator()
         with ui.column().classes('w-full gap-5'):
