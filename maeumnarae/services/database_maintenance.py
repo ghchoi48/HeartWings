@@ -7,7 +7,28 @@ from tempfile import TemporaryDirectory
 from uuid import uuid4
 
 from maeumnarae.core.upload_limits import MAX_BACKUP_BYTES
-from maeumnarae.core.database import Database, DatabaseError, SCHEMA_VERSION
+from maeumnarae.core.database import Database, DatabaseError, SCHEMA_VERSION, LEGACY_IMPORT_SCHEMAS
+
+
+def reset_counseling_data(database: Database) -> None:
+    """학교·개인 설정을 보존하고 명부와 상담 관련 데이터를 한 트랜잭션으로 삭제한다."""
+    with database._session_lock:
+        with database.session(write=True) as connection:
+            # 참조하는 기록부터 삭제하여 외래 키 검사를 유지한다.
+            for table in ('journal_attachments', 'counseling', 'group_counseling_logs',
+                          'special_education_logs', 'consultations', 'psychological_tests',
+                          'education_events', 'group_counseling_members', 'counseling_cases',
+                          'special_educations', 'counseling_groups', 'student_enrollments',
+                          'students', 'teachers'):
+                connection.execute(f'DELETE FROM "{table}"')
+            connection.execute("DELETE FROM calendar_events WHERE calendar_id IN (SELECT id FROM calendars WHERE source='counseling')")
+            for table in LEGACY_IMPORT_SCHEMAS:
+                if connection.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone():
+                    connection.execute(f'DELETE FROM "{table}"')
+            if connection.execute('PRAGMA foreign_key_check').fetchone():
+                raise DatabaseError('상담데이터 초기화 중 데이터 연결 관계를 확인하지 못했습니다.')
+        database._state.generation += 1
+        database._password = None
 
 
 def soft_reset_database(database: Database, counselor_name: str) -> None:

@@ -100,7 +100,6 @@ class PartialBackupView:
             '명부·상담 기록·첨부파일·학교 정보·상담용 캘린더 등 사용자 개인 데이터를 제외한 DB 데이터를 '
             '교체합니다. 현재 상담교사 이름·NEIS 인증키·위젯·Google 연결·사용자 캘린더는 유지됩니다.'
         )
-        ui.separator()
         ui.label(f'{title} 백업·복원').classes('font-semibold text-slate-700')
         ui.label(description).classes('text-sm text-slate-500')
         ui.label('현재 DB 비밀번호로 암호화하여 백업합니다. 복원에는 백업 당시 비밀번호가 필요합니다.').classes('text-sm text-slate-500')
