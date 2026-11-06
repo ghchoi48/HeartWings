@@ -273,8 +273,8 @@ def journal_story(record):
                       leading=24, alignment=TA_CENTER, spaceAfter=6),
             section('▫ 상담정보'),
             row(['학생명', record.subject, '학년·반·번호', enrollment], [.146, .372, .159, .323]),
-            row(['상담회기', f'{record.session_number}회기' if record.session_number else '',
-                 '상담일시', individual_time(record)], [.146, .166, .139, .549]),
+            row(['사례명', details.get('사례/교육명', ''), '상담회기', session,
+                 '상담일시', individual_time(record)], [.146, .156, .139, .11, .142, .307]),
             row(['상담방법', details.get('상담 방법', ''), '상담대상', details.get('상담 대상', ''),
                  '상담분야', details.get('상담 분야', '')], [.146, .166, .139, .166, .142, .241])]
     content_heading, content_label = '상담내용', '내용'
