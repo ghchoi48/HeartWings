@@ -11,6 +11,12 @@ from weakref import WeakValueDictionary
 from maeumnarae.core.models import SchoolSettings, current_school_year
 
 SCHEMA_VERSION = 2
+LEGACY_IMPORT_SCHEMAS = {
+    'legacy_imports': '''CREATE TABLE IF NOT EXISTS legacy_imports (
+        fingerprint TEXT PRIMARY KEY, imported_at TEXT NOT NULL)''',
+    'legacy_import_settings': '''CREATE TABLE IF NOT EXISTS legacy_import_settings (
+        id INTEGER PRIMARY KEY, period_times TEXT NOT NULL)''',
+}
 GOOGLE_CALENDAR_SCHEMA = """CREATE TABLE IF NOT EXISTS google_calendar_subscriptions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,

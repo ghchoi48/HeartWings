@@ -2,6 +2,7 @@
 
 from dataclasses import replace
 
+from maeumnarae.core.database import LEGACY_IMPORT_SCHEMAS
 from maeumnarae.core.models import StudentInput, TeacherInput, ConsultationInput, PsychologicalTestInput, CounselingInput, EducationEventInput
 from maeumnarae.repositories._support import now_text, values
 from maeumnarae.repositories.student_repo import StudentRepository
@@ -75,8 +76,7 @@ class LegacyImportRepository:
             if errors:
                 raise ValueError('\n'.join(errors[:30]))
             # 이관 이력 역시 암호화된 DB에 보관하고 데이터와 함께 커밋한다.
-            connection.execute('''CREATE TABLE IF NOT EXISTS legacy_imports (
-                fingerprint TEXT PRIMARY KEY, imported_at TEXT NOT NULL)''')
+            connection.execute(LEGACY_IMPORT_SCHEMAS['legacy_imports'])
             ids, cases, created = {}, {}, 0
             special_cases = {}
             timestamp = now_text()
@@ -158,6 +158,6 @@ class LegacyImportRepository:
         from maeumnarae.services.legacy_import import period_clocks
         normalized = {key: value.strftime('%H:%M') for key, value in period_clocks(periods).items()}
         with self.database.session(write=True) as connection:
-            connection.execute('CREATE TABLE IF NOT EXISTS legacy_import_settings (id INTEGER PRIMARY KEY, period_times TEXT NOT NULL)')
+            connection.execute(LEGACY_IMPORT_SCHEMAS['legacy_import_settings'])
             connection.execute('INSERT OR REPLACE INTO legacy_import_settings VALUES (1, ?)',
                                (json.dumps(normalized),))

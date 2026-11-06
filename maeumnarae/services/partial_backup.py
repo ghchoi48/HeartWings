@@ -12,7 +12,8 @@ from tempfile import TemporaryDirectory
 from typing import Literal
 from uuid import uuid4
 
-from maeumnarae.core.database import Database, DatabaseError, SCHEMA, SCHEMA_VERSION, GOOGLE_CALENDAR_SCHEMA
+from maeumnarae.core.database import (Database, DatabaseError, SCHEMA, SCHEMA_VERSION,
+                                     GOOGLE_CALENDAR_SCHEMA, LEGACY_IMPORT_SCHEMAS)
 from maeumnarae.core.upload_limits import MAX_BACKUP_BYTES
 from maeumnarae.repositories.home_repo import HomeRepository
 from maeumnarae.services.database_maintenance import _snapshot
@@ -22,13 +23,14 @@ PartialBackupKind = Literal['personal', 'counseling_school']
 PERSONAL = {'home_preferences', 'home_todos', 'home_widget_state', 'google_calendar_subscriptions'}
 PERSONAL_SETTINGS = {'counselor_name', 'neis_api_key'}
 ONBOARDING = 'CREATE TABLE onboarding_state (id INTEGER PRIMARY KEY CHECK(id=1), step TEXT NOT NULL)'
+OPTIONAL_SCHEMAS = {'onboarding_state': ONBOARDING, **LEGACY_IMPORT_SCHEMAS}
 FORMAT = 'maeumnarae-partial-backup'
 
 
 def _schema():
     # 오직 앱 소유 DDL로 컬럼 목록과 외래 키 순서를 산출한다. 사용자 데이터는 넣지 않는다.
     with closing(sqlite3.connect(':memory:')) as connection:
-        for statement in (*SCHEMA, GOOGLE_CALENDAR_SCHEMA, ONBOARDING):
+        for statement in (*SCHEMA, GOOGLE_CALENDAR_SCHEMA, *OPTIONAL_SCHEMAS.values()):
             connection.execute(statement)
         names = [row[0] for row in connection.execute(
             "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")]
@@ -76,10 +78,11 @@ def _columns(table, kind):
 def _check_schema(connection):
     tables = {row[0] for row in connection.execute(
         "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")}
-    if tables - set(COLUMNS) or set(COLUMNS) - tables - {'onboarding_state'}:
+    if tables - set(COLUMNS) or set(COLUMNS) - tables - set(OPTIONAL_SCHEMAS):
         raise DatabaseError('지원하지 않는 DB 구조입니다.')
     for table in tables:
-        if tuple(row[1] for row in connection.execute(f'PRAGMA table_info("{table}")')) != COLUMNS[table]:
+        # ALTER TABLE로 추가한 열은 끝에 위치한다. 추출/복원은 명시한 열 이름을 사용한다.
+        if {row[1] for row in connection.execute(f'PRAGMA table_info("{table}")')} != set(COLUMNS[table]):
             raise DatabaseError('지원하지 않는 DB 컬럼 구조입니다.')
     if connection.execute('PRAGMA user_version').fetchone()[0] != SCHEMA_VERSION:
         raise DatabaseError('지원하지 않는 DB 버전입니다.')
@@ -121,10 +124,14 @@ def _decode(value):
 
 
 def _validate(data, kind):
+    # 이관 테이블을 포함하지 않던 기존 부분 백업도 복원할 수 있다.
+    if isinstance(data, dict) and kind == 'counseling_school':
+        for table in LEGACY_IMPORT_SCHEMAS:
+            data.setdefault(table, None)
     if not isinstance(data, dict) or set(data) != _tables(kind):
         raise ValueError('잘못된 백업 테이블입니다.')
     for table, rows in data.items():
-        if table == 'onboarding_state' and rows is None:
+        if table in OPTIONAL_SCHEMAS and rows is None:
             continue
         if not isinstance(rows, list) or any(not isinstance(row, list) or
                 len(row) != len(_columns(table, kind)) or
@@ -168,11 +175,12 @@ def _apply(connection, data, kind):
     next_calendar = connection.execute('SELECT COALESCE(MAX(id),0)+1 FROM calendars').fetchone()[0]
     next_event = connection.execute('SELECT COALESCE(MAX(id),0)+1 FROM calendar_events').fetchone()[0]
     if kind == 'counseling_school':
-        connection.execute('DROP TABLE IF EXISTS onboarding_state')
-        if data['onboarding_state'] is not None:
-            connection.execute(ONBOARDING)
+        for table, statement in OPTIONAL_SCHEMAS.items():
+            connection.execute(f'DROP TABLE IF EXISTS "{table}"')
+            if data[table] is not None:
+                connection.execute(statement)
     for table in reversed(ORDER):
-        if table in selected and table not in {'school_settings', 'onboarding_state'}:
+        if table in selected and table not in {'school_settings', *OPTIONAL_SCHEMAS}:
             connection.execute(f'DELETE FROM "{table}"' + _where(table, kind))
     settings = dict(zip(_columns('school_settings', kind), data['school_settings'][0]))
     settings.pop('id')
