@@ -5,7 +5,7 @@ from maeumnarae.core.paths import PROJECT_ROOT
 
 
 PROGRAM_NAME = '마음나래'
-PROGRAM_VERSION = '1.1.1'
+PROGRAM_VERSION = '1.2.0'
 AUTHOR = '전문상담교사 최규호 with GPT-6 Astra'
 GITHUB_URL = 'https://github.com/ghchoi48/HeartWings'
 RESOURCE_ROOT = PROJECT_ROOT

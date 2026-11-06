@@ -16,12 +16,14 @@ from maeumnarae.views.legacy_import_view import LegacyImportView
 from maeumnarae.views.settings_card import settings_card
 from maeumnarae.views.journal_export_view import JournalExportView
 from maeumnarae.views.journal_print_view import build_all_print, invalidate_prints
+from maeumnarae.views.partial_backup_view import PartialBackupView
 
 
 def build_database_settings(database: Database, on_roster_import=None) -> None:
     busy = False
     uploaded: bytes | None = None
     import_views = []
+    partial_views = []
 
     def set_busy(value: bool):
         nonlocal busy
@@ -31,6 +33,8 @@ def build_database_settings(database: Database, on_roster_import=None) -> None:
                         open_soft_reset, new_counselor, soft_confirm, soft_reset, soft_cancel):
             control.set_enabled(not value)
         for view in import_views:
+            view.apply_busy(value)
+        for view in partial_views:
             view.apply_busy(value)
         if value:
             restore.props('loading')
@@ -170,7 +174,7 @@ def build_database_settings(database: Database, on_roster_import=None) -> None:
     with settings_card('DB 관리', 'storage', '상담 데이터의 보관 상태와 백업을 관리하세요.', collapsible=True):
         folder_button = ui.button('DB 폴더 열기', icon='folder_open', on_click=open_database_folder).props('outline')
         ui.separator()
-        ui.label('DB 백업').classes('font-semibold text-slate-700')
+        ui.label('전체 DB 백업·복원').classes('font-semibold text-slate-700')
         ui.label('현재 DB 비밀번호로 암호화된 백업 파일을 내려받습니다. 복원할 때 이 비밀번호가 필요합니다.').classes('text-sm text-slate-500')
         backup = ui.button('DB 백업 다운로드', icon='download', on_click=download_backup)
         ui.separator()
@@ -190,6 +194,10 @@ def build_database_settings(database: Database, on_roster_import=None) -> None:
                 restore = ui.button('복원', icon='restore', on_click=restore_database)
         dialog.on('hide', clear_restore)
         open_restore = ui.button('백업 파일에서 복원', icon='restore', on_click=dialog.open).props('outline')
+        for kind in ('personal', 'counseling_school'):
+            partial_view = PartialBackupView(database, kind, lambda: busy, set_busy)
+            partial_view.build()
+            partial_views.append(partial_view)
         ui.separator()
         with ui.column().classes('w-full gap-4 rounded-xl border border-red-200 bg-red-50/50 p-5'):
             with ui.row().classes('items-center gap-2 text-red-700'):
@@ -203,7 +211,7 @@ def build_database_settings(database: Database, on_roster_import=None) -> None:
                         ui.label('인수인계 초기화를 진행할까요?').classes('text-xl font-bold text-slate-800')
                         ui.label('위젯 메모·할 일·배치 등 위젯 데이터, NEIS 인증키, Google 캘린더 연결 및 저장된 일정, 사용자 캘린더와 그 일정이 삭제됩니다.').classes('text-sm text-red-700')
                         ui.label('학생·교사 명부와 상담 기록, 기존 일지의 작성자 이름은 유지됩니다. Google 원본 캘린더는 삭제하지 않습니다.').classes('text-sm text-slate-600')
-                        ui.label('초기화 후 현재 DB 비밀번호로 다시 열어 주세요. 필요한 데이터는 먼저 백업해 주세요.').classes('text-sm text-slate-600')
+                        ui.label('초기화 전에 사용자 개인 데이터 백업을 내려받으면 해당 항목과 기존 상담교사 이름을 나중에 함께 복원할 수 있습니다. 초기화 후 현재 DB 비밀번호로 다시 열어 주세요.').classes('text-sm text-slate-600')
                         new_counselor = ui.input('새 상담교사 이름').props('outlined maxlength=100 required').classes('w-full')
                         soft_confirm = ui.checkbox('위 항목을 삭제하고 새 상담교사 이름으로 변경하겠습니다.')
                         with ui.row().classes('w-full justify-end gap-2'):
