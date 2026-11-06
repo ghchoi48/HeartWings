@@ -8,7 +8,7 @@ import sys
 from zipfile import ZipFile
 
 from maeumnarae.core.program_info import program_license, third_party_notices, third_party_source
-from maeumnarae.services.legacy_import import read_rows, parse_rows, excel_day
+from maeumnarae.services.data_management.legacy_import import read_rows, parse_rows, excel_day
 
 
 def verify(fixture: Path, school_year: int, period_times: dict) -> dict:

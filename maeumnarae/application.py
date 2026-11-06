@@ -5,19 +5,19 @@ import sys
 from pathlib import Path
 
 from nicegui import app, native, run, ui
-from maeumnarae.repositories.onboarding_repo import OnboardingRepository
-from maeumnarae.repositories.school_settings_repo import SchoolSettingsRepository
-from maeumnarae.views.onboarding_view import OnboardingView
+from maeumnarae.repositories.settings.onboarding_repo import OnboardingRepository
+from maeumnarae.repositories.settings.school_settings_repo import SchoolSettingsRepository
+from maeumnarae.views.shell.onboarding_view import OnboardingView
 
 from maeumnarae.core.database import Database, DatabaseError, default_database_path
-from maeumnarae.repositories.counseling_repo import CounselingRepository
-from maeumnarae.repositories.student_repo import StudentRepository
-from maeumnarae.repositories.reporting_repo import ReportingRepository
-from maeumnarae.views.app_layout import AppLayout
+from maeumnarae.repositories.journals.counseling_repo import CounselingRepository
+from maeumnarae.repositories.students.student_repo import StudentRepository
+from maeumnarae.repositories.reports.reporting_repo import ReportingRepository
+from maeumnarae.views.shell.app_layout import AppLayout
 from maeumnarae.core.desktop import ICON_PATH, configure_logging, configure_native
-from maeumnarae.views.display_settings import DEFAULT_PRIMARY, DisplaySettings
+from maeumnarae.views.settings.display_settings import DEFAULT_PRIMARY, DisplaySettings
 from maeumnarae.core.app_fonts import register_fonts
-from maeumnarae.views.update_notification import StartupUpdateCheck
+from maeumnarae.views.shell.update_notification import StartupUpdateCheck
 
 
 def register_page(path: Path) -> None:

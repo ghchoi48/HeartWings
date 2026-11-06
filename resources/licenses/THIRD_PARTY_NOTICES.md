@@ -1,7 +1,7 @@
 # 마음나래 서드파티 고지 및 소스 안내
 
 마음나래 자체 코드는 별도 표시된 부분을 제외하고 MIT 라이선스입니다.
-`maeumnarae/services/memory_xlsb.py`에는 LGPL-3.0-or-later가 적용됩니다. 포함된 서드파티 구성요소의 저작권은
+`maeumnarae/services/data_management/memory_xlsb.py`에는 LGPL-3.0-or-later가 적용됩니다. 포함된 서드파티 구성요소의 저작권은
 각 권리자에게 있으며 각자의 라이선스가 적용됩니다. 원문 목록은
 [manifest.json](manifest.json), 라이브러리 원문은 `libraries/`, 폰트 원문은 `fonts/`에 있습니다.
 프로그램의 설정 → 프로그램 정보에서도 등록된 고지를 확인할 수 있습니다.
@@ -67,7 +67,7 @@ CONTENTS.json에는 실제 설치 모듈 버전과 파일별 해시를 기록합
 실행 파일 배포 시 실제 사용한 라이브러리 소스·수정 내역과, 수정된 라이브러리로
 앱을 재결합할 수 있는 앱 소스·빌드 자료 또는 적합한 교체 방식을 제공해야 합니다.
 PyInstaller 번들에 포함했다는 사실만으로 교체 가능성을 보장하지 않습니다.
-이 저장소의 `maeumnarae/services/memory_xlsb.py`는 원본 Workbook 구현에서 파생된
+이 저장소의 `maeumnarae/services/data_management/memory_xlsb.py`는 원본 Workbook 구현에서 파생된
 LGPL-3.0-or-later 파일이며 프로젝트 MIT 적용에서 제외됩니다.
 [출처·변경 및 기준 동작 기록](pyxlsb/PROVENANCE.md)에 비교 결과를 기록했습니다.
 LGPL이 허용하는 수정 및 수정 사항 디버깅을 위한 역공학을 추가 이용약관으로 제한하지 않습니다.

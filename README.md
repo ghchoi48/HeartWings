@@ -104,8 +104,11 @@ HeartWings/
 ├── maeumnarae/
 │   ├── core/            # DB, 모델, 설정 및 공통 기반
 │   ├── repositories/    # 데이터 조회·저장
+│   │   └── calendar/, journals/, reports/, students/, settings/, home/, data_management/, shared/
 │   ├── services/        # 외부 연동, 가져오기·내보내기, 백업
+│   │   └── calendar/, reports/, students/, data_management/, school/, system/
 │   ├── views/           # 화면 구성
+│   │   └── shell/, home/, calendar/, journals/, reports/, students/, settings/, data_management/, shared/
 │   └── widgets/         # 홈 위젯
 ├── resources/           # 아이콘, 글꼴, 서식 및 라이선스
 ├── requirements/        # 실행·빌드 의존성
@@ -133,4 +136,4 @@ Windows 설치 파일은 `dist/installer/maeumnarae-<버전>-windows-x64-setup.e
 
 배포 구성요소의 고지 범위와 소스 제공 안내는 [서드파티 고지 및 소스 안내](resources/licenses/THIRD_PARTY_NOTICES.md)를 참고하세요.
 
-`maeumnarae/services/memory_xlsb.py`는 pyxlsb에서 파생된 구현으로 **LGPL-3.0-or-later**가 적용되며, 프로젝트의 MIT 적용에서 제외됩니다. [출처 및 변경 기록](resources/licenses/pyxlsb/PROVENANCE.md)을 참고하세요. 수정한 pyxlsb로 앱을 재빌드하는 절차와 릴리스 소스 제공 방법은 [BUILDING.md](BUILDING.md)에 있습니다.
+`maeumnarae/services/data_management/memory_xlsb.py`는 pyxlsb에서 파생된 구현으로 **LGPL-3.0-or-later**가 적용되며, 프로젝트의 MIT 적용에서 제외됩니다. [출처 및 변경 기록](resources/licenses/pyxlsb/PROVENANCE.md)을 참고하세요. 수정한 pyxlsb로 앱을 재빌드하는 절차와 릴리스 소스 제공 방법은 [BUILDING.md](BUILDING.md)에 있습니다.

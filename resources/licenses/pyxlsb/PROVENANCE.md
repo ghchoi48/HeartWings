@@ -26,7 +26,7 @@ pyxlsb 소스의 저장소 동봉 및 오프라인 다운로드는 아직 구현
 
 ## MemoryWorkbook 비교 결과
 
-대상: `maeumnarae/services/memory_xlsb.py`.
+대상: `maeumnarae/services/data_management/memory_xlsb.py`.
 단순 import·상속만을 근거로 삼지 않고 메서드 본문의 처리 순서를 비교했습니다.
 
 | 부분 | 원본과의 관계 | 앱에서 추가·변경된 부분 |
@@ -86,7 +86,7 @@ LGPL 대응 소스·재빌드 자료 제공과 배포 검증은 후속 단계입
 
 1단계 기준 자료를 재생성하지 않고 다음 구조로 변경했습니다.
 
-- `maeumnarae/services/xlsb_reader.py`: 앱 소유의 MIT 인터페이스.
+- `maeumnarae/services/data_management/xlsb_reader.py`: 앱 소유의 MIT 인터페이스.
   `open_workbook(bytes)`는 컨텍스트 관리되는 `WorkbookReader`를 반환합니다.
   `read_sheet(name)`도 컨텍스트 관리자이며, 그 안에서 `SheetRow` 반복자를 사용합니다.
   행 번호는 1 기반이고 값은 A열부터 빈 열을 None으로 보존하는 tuple입니다.

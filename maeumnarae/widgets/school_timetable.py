@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 from nicegui import run, ui
 
 from maeumnarae.core.database import DatabaseError
-from maeumnarae.views.time_inputs import storage_time, time_input
+from maeumnarae.views.shared.time_inputs import storage_time, time_input
 
 KST = timezone(timedelta(hours=9))
 

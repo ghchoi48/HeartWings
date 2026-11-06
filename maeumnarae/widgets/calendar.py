@@ -4,15 +4,15 @@ from datetime import datetime
 from nicegui import run, ui
 
 from maeumnarae.core.database import DatabaseError
-from maeumnarae.repositories.calendar_repo import CalendarRepository
-from maeumnarae.services.calendar_dates import visible_days, events_by_date, shift_month
-from maeumnarae.services.calendar_holidays import korean_holidays
-from maeumnarae.services.reporting import KST
-from maeumnarae.services.school_calendar import load_school_events
-from maeumnarae.services.google_calendar import load_google_events, REFRESH_SECONDS
-from maeumnarae.views.google_calendar_editor import show_google_event
-from maeumnarae.views.calendar_event_editor import open_event_editor
-from maeumnarae.views.calendar_view import event_caption, event_name, render_event_icons, show_school_event
+from maeumnarae.repositories.calendar.calendar_repo import CalendarRepository
+from maeumnarae.services.calendar.calendar_dates import visible_days, events_by_date, shift_month
+from maeumnarae.services.calendar.calendar_holidays import korean_holidays
+from maeumnarae.services.reports.reporting import KST
+from maeumnarae.services.calendar.school_calendar import load_school_events
+from maeumnarae.services.calendar.google_calendar import load_google_events, REFRESH_SECONDS
+from maeumnarae.views.calendar.google_calendar_editor import show_google_event
+from maeumnarae.views.calendar.calendar_event_editor import open_event_editor
+from maeumnarae.views.calendar.calendar_view import event_caption, event_name, render_event_icons, show_school_event
 
 
 class CalendarWidget:

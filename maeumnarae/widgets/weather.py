@@ -4,7 +4,7 @@ import json
 from nicegui import run, ui
 
 from maeumnarae.core.database import DatabaseError
-from maeumnarae.services.weather import WeatherError, coordinates, fetch_weather, search_regions, weather_status
+from maeumnarae.services.school.weather import WeatherError, coordinates, fetch_weather, search_regions, weather_status
 
 GEOLOCATION = '''return await new Promise(resolve => {
     if (!navigator.geolocation) { resolve(null); return; }

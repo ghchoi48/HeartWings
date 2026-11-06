@@ -3,7 +3,7 @@ Upstream author: William Turner (setup.py / PKG-INFO).
 Copyright (c) William Turner.
 
 HeartWings includes a modified implementation derived from pyxlsb/workbook.py
-in maeumnarae/services/memory_xlsb.py, licensed under LGPL-3.0-or-later.
+in maeumnarae/services/data_management/memory_xlsb.py, licensed under LGPL-3.0-or-later.
 Copyright (c) 2026 Gyuho Choi (HeartWings modifications).
 Attribution and modification notice added 2026-10-29; original edit date unknown.
 Changes: in-memory ZIP streams instead of temporary files, ExitStack resource

@@ -5,8 +5,8 @@ from datetime import datetime, timedelta, timezone
 from nicegui import run, ui
 
 from maeumnarae.core.database import DatabaseError
-from maeumnarae.repositories.school_settings_repo import SchoolSettingsRepository
-from maeumnarae.services.neis import MEALS, SOURCE_URL, NeisError, fetch_meals, text_lines
+from maeumnarae.repositories.settings.school_settings_repo import SchoolSettingsRepository
+from maeumnarae.services.school.neis import MEALS, SOURCE_URL, NeisError, fetch_meals, text_lines
 
 
 class Meal:

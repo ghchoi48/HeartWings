@@ -15,8 +15,8 @@ from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
 
 
 APP_FILES = (
-    'maeumnarae/services/memory_xlsb.py',
-    'maeumnarae/services/xlsb_reader.py',
+    'maeumnarae/services/data_management/memory_xlsb.py',
+    'maeumnarae/services/data_management/xlsb_reader.py',
     'LICENSE',
     'resources/licenses/pyxlsb/COPYING',
     'resources/licenses/pyxlsb/COPYING.LESSER',
@@ -82,7 +82,7 @@ def source_bundle(root: Path, package_dir: Path, version: str) -> tuple[Path, by
     files['CHANGES.md'] = ('\n'.join(changes) + '\n').encode()
     files['README.md'] = ('''# XLSB 라이브러리 및 파생 구현 소스
 
-pyxlsb/에는 빌드 환경에서 사용한 라이브러리 파일을, maeumnarae/services/에는
+pyxlsb/에는 빌드 환경에서 사용한 라이브러리 파일을, maeumnarae/services/data_management/에는
 현재 앱의 파생 구현과 읽기 인터페이스를 수록합니다. 원본과의 차이는 CHANGES.md에 있습니다.
 pyxlsb와 memory_xlsb.py는 LGPL-3.0-or-later, xlsb_reader.py는 MIT입니다.
 LICENSE는 MIT 부분에만 적용됩니다. GPL/LGPL 전문과 저작권 고지는 resources/licenses/에 있습니다.

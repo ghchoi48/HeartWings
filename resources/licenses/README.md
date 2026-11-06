@@ -1,7 +1,7 @@
 # 오픈소스 라이선스 고지
 
 마음나래 자체 코드는 별도 표시된 부분을 제외하고 루트 `LICENSE`의 MIT 라이선스로 제공됩니다.
-`maeumnarae/services/memory_xlsb.py`는 LGPL-3.0-or-later 파생 코드입니다.
+`maeumnarae/services/data_management/memory_xlsb.py`는 LGPL-3.0-or-later 파생 코드입니다.
 서드파티 코드·폰트·네이티브 구성요소에는 각각의 라이선스가 적용되며,
 이 프로젝트의 MIT 라이선스로 재라이선스되지 않습니다.
 

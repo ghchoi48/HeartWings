@@ -16,7 +16,7 @@ a = Analysis(
     datas=data + model_data + [(str(root / 'LICENSE'), '.'), (str(root / 'resources' / 'licenses'), 'resources/licenses')],
     hiddenimports=hidden + model_hidden + [
         'sqlcipher3.dbapi2', 'sqlcipher3._sqlite3',
-        'maeumnarae.repositories.student_repo', 'maeumnarae.repositories.counseling_repo',
+        'maeumnarae.repositories.students.student_repo', 'maeumnarae.repositories.journals.counseling_repo',
     ],
 )
 pyz = PYZ(a.pure)
