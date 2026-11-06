@@ -45,6 +45,13 @@ Name: "korean"; MessagesFile: "languages\Korean-6.3.isl"
 [Tasks]
 Name: "desktopicon"; Description: "바탕 화면 바로가기 만들기"; GroupDescription: "바로가기:"
 
+[InstallDelete]
+; Remove the previous PyInstaller bundle before copying the new version.
+; This also cleans up libraries no longer included in the new bundle.
+; Keep deletion scoped to program files; never delete {app} or user data.
+Type: filesandordirs; Name: "{app}\_internal"
+Type: files; Name: "{app}\maeumnarae.exe"
+
 [Files]
 Source: "{#SourceRoot}\dist\maeumnarae\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 

@@ -78,7 +78,7 @@ pip 설치용 설정과 GPL/LGPL 고지를 만듭니다. 공식 기준 원본은
 
 `build/pyxlsb-local/pyxlsb/`에서 필요한 코드를 수정하세요. 변경 내용·수정 날짜·저작권을
 소스와 CHANGES.md에 기록하고 LGPL을 유지합니다. 앱의 어댑터를 수정하려면
-`maeumnarae/services/memory_xlsb.py`를 수정합니다. 원본 버전과의 바이트 일치를 강제하지 않습니다.
+`maeumnarae/services/data_management/memory_xlsb.py`를 수정합니다. 원본 버전과의 바이트 일치를 강제하지 않습니다.
 
 ```sh
 python -m pip install --no-deps --no-build-isolation --force-reinstall ./build/pyxlsb-local
@@ -116,6 +116,14 @@ Windows는 설치 프로그램 없이 `dist/maeumnarae` 전체(내부 리소스 
 있습니다. 설치 프로그램을 실행하면 같은 AppId의 기존 설치에 영향을 줄 수 있으므로
 수정본 검증에는 위 폴더 실행을 사용하세요. macOS도 빌드 디렉터리의 앱으로 실행할 수 있습니다.
 OS가 실행을 제한하면 해당 OS가 제공하는 앱 실행 승인 절차를 사용하세요.
+
+Windows 설치 프로그램은 새 파일을 복사하기 전에 설치 폴더의 `_internal` 폴더와
+`maeumnarae.exe`를 삭제합니다. 업데이트·재설치 시 이전 버전의 라이브러리가 남아
+새 버전과 섞이는 것을 방지하며, 처음 설치할 때 해당 파일이 없으면 그대로 진행합니다.
+실행 중인 앱은 기존 `CloseApplications=yes` 설정에 따라 종료 안내를 표시합니다.
+사용자 DB·설정과 설치 폴더의 다른 파일은 이 정리 대상에 포함하지 않습니다.
+Windows 릴리스 검증 시에는 이전 설치의 `_internal`에 임시 파일을 넣은 뒤 업데이트하여
+해당 파일이 제거되고 새 앱이 정상 실행되며 기존 DB·설정이 유지되는지 확인하세요.
 
 배포할 때는 `dist/release/`에서 이번 빌드에 해당하는 실행 파일·소스 ZIP·release.json을
 함께 제공하세요. 오래된 타깃/버전 파일을 섞지 마세요. 소스 ZIP과 설치 파일을 게시하기
