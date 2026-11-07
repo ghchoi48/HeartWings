@@ -1,6 +1,7 @@
 [
   {
     "id": "exaone-4.0-1.2b-q4-k-m",
+    "recommended": false,
     "name": "EXAONE 4.0 1.2B · Q4_K_M",
     "repo": "LGAI-EXAONE/EXAONE-4.0-1.2B-GGUF",
     "revision": "162446400ea4596377a3ce1d3ddffa32971af0a6",
@@ -11,7 +12,7 @@
     "license_url": "https://huggingface.co/LGAI-EXAONE/EXAONE-4.0-1.2B-GGUF/blob/162446400ea4596377a3ce1d3ddffa32971af0a6/LICENSE",
     "memory_gb": 8,
     "profile": "exaone4",
-    "description": "기본 추천 · 한국어·영어·스페인어 경량 모델. 비상업적 연구·교육용 라이선스를 확인해 주세요.",
+    "description": "기존 설치 지원 · 한국어·영어·스페인어 경량 모델. 비상업적 연구·교육용 라이선스를 확인해 주세요.",
     "system_prompt": "You are EXAONE model from LG AI Research, a helpful assistant.",
     "chat_template_file": "exaone4-chat-template.jinja",
     "template_kwargs": {
@@ -30,7 +31,7 @@
     "license_url": "https://huggingface.co/Qwen/Qwen3-4B-GGUF",
     "memory_gb": 16,
     "profile": "qwen3",
-    "description": "추가 선택 · 메모리 여유가 있는 환경용 다국어 모델.",
+    "description": "추천 모델 · 메모리 여유가 있는 환경용 다국어 모델.",
     "template_kwargs": {
       "enable_thinking": false
     }

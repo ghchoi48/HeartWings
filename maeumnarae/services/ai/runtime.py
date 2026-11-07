@@ -34,7 +34,7 @@ def engine_path():
 
 
 def request_payload(record, request):
-    profile = next((item for item in catalog() if item.profile == record.profile), None)
+    profile = next((item for item in catalog(include_unrecommended=True) if item.profile == record.profile), None)
     # 추천 목록에서 제외된 기존 EXAONE 3.5 설치도 같은 실행 설정을 유지한다.
     system_prompt = (profile.system_prompt if profile else
                      'You are EXAONE model from LG AI Research, a helpful assistant.'
@@ -119,7 +119,7 @@ class LlamaServerRuntime:
         args = [str(executable), '--model', record.path, '--host', '127.0.0.1', '--port', str(port),
                 '--ctx-size', '4096', '--parallel', '1', '--n-gpu-layers', '99' if gpu else '0',
                 '--jinja', '--no-webui', '--no-warmup', '--log-disable', '--alias', alias]
-        profile = next((item for item in catalog() if item.profile == record.profile), None)
+        profile = next((item for item in catalog(include_unrecommended=True) if item.profile == record.profile), None)
         if profile and profile.chat_template_file:
             template_root = (RESOURCE_ROOT / 'ai').resolve()
             template = (template_root / profile.chat_template_file).resolve()

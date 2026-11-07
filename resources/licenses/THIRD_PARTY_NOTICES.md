@@ -143,7 +143,7 @@ Windows 설치 프로그램의 Inno Setup 번역 원문과 기존 라이선스�
 
 - **llama.cpp / GGML b12144:** MIT. 지원 플랫폼에 공식 엔진과 동적 라이브러리를 동봉합니다.
   원문: `libraries/llama-cpp.txt`, 고정 소스: https://github.com/ggml-org/llama.cpp/tree/b12144
-- **EXAONE 4.0 1.2B:** 기본 추천 모델이며 가중치는 별도 다운로드입니다.
+- **EXAONE 4.0 1.2B:** 추천 목록에서는 제외하며 기존 설치 모델의 고지를 유지합니다.
   EXAONE AI Model License Agreement 1.2 - NC 원문은 `libraries/exaone4-model.txt`에 포함합니다.
   비상업적 연구·교육 목적의 이용 조건을 확인하세요. 서버용 채팅 템플릿은 공식 저장소의
   revision `162446400ea4596377a3ce1d3ddffa32971af0a6`에서 가져왔습니다.

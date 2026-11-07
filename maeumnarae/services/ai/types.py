@@ -68,6 +68,7 @@ class CatalogModel:
     system_prompt: str = 'You are a helpful assistant. Respond in Korean.'
     template_kwargs: dict = field(default_factory=dict)
     chat_template_file: str | None = None
+    recommended: bool = True
 
     @property
     def url(self) -> str:

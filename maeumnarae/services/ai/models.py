@@ -16,15 +16,16 @@ from .gguf import inspect_gguf
 from .types import AIError, CatalogModel, ModelRecord
 
 
-def catalog() -> tuple[CatalogModel, ...]:
-    return tuple(CatalogModel(**item) for item in json.loads(
+def catalog(*, include_unrecommended: bool = False) -> tuple[CatalogModel, ...]:
+    models = (CatalogModel(**item) for item in json.loads(
         (RESOURCE_ROOT / 'ai/models.json').read_text(encoding='utf-8')))
+    return tuple(item for item in models if include_unrecommended or item.recommended)
 
 
 def supports_reasoning(record: ModelRecord | None) -> bool:
     return record is not None and any(
         item.profile == record.profile and 'enable_thinking' in item.template_kwargs
-        for item in catalog())
+        for item in catalog(include_unrecommended=True))
 
 
 class ModelManager:

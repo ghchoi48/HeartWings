@@ -80,8 +80,9 @@ class AITests(unittest.IsolatedAsyncioTestCase):
         await self.runtime.started.wait()
         return task
 
-    async def test_exaone4_catalog_registration_and_legacy_profile(self):
-        self.assertEqual(catalog()[0].id, 'exaone-4.0-1.2b-q4-k-m')
+    async def test_exaone_excluded_from_recommendations_but_registration_supported(self):
+        self.assertEqual(catalog()[0].id, 'qwen3-4b-q4-k-m')
+        self.assertFalse(any('exaone' in item.id.lower() for item in catalog()))
         self.assertFalse(any('3.5' in item.id for item in catalog()))
         self.path.write_bytes(gguf('exaone4'))
         record = await self.ready()
@@ -298,7 +299,7 @@ class AITests(unittest.IsolatedAsyncioTestCase):
             task = asyncio.create_task(self.service.download('one', catalog()[0].id))
             await started.wait()
             with self.assertRaises(AIError):
-                await self.service.download('two', catalog()[1].id)
+                await self.service.download('two', catalog()[0].id)
             await self.service.set_enabled('two', False)
             self.assertTrue(task.cancelled())
             self.assertIsNone(self.service.download_id)

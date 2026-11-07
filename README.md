@@ -142,10 +142,9 @@ AI 탭에서 전체 AI 사용을 켜고 모델을 다운로드하거나 로컬 G
 모델을 자동 다운로드하지 않습니다. 작업 양식 탭에서는 가상 메모로 상담 요약·일지 초안을 시험할 수 있습니다.
 실제 상담 일지의 조회·저장·편집기 반영은 아직 연결하지 않습니다.
 
-- **기본 추천:** EXAONE 4.0 1.2B Q4_K_M (약 0.81GB 다운로드, 8GB 메모리 환경 목표).
-- **추가 선택:** Qwen3 4B Q4_K_M (약 2.50GB 다운로드, 16GB 메모리 환경 목표).
+- **추천 모델:** Qwen3 4B Q4_K_M (약 2.50GB 다운로드, 16GB 메모리 환경 목표).
 - **지원:** Windows x64 CPU, Apple Silicon Mac Metal/CPU. 실제 메모리 사용량은 환경에 따라 달라집니다.
-- **EXAONE 이용 조건:** [EXAONE AI Model License Agreement 1.2 - NC](https://huggingface.co/LGAI-EXAONE/EXAONE-4.0-1.2B-GGUF/blob/162446400ea4596377a3ce1d3ddffa32971af0a6/LICENSE)는 비상업적 연구·교육 목적으로 사용을 제한합니다. 일반 상담 실무 이용 허용을 의미하지 않습니다.
+- **기존 설치·로컬 등록 EXAONE 이용 조건:** [EXAONE AI Model License Agreement 1.2 - NC](https://huggingface.co/LGAI-EXAONE/EXAONE-4.0-1.2B-GGUF/blob/162446400ea4596377a3ce1d3ddffa32971af0a6/LICENSE)는 비상업적 연구·교육 목적으로 사용을 제한합니다. 일반 상담 실무 이용 허용을 의미하지 않습니다.
 
 모델은 첫 생성 시 로드합니다. AI를 끄면 생성·다운로드를 취소하고 엔진을 종료하지만,
 설치한 모델과 선택은 보존합니다. 모델 변경·DB 잠금·앱 종료 때도 엔진을 종료합니다.
