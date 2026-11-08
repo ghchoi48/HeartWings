@@ -27,7 +27,9 @@ class TodoList:
         with ui.column().classes('w-full gap-3 flex-nowrap') as self.body:
             with ui.row().classes('w-full items-center flex-nowrap'):
                 self.selector = ui.select({}, label='할 일 목록', on_change=self.select).props('outlined dense').classes('flex-1 min-w-0')
-                ui.button(icon='playlist_add', on_click=self.new_list).props('flat round aria-label="목록 만들기"')
+                ui.button(icon='playlist_add', on_click=self.new_list).props('flat round aria-label="목록 만들기"').tooltip('목록 만들기')
+                ui.button(icon='edit', on_click=self.edit_list).props(
+                    'flat round aria-label="목록 수정"').classes('shrink-0').tooltip('목록 수정')
             with ui.row().classes('w-full items-center flex-nowrap gap-2 overflow-x-auto'):
                 self.input = ui.input('새 할 일').props('outlined dense maxlength=300').classes('flex-1 min-w-32')
                 self.input.on('keydown.enter', self.add)
@@ -153,6 +155,35 @@ class TodoList:
             with ui.row():
                 ui.button('취소', on_click=dialog.close).props('flat')
                 ui.button('만들기', on_click=save)
+        dialog.open()
+
+    def edit_list(self):
+        list_id = self.selected
+        if list_id is None or self.busy:
+            return
+        with ui.dialog() as dialog, ui.card().classes('w-80 max-w-full'):
+            ui.label('할 일 목록 수정').classes('text-lg font-bold')
+            name = ui.input('목록 이름', value=self.selector.options[list_id]).props(
+                'outlined maxlength=60').classes('w-full')
+
+            async def save():
+                if await self.change(self.repository.edit_todo_list, list_id, name.value or ''):
+                    dialog.close()
+
+            async def delete():
+                if await self.change(self.repository.delete_todo_list, list_id):
+                    dialog.close()
+
+            name.on('keydown.enter', save)
+            with ui.row().classes('w-full justify-end'):
+                ui.button('취소', on_click=dialog.close).props('flat')
+                ui.button('저장', on_click=save)
+            ui.separator()
+            ui.label('목록을 삭제하면 포함된 할 일과 완료 내역도 모두 삭제됩니다.').classes('text-sm text-slate-500')
+            ui.label('마지막 목록을 삭제하면 빈 기본 목록이 생성됩니다.').classes('text-xs text-slate-500')
+            confirm = ui.checkbox('이 목록과 할 일을 삭제하겠습니다.')
+            ui.button('목록 삭제', icon='delete', color='negative', on_click=delete).props(
+                'flat').bind_enabled_from(confirm, 'value')
         dialog.open()
 
     async def add(self):

@@ -276,6 +276,37 @@ class HomeRepository:
                 widgets['widget_todo_lists'][instance_id] = list_id
         self._update(add)
 
+    def edit_todo_list(self, list_id: int, name: str) -> None:
+        name = name.strip()
+        if not 1 <= len(name) <= 60:
+            raise ValueError('목록 이름을 1~60자로 입력해 주세요.')
+
+        def edit(widgets):
+            entry = next((entry for entry in widgets['todo_lists'] if entry['id'] == list_id), None)
+            if entry is None:
+                raise NotFoundError('목록을 찾을 수 없습니다.')
+            if any(other['id'] != list_id and other['name'] == name for other in widgets['todo_lists']):
+                raise NotFoundError('같은 이름의 목록이 이미 있습니다.')
+            entry['name'] = name
+        self._update(edit)
+
+    def delete_todo_list(self, list_id: int) -> None:
+        def delete(widgets):
+            if not any(entry['id'] == list_id for entry in widgets['todo_lists']):
+                raise NotFoundError('목록을 찾을 수 없습니다.')
+            widgets['todo_lists'] = [entry for entry in widgets['todo_lists'] if entry['id'] != list_id]
+            widgets['todos'] = [item for item in widgets['todos'] if item.get('list_id', 1) != list_id]
+            if not widgets['todo_lists']:
+                widgets['todo_lists'] = [{'id': widgets['next_todo_list_id'], 'name': '기본 목록'}]
+                widgets['next_todo_list_id'] += 1
+            fallback = widgets['todo_lists'][0]['id']
+            if widgets['selected_todo_list'] == list_id:
+                widgets['selected_todo_list'] = fallback
+            for instance_id, selected in widgets['widget_todo_lists'].items():
+                if selected == list_id:
+                    widgets['widget_todo_lists'][instance_id] = fallback
+        self._update(delete)
+
     def select_todo_list(self, list_id: int, instance_id: str | None = None) -> None:
         def select(widgets):
             if not any(entry['id'] == list_id for entry in widgets['todo_lists']):

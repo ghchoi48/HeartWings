@@ -9,10 +9,12 @@ from maeumnarae.services.calendar.calendar_dates import visible_days, events_by_
 from maeumnarae.services.calendar.calendar_holidays import korean_holidays
 from maeumnarae.services.reports.reporting import KST
 from maeumnarae.services.calendar.school_calendar import load_school_events
-from maeumnarae.services.calendar.google_calendar import load_google_events, REFRESH_SECONDS
+from maeumnarae.services.calendar.google_calendar import load_google_events
 from maeumnarae.views.calendar.google_calendar_editor import show_google_event
 from maeumnarae.views.calendar.calendar_event_editor import open_event_editor
 from maeumnarae.views.calendar.calendar_view import event_caption, event_name, render_event_icons, show_school_event
+
+REFRESH_SECONDS = 15 * 60
 
 
 class CalendarWidget:
@@ -31,7 +33,6 @@ class CalendarWidget:
         self.calendars = []
         self.events = {}
         self.holidays = {}
-        self.loaded_revision = None
         self.request = 0
         self.loading = False
         self.editor_open = False
@@ -55,8 +56,7 @@ class CalendarWidget:
         self.message.bind_visibility_from(self.message, 'text', backward=lambda text: bool(text))
         self.body = ui.column().classes('w-full gap-2')
         ui.timer(0, self.reload, once=True)
-        ui.timer(0.5, self.refresh_if_changed)
-        ui.timer(REFRESH_SECONDS, self.refresh_google)
+        ui.timer(REFRESH_SECONDS, self.refresh_periodically)
 
     def update_add_state(self):
         unavailable = not any(item.source == 'custom' for item in self.calendars)
@@ -67,24 +67,17 @@ class CalendarWidget:
                          remove='' if unavailable else 'opacity-50')
 
     async def force_reload(self):
-        await self.reload(force=True)
+        if not self.loading:
+            await self.reload(force=True)
 
-    async def refresh_google(self):
-        if (not self.is_active() or self.body.is_deleted or self.repository.database.is_locked or self.loading or self.editor_open
-                or not any(c.source == 'google_ics' and c.visible for c in self.calendars)):
+    async def refresh_periodically(self):
+        if (not self.is_active() or self.body.is_deleted or self.repository.database.is_locked
+                or self.loading or self.editor_open):
             return
         await self.reload(force=True)
-
-    async def refresh_if_changed(self):
-        if not self.is_active() or self.body.is_deleted or self.repository.database.is_locked or self.loading or self.editor_open:
-            return
-        if (self.loaded_revision != self.repository.database.write_revision
-                or self.today_date != datetime.now(KST).date()):
-            await self.reload()
 
     async def today(self):
-        self.anchor = self.selected = datetime.now(KST).date()
-        await self.reload()
+        await self.choose(datetime.now(KST).date())
 
     async def shift(self, direction):
         self.anchor = self.selected = shift_month(self.selected, direction)
@@ -104,7 +97,6 @@ class CalendarWidget:
         self.request += 1
         request = self.request
         self.loading = True
-        revision = self.repository.database.write_revision
         days = visible_days(self.anchor, 'month')
         self.message.text = '일정을 불러오는 중입니다…'
         self.add.disable()
@@ -127,7 +119,6 @@ class CalendarWidget:
             self.calendars = calendars
             self.events = events_by_date(events, days)
             self.holidays = holidays
-            self.loaded_revision = revision
             self.today_date = datetime.now(KST).date()
             self.message.text = school_message
             self.render()
@@ -135,8 +126,6 @@ class CalendarWidget:
             if request == self.request and not self.body.is_deleted:
                 self.body.clear()
                 self.message.text = f'{error} · 새로고침을 눌러 다시 시도해 주세요.'
-                # Avoid repeatedly retrying a failing database every half second.
-                self.loaded_revision = revision
         finally:
             if request == self.request:
                 self.loading = False
@@ -206,9 +195,7 @@ class CalendarWidget:
         self.editor_open = True
 
         async def changed(day):
-            if day is not None:
-                self.anchor = self.selected = day
-            await self.reload()
+            ui.notify('일정 변경은 다음 자동 새로고침 또는 새로고침 버튼을 누르면 반영됩니다.', type='info')
 
         try:
             await open_event_editor(self.repository, self.calendars, self.selected, changed, entry)

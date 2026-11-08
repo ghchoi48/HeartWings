@@ -42,6 +42,7 @@ class HomeView:
         self.busy = False
         self.loaded = False
         self.widget_views = []
+        self.calendar_widgets = {}
 
     def build(self):
         ui.add_css('''
@@ -93,6 +94,8 @@ class HomeView:
                 self.status = ui.label('위젯을 불러오는 중입니다…').classes('text-sm text-slate-500')
             with ui.element('div').classes('w-full').style('container-type: inline-size'):
                 self.grid = ui.element('div').classes('home-grid w-full')
+                self.calendar_parking = ui.element('div')
+                self.calendar_parking.set_visibility(False)
             ui.timer(0, self.load, once=True)
 
     async def load(self):
@@ -122,6 +125,14 @@ class HomeView:
         element.on('keydown', lambda e: self.change_geometry(instance_id, e.args), js_handler=KEYBOARD)
 
     def render(self):
+        # Keep calendar content and its timers alive across layout-only changes.
+        calendar_ids = {item['id'] for item in self.layout if item['kind'] == 'calendar'}
+        for instance_id, (_, content) in list(self.calendar_widgets.items()):
+            if instance_id in calendar_ids:
+                content.move(self.calendar_parking)
+            else:
+                content.delete()
+                del self.calendar_widgets[instance_id]
         self.grid.clear()
         self.widget_views = []
         self.grid.classes(add='home-grid-editing' if self.editing else '',
@@ -143,8 +154,10 @@ class HomeView:
                         ui.label('위젯 편집을 눌러 위젯을 추가하세요.')
             for index, item in enumerate(self.layout):
                 widget = WIDGETS[item['kind']]
-                view = widget(self.repository, self.teachers, item['id'], self.refresh_todos,
-                              **(self.calendar_callbacks if item['kind'] == 'calendar' else {}))
+                existing_calendar = self.calendar_widgets.get(item['id'])
+                view = existing_calendar[0] if existing_calendar else widget(
+                    self.repository, self.teachers, item['id'], self.refresh_todos,
+                    **(self.calendar_callbacks if item['kind'] == 'calendar' else {}))
                 self.widget_views.append(view)
                 with ui.card().classes('home-widget rounded-2xl shadow-sm p-4 gap-3').style(
                         f'grid-column: {item["x"] + 1} / span {item["width"]}; '
@@ -152,7 +165,7 @@ class HomeView:
                         f'height: calc({row_span(item)} * var(--home-cell) + {(row_span(item) - 1) * 8}px); '
                         f'--home-mobile-height: {item["height"]}px').props(
                         f'data-kind={item["kind"]} data-instance={item["id"]} data-width={item["width"]} '
-                        f'data-height={item["height"]} data-x={item["x"]} data-y={item["y"]}'):
+                        f'data-height={item["height"]} data-x={item["x"]} data-y={item["y"]}') as card:
                     with ui.row().classes('home-widget-header w-full items-center flex-nowrap gap-2' + (' home-drag-handle' if self.editing else '')) as header:
                         if self.editing:
                             ui.icon('drag_indicator').classes('shrink-0 text-slate-400')
@@ -178,8 +191,13 @@ class HomeView:
                                     f'type=button data-resize-axis={axis} aria-label="{widget.title} {label}"') as handle:
                                 ui.icon(icon, size='16px').classes('pointer-events-none')
                             self.bind_geometry(handle, item['id'])
-                    with ui.column().classes('home-widget-content w-full gap-3'):
-                        view.build()
+                    if existing_calendar:
+                        existing_calendar[1].move(card)
+                    else:
+                        with ui.column().classes('home-widget-content w-full gap-3') as content:
+                            view.build()
+                        if item['kind'] == 'calendar':
+                            self.calendar_widgets[item['id']] = (view, content)
 
     async def refresh_todos(self, source):
         for view in list(self.widget_views):
