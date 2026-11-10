@@ -99,7 +99,8 @@ class StudentRepository:
             return Student.model_validate(dict(row)) if row else None
 
     def list(self, *, search: str = '', grade: int | None = None,
-             limit: int = 100, offset: int = 0) -> list[Student]:
+             limit: int = 100, offset: int = 0,
+             has_special_education_logs: bool = False) -> list[Student]:
         """이름/학번의 리터럴 부분 문자열 검색 및 학년 필터. 결과 순서는 고정한다."""
         check_page(limit, offset)
         with self.database.session() as connection:
@@ -107,8 +108,11 @@ class StudentRepository:
                 '''SELECT * FROM students
                 WHERE (instr(name, :search) > 0 OR instr(coalesce(student_number, ''), :search) > 0)
                   AND (:grade IS NULL OR grade = :grade)
+                  AND (:has_special_education_logs = 0 OR EXISTS (
+                      SELECT 1 FROM special_education_logs WHERE student_id = students.id))
                 ORDER BY grade, classroom, name, id LIMIT :limit OFFSET :offset''',
-                dict(search=search.strip(), grade=grade, limit=limit, offset=offset)).fetchall()
+                dict(search=search.strip(), grade=grade, limit=limit, offset=offset,
+                     has_special_education_logs=has_special_education_logs)).fetchall()
             return [Student.model_validate(dict(row)) for row in rows]
 
     def update(self, student_id: int, student: StudentInput) -> Student:

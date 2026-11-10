@@ -14,3 +14,5 @@ defusedxml>=0.7.1,<1
 # Official release baseline; modified local builds remain permitted.
 pyxlsb==1.0.10
 reportlab>=4.4,<5
+Pillow>=10,<13
+pypdfium2==5.15.1

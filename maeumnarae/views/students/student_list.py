@@ -19,8 +19,10 @@ class StudentList:
         self.on_select = on_select
         self.page_size = page_size
         self.list_request = 0
+        self.has_special_education_logs = False
 
     def build(self, *, autoload: bool = True,
+              special_education_filter: bool = False,
               on_add: Callable[[], Awaitable[None] | None] | None = None) -> None:
         """현재 컨테이너에 목록 카드를 만들고 기본적으로 최초 조회를 예약한다."""
         with ui.card().classes('w-full h-full min-w-0 rounded-2xl shadow-sm p-5'):
@@ -38,8 +40,13 @@ class StudentList:
                 'flat :rows-per-page-options="[10, 20, 30]" rows-per-page-label="페이지당 학생 수" '
                 'no-data-label="등록된 학생이 없습니다" no-results-label="검색 결과가 없습니다"')
             with self.table.add_slot('top'):
-                ui.input('학생 검색', placeholder='이름, 별명, 성별, 학년, 반').props(
+                search = ui.input('학생 검색', placeholder='이름, 별명, 성별, 학년, 반').props(
                     'outlined dense clearable debounce=300').classes('w-full').bind_value(self.table, 'filter')
+                if special_education_filter:
+                    with search.add_slot('append'):
+                        ui.checkbox('일지가 있는 학생만',
+                                    on_change=self._change_special_education_filter).props(
+                                        'dense').classes('text-xs').on('click.stop', lambda: None)
             self.table.on('rowClick', self._select_student,
                           js_handler='(event, row) => emit(row.id)')
         if autoload:
@@ -54,7 +61,9 @@ class StudentList:
         try:
             students = []
             while True:
-                batch = await run.io_bound(self.students.list, limit=1000, offset=len(students))
+                batch = await run.io_bound(
+                    self.students.list, limit=1000, offset=len(students),
+                    has_special_education_logs=self.has_special_education_logs)
                 if request != self.list_request:
                     return
                 students.extend(batch)
@@ -72,6 +81,13 @@ class StudentList:
         self.table.rows = [dict(id=s.id, name=s.name, nickname=s.nickname or '—',
                                 gender=s.gender or '—', grade=s.grade, classroom=s.classroom) for s in students]
         self.table.update()
+
+    async def _change_special_education_filter(self, event: events.ValueChangeEventArguments) -> None:
+        self.has_special_education_logs = bool(event.value)
+        self.table.pagination['page'] = 1
+        self.table.props('no-data-label="조건에 맞는 학생이 없습니다"' if event.value
+                         else 'no-data-label="등록된 학생이 없습니다"')
+        await self.reload()
 
     async def _select_student(self, event: events.GenericEventArguments) -> None:
         if self.on_select is not None:

@@ -22,7 +22,9 @@ datas += collect_data_files('tzdata')
 datas += copy_metadata('icalendar') + copy_metadata('recurring-ical-events') + copy_metadata('x-wr-timezone')
 datas += copy_metadata('nicegui') + copy_metadata('pywebview')
 datas += copy_metadata('sqlcipher3')
-binaries = collect_dynamic_libs('sqlcipher3')
+datas += collect_data_files('pypdfium2') + collect_data_files('pypdfium2_raw')
+datas += copy_metadata('pypdfium2')
+binaries = collect_dynamic_libs('sqlcipher3') + collect_dynamic_libs('pypdfium2_raw')
 hidden = ['sqlcipher3.dbapi2', 'sqlcipher3._sqlite3', 'webview', 'webview.dom',
           'nicegui.native.native_mode', 'multiprocessing', 'uvicorn.logging']
 if sys.platform == 'darwin':

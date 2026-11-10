@@ -2,7 +2,8 @@
 
 import json
 from copy import deepcopy
-from datetime import date, datetime, timedelta, timezone
+from dataclasses import dataclass
+from datetime import date, datetime, timezone
 
 from maeumnarae.core.database import Database, DatabaseError, NotFoundError
 from maeumnarae.core.settings_store import SettingsStore
@@ -13,6 +14,22 @@ from maeumnarae.repositories.shared._support import utc_text
 
 WIDGET_KINDS = ('clock', 'todo', 'teacher_search', 'meal', 'memo', 'weather', 'scheduled_journals', 'school_timetable', 'calendar')
 DEFAULT_LAYOUT = [{'id': kind, 'kind': kind, 'span': 1} for kind in ('clock', 'meal', 'todo')]
+
+
+SCHEDULED_JOURNAL_LABELS = {
+    'counseling': '개인상담', 'group': '집단상담',
+    'consultation': '자문', 'special_education': '특별교육',
+}
+
+
+@dataclass(frozen=True)
+class ScheduledJournal:
+    id: int
+    source: str
+    owner_id: int
+    starts_at: datetime
+    title: str
+    display_name: str
 
 
 class HomeRepository:
@@ -131,17 +148,36 @@ class HomeRepository:
     def layout(self) -> list[dict]:
         return self._read()['layout']
 
-    def scheduled_journal_counts(self):
-        """한국 시각 오늘까지의 예약 일지만 집계하며 제목·본문 등은 읽지 않는다."""
-        tomorrow = datetime.now(timezone(timedelta(hours=9))).replace(
-            hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+    def scheduled_journals(self, *, now: datetime | None = None) -> list[ScheduledJournal]:
+        """현재 시각까지 시작한 예약 일지를 오래된 순으로 조회한다."""
+        cutoff = utc_text(now if now is not None else datetime.now(timezone.utc))
         with self.database.session() as connection:
-            return dict(connection.execute('''
-                SELECT '개인상담', count(*) FROM counseling WHERE status='scheduled' AND starts_at < :end
-                UNION ALL SELECT '집단상담', count(*) FROM group_counseling_logs WHERE status='scheduled' AND starts_at < :end
-                UNION ALL SELECT '자문', count(*) FROM consultations WHERE status='scheduled' AND starts_at < :end
-                UNION ALL SELECT '특별교육', count(*) FROM special_education_logs WHERE status='scheduled' AND starts_at < :end
-            ''', {'end': utc_text(tomorrow)}).fetchall())
+            rows = connection.execute('''SELECT e.id AS id, 'counseling' AS source,
+                    e.student_id AS owner_id, e.starts_at AS starts_at, e.title AS title, s.name AS display_name
+                FROM counseling e JOIN students s ON s.id=e.student_id
+                WHERE e.status='scheduled' AND e.starts_at <= :end
+                UNION ALL
+                SELECT e.id, 'group', e.group_id, e.starts_at, e.title, g.name
+                FROM group_counseling_logs e JOIN counseling_groups g ON g.id=e.group_id
+                WHERE e.status='scheduled' AND e.starts_at <= :end
+                UNION ALL
+                SELECT e.id, 'consultation', e.teacher_id, e.starts_at, e.title, t.name
+                FROM consultations e JOIN teachers t ON t.id=e.teacher_id
+                WHERE e.status='scheduled' AND e.starts_at <= :end
+                UNION ALL
+                SELECT e.id, 'special_education', e.student_id, e.starts_at, e.title, s.name
+                FROM special_education_logs e JOIN students s ON s.id=e.student_id
+                WHERE e.status='scheduled' AND e.starts_at <= :end
+                ORDER BY starts_at, source, id''', {'end': cutoff}).fetchall()
+            return [ScheduledJournal(**{**dict(row), 'starts_at': datetime.fromisoformat(row['starts_at'])})
+                    for row in rows]
+
+    def scheduled_journal_counts(self):
+        """현재 시각까지의 예약 일지 건수를 종류별로 집계한다."""
+        counts = dict.fromkeys(SCHEDULED_JOURNAL_LABELS.values(), 0)
+        for entry in self.scheduled_journals():
+            counts[SCHEDULED_JOURNAL_LABELS[entry.source]] += 1
+        return counts
 
     def school_timetable(self):
         return normalize_timetable(self._read().get('school_timetable', []))

@@ -157,7 +157,9 @@ class HomeView:
                 existing_calendar = self.calendar_widgets.get(item['id'])
                 view = existing_calendar[0] if existing_calendar else widget(
                     self.repository, self.teachers, item['id'], self.refresh_todos,
-                    **(self.calendar_callbacks if item['kind'] == 'calendar' else {}))
+                    **(self.calendar_callbacks if item['kind'] == 'calendar' else
+                       {key: value for key, value in self.calendar_callbacks.items() if key != 'on_calendar'}
+                       if item['kind'] == 'scheduled_journals' else {}))
                 self.widget_views.append(view)
                 with ui.card().classes('home-widget rounded-2xl shadow-sm p-4 gap-3').style(
                         f'grid-column: {item["x"] + 1} / span {item["width"]}; '

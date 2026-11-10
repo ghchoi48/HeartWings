@@ -8,6 +8,8 @@ from nicegui import run, ui
 
 from maeumnarae.core.database import DatabaseError
 from maeumnarae.repositories.journals.attachment_repo import AttachmentRepository, DraftAttachments, MAX_ATTACHMENT_BYTES
+from maeumnarae.services.attachment_preview import can_preview
+from maeumnarae.views.journals.attachment_preview import AttachmentPreview
 
 
 class AttachmentView:
@@ -15,6 +17,7 @@ class AttachmentView:
         self.repository = repository
         self.lock = lock or asyncio.Lock()
         self.pending = 0
+        self.preview = None
 
     def build(self):
         with ui.dialog().props('persistent') as self.dialog, ui.card().classes('w-full max-w-2xl p-6 gap-4'):
@@ -62,6 +65,8 @@ class AttachmentView:
                     with ui.column().classes('grow min-w-0 gap-1'):
                         ui.label(entry.filename).classes('break-all')
                         ui.label(f'{entry.size:,}바이트').classes('text-xs text-slate-500')
+                    if can_preview(entry.filename):
+                        ui.button(icon='visibility', on_click=lambda entry=entry: self.show_preview(entry)).props('flat round aria-label="첨부파일 미리보기"').tooltip('미리보기')
                     ui.button(icon='download', on_click=lambda entry=entry: self.download(entry)).props('flat round aria-label="첨부파일 다운로드"').tooltip('다운로드')
                     ui.button(icon='delete_outline', on_click=lambda entry=entry: self.remove(entry)).props('flat round color=negative aria-label="첨부파일 삭제"').tooltip('삭제')
         self.set_busy(self.pending > 0)
@@ -77,6 +82,19 @@ class AttachmentView:
             await self.refresh()
             draft = isinstance(self.repository, DraftAttachments) and self.repository.record_id is None
             ui.notify('첨부파일을 추가했습니다. 일지를 저장하면 함께 저장됩니다.' if draft else '첨부파일을 저장했습니다.', type='positive')
+
+    async def show_preview(self, entry):
+        if self.dialog.is_deleted:
+            return
+        self.close_preview()
+        with self.dialog:
+            preview = self.preview = AttachmentPreview(self.repository, entry, self.lock)
+        await preview.load()
+
+    def close_preview(self):
+        if self.preview is not None:
+            self.preview.close()
+            self.preview = None
 
     async def download(self, entry):
         async with self.operation():
@@ -144,12 +162,16 @@ class AttachmentButton(ui.button):
             await self.view.dialog
         finally:
             self.opened = False
+            if self.view is not None:
+                self.view.close_preview()
             if self.view is not None and not self.view.dialog.is_deleted:
                 self.view.dialog.delete()
             self.view = None
 
     def _handle_delete(self):
         self.repository.discard()
+        if self.view is not None:
+            self.view.close_preview()
         if self.view is not None and not self.view.dialog.is_deleted:
             self.view.dialog.submit(None)
             self.view.dialog.delete()

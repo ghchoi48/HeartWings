@@ -135,6 +135,16 @@ class SpecialEducationView(CounselingView):
     def set_case_actions_enabled(self, enabled: bool) -> None:
         self.edit_case.set_enabled(enabled)
 
+    async def after_case_deleted(self):
+        await super().after_case_deleted()
+        if self.student_list.has_special_education_logs:
+            await self.student_list.reload()
+
+    async def after_log_deleted(self):
+        await super().after_log_deleted()
+        if self.student_list.has_special_education_logs:
+            await self.student_list.reload()
+
     def build(self) -> None:
         """학생 검색, 선택 학생의 상담 목록을 구성한다."""
         with ui.column().classes('w-full gap-5 p-4 md:p-8'):
@@ -142,7 +152,7 @@ class SpecialEducationView(CounselingView):
             ui.label('학생을 선택하고 교육 내용을 기록하세요.').classes('text-slate-500')
             with ui.element('div').classes('w-full grid grid-cols-1 lg:grid-cols-[3fr_7fr] items-start gap-6'):
                 self.student_list = StudentList(self.students, on_select=self.select_student)
-                self.student_list.build()
+                self.student_list.build(special_education_filter=True)
                 with ui.card().classes('w-full min-w-0 rounded-2xl shadow-sm p-5'):
                     with ui.row().classes('w-full items-center justify-between'):
                         self.student_heading = ui.label('교육 대상 학생을 선택해 주세요.').classes('text-xl font-bold')

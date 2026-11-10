@@ -10095,6 +10095,15 @@
       "source_sha256": "9166c40e6ffd4c0edebabc354e1a1e2cffc1bb473f88007694793757685cc8c3",
       "source_archive": "https://pypi.org/project/x-wr-timezone/2.0.1/#files",
       "note": "LGPL-3.0-or-later. Original source is bundled. See GOOGLE_CALENDAR_SOURCES.md for rebuilding with modified libraries. GPL and LGPL texts are included in the source archive and pyxlsb/COPYING files."
+    },
+    {
+      "name": "pypdfium2 / PDFium",
+      "version": "5.15.1 / 159.0.8149.0",
+      "license": "Apache-2.0 OR BSD-3-Clause (pypdfium2); BSD-style (PDFium); bundled components: see license text",
+      "source": "https://github.com/pypdfium2-team/pypdfium2",
+      "text_file": "libraries/pypdfium2.txt",
+      "license_origin": "pypdfium2-5.15.1.dist-info/licenses",
+      "note": "Installed distribution license texts, including PDFium and bundled third-party components."
     }
   ],
   "fonts": [

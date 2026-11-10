@@ -78,6 +78,8 @@ def register_page(path: Path) -> None:
             root.clear()
 
             async def lock_database():
+                from maeumnarae.views.journals.attachment_preview import close_previews
+                close_previews(ui.context.client)
                 await run.io_bound(database.lock)
                 ui.navigate.to('/')
 
