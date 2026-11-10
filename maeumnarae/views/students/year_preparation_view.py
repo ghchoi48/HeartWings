@@ -271,7 +271,7 @@ class YearPreparationView:
                         options = {'': '명부 연결 없음 (누락 상태 지정)'}
                         options.update({r.key: f'{r.key} · ' + self.describe(r.source) for r in candidates})
                         with ui.row().classes('w-full flex-nowrap items-center') as connection_row:
-                            target = ui.select(options, value='', label='진급 학년도 명부 검색·연결', with_input=True).classes('flex-1 min-w-0')
+                            target = ui.select(options, value='', label='진급 학년도 명부 검색·연결', with_input=True).props('filled').classes('flex-1 min-w-0')
                         ui.label('왼쪽 기준 학년도 학생과 동일한 학생을 진급 명부에서 선택한 뒤 편집 반영을 누르세요.').classes('text-sm')
                     elif row:
                         candidates = list(row.candidates) + [pid for pid in self.draft.people if pid not in row.candidates]
