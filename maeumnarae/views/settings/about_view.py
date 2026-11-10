@@ -3,6 +3,7 @@
 from nicegui import ui
 
 from maeumnarae.core.program_info import AUTHOR, GITHUB_URL, PROGRAM_NAME, PROGRAM_VERSION, program_license, third_party_notices, third_party_source
+from maeumnarae.views.settings.update_history import show_update_history
 
 
 def license_text(text: str) -> None:
@@ -15,6 +16,7 @@ def license_text(text: str) -> None:
 def build_about() -> None:
     ui.label(PROGRAM_NAME).classes('text-2xl font-bold text-slate-800')
     ui.label(f'현재 버전: {PROGRAM_VERSION}').classes('text-sm text-slate-500')
+    ui.button('업데이트 내역', icon='history', on_click=show_update_history).props('outline')
     ui.label('학교 Wee클래스와 전문상담교사를 위한 상담 관리 프로그램입니다.').classes('text-slate-600')
     ui.label('학생 정보와 상담 기록을 관리하고, 캘린더와 통계로 상담 업무를 확인할 수 있습니다.').classes('text-sm text-slate-500')
     ui.label(f'제작자: {AUTHOR}').classes('font-semibold text-slate-700')

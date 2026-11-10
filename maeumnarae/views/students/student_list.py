@@ -44,7 +44,7 @@ class StudentList:
                     'outlined dense clearable debounce=300').classes('w-full').bind_value(self.table, 'filter')
                 if special_education_filter:
                     with search.add_slot('append'):
-                        ui.checkbox('일지가 있는 학생만',
+                        ui.checkbox('일지있음',
                                     on_change=self._change_special_education_filter).props(
                                         'dense').classes('text-xs').on('click.stop', lambda: None)
             self.table.on('rowClick', self._select_student,

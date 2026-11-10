@@ -57,3 +57,35 @@ def fetch_update(current_version: str = PROGRAM_VERSION) -> Release | None:
     except (OSError, ValueError):
         # 오프라인, 시간 초과, API 제한, 릴리스 없음은 앱 시작을 방해하지 않는다.
         return None
+
+
+def fetch_release_history(page: int = 1) -> tuple[list[Release], bool]:
+    """공개 릴리스 내역 한 페이지와 다음 페이지 가능 여부를 반환한다."""
+    if page < 1:
+        raise ValueError('페이지는 1 이상이어야 합니다.')
+    repository = GITHUB_URL.removeprefix('https://github.com/')
+    request = Request(f'https://api.github.com/repos/{repository}/releases?per_page=20&page={page}', headers={
+        'Accept': 'application/vnd.github+json',
+        'User-Agent': f'HeartWings/{PROGRAM_VERSION}',
+        'X-GitHub-Api-Version': '2022-11-28',
+    })
+    with urlopen(request, timeout=8,
+                 context=ssl.create_default_context(cafile=certifi.where())) as response:
+        raw = response.read(4_000_001)
+    if len(raw) > 4_000_000:
+        raise ValueError('업데이트 내역이 너무 큽니다.')
+    data = json.loads(raw)
+    if not isinstance(data, list):
+        raise ValueError('업데이트 내역 형식이 올바르지 않습니다.')
+    releases = []
+    for item in data:
+        if not isinstance(item, dict) or item.get('draft') or item.get('prerelease'):
+            continue
+        tag = item.get('tag_name')
+        if version_numbers(tag) is None:
+            continue
+        notes = item.get('body')
+        if not isinstance(notes, str) or not notes.strip():
+            notes = '등록된 변경사항이 없습니다.'
+        releases.append(Release(tag, notes, f'{GITHUB_URL}/releases/tag/{quote(tag, safe="")}'))
+    return releases, len(data) == 20
