@@ -34,7 +34,7 @@ class YearPreparationView:
                 .year-review-slide-up { animation: none; }
             }
         ''')
-        with ui.card().classes('w-full shadow-none border p-4'):
+        with ui.card().classes('w-full min-w-0 shadow-none border border-slate-200 p-4 gap-3'):
             ui.label('학생 진급' if self.kind == 'students' else '교사 명부 갱신').classes('text-lg font-bold')
             ui.label('새 학년도 전체 명단을 업로드하세요. 명단에 없는 기존 인원도 검토 대상입니다. 최종 확정 전에는 저장되지 않습니다.').classes('text-sm')
             current_year = current_school_year()
@@ -44,7 +44,7 @@ class YearPreparationView:
                 ui.label('→').classes('text-xl text-slate-500 shrink-0')
                 self.target = ui.label(f'대상 학년도: {current_year + 1}학년도').classes('whitespace-nowrap')
             self.year.on_value_change(lambda e: self.target.set_text(f'대상 학년도: {int(e.value) + 1}학년도' if e.value is not None else '기준 학년도를 선택하세요.'))
-            self.download = ui.button('기존 일괄 등록 서식 다운로드', icon='download', on_click=self.download_template).props('outline')
+            self.download = ui.button('서식 다운로드', icon='download', on_click=self.download_template).props('outline')
             self.upload = SecureUpload(label=f'{TITLES[self.kind]} 전체 명단 XLSX', auto_upload=True, max_files=1,
                 max_file_size=MAX_FILE_BYTES, on_upload=self.receive,
                 on_rejected=lambda: ui.notify('10MB 이하의 XLSX 파일을 선택하세요.', type='warning')).props('accept=.xlsx').classes('w-full')

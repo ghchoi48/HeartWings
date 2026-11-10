@@ -1,4 +1,4 @@
-"""일반, 화면, 시스템, DB, 프로그램 정보 탭으로 구성한 설정 화면."""
+"""일반, 화면, 시스템, DB, 내보내기, 프로그램 정보 탭으로 구성한 설정 화면."""
 
 from collections.abc import Callable
 
@@ -13,6 +13,7 @@ from maeumnarae.views.settings.password_settings_view import build_password_sett
 from maeumnarae.views.settings.school_settings_view import build_school_settings
 from maeumnarae.views.settings.about_view import build_about
 from maeumnarae.views.settings.database_settings_view import build_database_settings
+from maeumnarae.views.settings.export_settings_view import build_export_settings
 from maeumnarae.views.shared.settings_card import settings_card
 from maeumnarae.views.reports.journal_print_view import invalidate_prints
 
@@ -35,6 +36,7 @@ def build_settings(display: DisplaySettings | None = None,
             ui.tab('display', label='화면', icon='palette')
             ui.tab('system', label='시스템', icon='settings')
             ui.tab('db', label='DB', icon='storage')
+            ui.tab('export', label='내보내기', icon='file_download')
             ui.tab('about', label='프로그램 정보', icon='info_outline')
         tabs.on_value_change(lambda: invalidate_prints(tabs.client))
         with ui.tab_panels(tabs, value='general').props('keep-alive').classes('w-full bg-transparent'):
@@ -60,6 +62,10 @@ def build_settings(display: DisplaySettings | None = None,
                 with ui.column().classes('w-full gap-6'):
                     if database is not None:
                         build_database_settings(database, on_roster_import)
+            with ui.tab_panel('export').classes('p-0'):
+                with ui.column().classes('w-full gap-6'):
+                    if database is not None:
+                        build_export_settings(database)
             with ui.tab_panel('about').classes('p-0'):
                 with settings_card('프로그램 정보', 'info_outline',
                                    '마음나래 프로그램을 소개합니다.'):

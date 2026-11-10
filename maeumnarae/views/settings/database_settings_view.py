@@ -16,8 +16,7 @@ from maeumnarae.views.students.roster_import_view import RosterImportView
 from maeumnarae.views.students.year_preparation_view import YearPreparationView
 from maeumnarae.views.data_management.legacy_import_view import LegacyImportView
 from maeumnarae.views.shared.settings_card import settings_card
-from maeumnarae.views.reports.journal_export_view import JournalExportView
-from maeumnarae.views.reports.journal_print_view import build_all_print, invalidate_prints
+from maeumnarae.views.reports.journal_print_view import invalidate_prints
 from maeumnarae.views.data_management.partial_backup_view import PartialBackupView
 
 
@@ -275,10 +274,6 @@ def build_database_settings(database: Database, on_roster_import=None) -> None:
                             reset = ui.button('DB 전체 초기화', icon='delete_forever', color='negative', on_click=initialize_database)
                     reset_dialog.on('hide', lambda: reset_confirm.set_value(False))
                     open_reset = ui.button('DB 전체 초기화 (Hard Reset)', icon='delete_forever', color='negative', on_click=reset_dialog.open).props('outline')
-    JournalExportView(database).build(collapsible=True)
-    JournalExportView(database, ledger=True).build(collapsible=True)
-    build_all_print(database)
-
     async def imported(kind):
         if on_roster_import is not None:
             await on_roster_import(kind)
