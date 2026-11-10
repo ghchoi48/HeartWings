@@ -79,7 +79,7 @@ class StudentList:
         if request != self.list_request:
             return
         self.table.rows = [dict(id=s.id, name=s.name, nickname=s.nickname or '—',
-                                gender=s.gender or '—', grade=s.grade, classroom=s.classroom) for s in students]
+                                gender=s.gender or '—', grade=s.grade if s.status == '재학' else s.status, classroom=s.classroom) for s in students]
         self.table.update()
 
     async def _change_special_education_filter(self, event: events.ValueChangeEventArguments) -> None:

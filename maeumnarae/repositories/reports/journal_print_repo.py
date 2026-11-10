@@ -96,11 +96,11 @@ class JournalPrintRepository:
                             enrollment_key = (data['subject_id'], year)
                             if enrollment_key not in enrollments:
                                 enrollments[enrollment_key] = connection.execute(
-                                    'SELECT grade, classroom, student_number FROM student_enrollments '
+                                    'SELECT grade, classroom, student_number, status FROM student_enrollments '
                                     'WHERE student_id=? AND school_year=?', enrollment_key).fetchone()
                             enrollment = enrollments[enrollment_key]
                             if enrollment:
-                                individual.update(grade=enrollment['grade'], classroom=enrollment['classroom'],
+                                individual.update(enrollment_status=enrollment['status'], grade=enrollment['grade'], classroom=enrollment['classroom'],
                                                   student_number=enrollment['student_number'] or '')
                         if kind in SESSION_SOURCES:
                             session_params = ((data['subject_id'], data['case_id']) if kind in ('individual', 'special')

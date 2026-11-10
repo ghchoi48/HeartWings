@@ -29,13 +29,13 @@ class StudentRepository:
             {key: data[key] for key in StudentEnrollmentInput.model_fields}))
         enrollment.update(student_id=student_id, timestamp=now_text())
         connection.execute('''INSERT INTO student_enrollments
-            (student_id, school_year, grade, classroom, student_number, created_at, updated_at)
-            VALUES (:student_id, :school_year, :grade, :classroom, :student_number, :timestamp, :timestamp)
+            (student_id, school_year, grade, classroom, student_number, status, created_at, updated_at)
+            VALUES (:student_id, :school_year, :grade, :classroom, :student_number, :status, :timestamp, :timestamp)
             ON CONFLICT(student_id, school_year) DO UPDATE SET
-                grade=excluded.grade, classroom=excluded.classroom,
+                grade=excluded.grade, classroom=excluded.classroom, status=excluded.status,
                 student_number=excluded.student_number, updated_at=excluded.updated_at''', enrollment)
-        connection.execute('''UPDATE students SET (school_year, grade, classroom, student_number) =
-            (SELECT school_year, grade, classroom, student_number FROM student_enrollments
+        connection.execute('''UPDATE students SET (school_year, grade, classroom, student_number, status) =
+            (SELECT school_year, grade, classroom, student_number, status FROM student_enrollments
              WHERE student_id=:student_id ORDER BY school_year DESC LIMIT 1), updated_at=:timestamp
             WHERE id=:student_id''', enrollment)
 
@@ -56,7 +56,7 @@ class StudentRepository:
                     'SELECT 1 FROM student_enrollments WHERE student_id=? AND school_year=?',
                     (student_id, school_year)).fetchone() is None:
                 raise NotFoundError('학적 이력을 찾을 수 없습니다.')
-            latest = connection.execute('''SELECT school_year, grade, classroom, student_number
+            latest = connection.execute('''SELECT school_year, grade, classroom, student_number, status
                 FROM student_enrollments WHERE student_id=? AND school_year<>?
                 ORDER BY school_year DESC LIMIT 1''', (student_id, school_year)).fetchone()
             if latest is None:
@@ -64,8 +64,8 @@ class StudentRepository:
             connection.execute('DELETE FROM student_enrollments WHERE student_id=? AND school_year=?',
                                (student_id, school_year))
             connection.execute('''UPDATE students SET school_year=?, grade=?, classroom=?,
-                student_number=?, updated_at=? WHERE id=?''',
-                (latest['school_year'], latest['grade'], latest['classroom'], latest['student_number'],
+                student_number=?, status=?, updated_at=? WHERE id=?''',
+                (latest['school_year'], latest['grade'], latest['classroom'], latest['student_number'], latest['status'],
                  now_text(), student_id))
             row = connection.execute('SELECT * FROM students WHERE id=?', (student_id,)).fetchone()
             saved = Student.model_validate(dict(row))
@@ -82,9 +82,9 @@ class StudentRepository:
                 item['created_at'] = item['updated_at'] = now_text()
                 item['nickname'] = item['nickname'] or ''
                 cursor = connection.execute('''INSERT INTO students
-                    (name, nickname, gender, school_year, student_number, grade, classroom, birth_date,
+                    (name, nickname, gender, school_year, student_number, grade, status, classroom, birth_date,
                      student_contact, guardian_contact, notes, created_at, updated_at)
-                    VALUES (:name, :nickname, :gender, :school_year, :student_number, :grade, :classroom, :birth_date,
+                    VALUES (:name, :nickname, :gender, :school_year, :student_number, :grade, :status, :classroom, :birth_date,
                             :student_contact, :guardian_contact, :notes, :created_at, :updated_at)''', item)
                 self._save_enrollment(connection, cursor.lastrowid, item)
                 row = connection.execute('SELECT * FROM students WHERE id=?', (cursor.lastrowid,)).fetchone()

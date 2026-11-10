@@ -158,7 +158,7 @@ class AppLayout:
                             await view.select_student(None)
                         else:
                             view.selected = student
-                            view.student_heading.text = f'{student.name} · {student.grade}학년 {student.classroom}반'
+                            view.student_heading.text = f'{student.name} · {student.enrollment_label}'
             if self.group_view and self.group_view.selected:
                 await self.group_view.select_group(self.group_view.selected.id)
             if self.calendar_view:
@@ -196,7 +196,7 @@ class AppLayout:
                 counseling_heading.bind_text_from(
                     self.counseling_view, 'selected',
                     backward=lambda student: (
-                        f'{student.name} · {student.grade}학년 {student.classroom}반'
+                        f'{student.name} · {student.enrollment_label}'
                         if student else '일지 관리'
                     ),
                 )

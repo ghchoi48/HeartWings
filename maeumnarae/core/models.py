@@ -5,7 +5,7 @@ import json
 from dataclasses import dataclass
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator, model_validator
 
 
 class InputModel(BaseModel):
@@ -87,10 +87,42 @@ def current_school_year() -> int:
     return today.year if today.month >= 3 else today.year - 1
 
 
-class StudentEnrollmentInput(InputModel):
+ENROLLMENT_STATUSES = ['재학', '전학', '자퇴', '조기졸업', '유예', '졸업']
+
+
+class EnrollmentState(InputModel):
+    status: Literal['재학', '전학', '자퇴', '조기졸업', '유예', '졸업'] = '재학'
+
+    @model_validator(mode='before')
+    @classmethod
+    def clear_inactive_grade(cls, data):
+        if isinstance(data, dict) and data.get('status') in ('졸업', '조기졸업', '자퇴', '전학'):
+            return {**data, 'grade': None}
+        return data
+
+    @property
+    def enrollment_label(self):
+        if self.status != '재학':
+            return self.status
+        return f'{self.grade}학년 {self.classroom}반'
+
+    @model_validator(mode='after')
+    def validate_enrollment_state(self):
+        if self.status not in ('졸업', '조기졸업', '자퇴', '전학') and self.grade is None:
+            raise ValueError('재학·유예 학적에는 학년을 입력하세요.')
+        if self.status == '재학' and not self.classroom:
+            raise ValueError('재학 학생의 반을 입력하세요.')
+        if self.status not in ('재학', '유예') and (self.classroom or self.student_number):
+            raise ValueError('비재학 학생의 반과 번호는 비워 주세요.')
+        if self.student_number and not self.classroom:
+            raise ValueError('번호가 있으면 반을 입력하세요.')
+        return self
+
+
+class StudentEnrollmentInput(EnrollmentState):
     school_year: int = Field(default_factory=current_school_year, ge=1900, le=9999)
-    grade: int = Field(ge=1, le=12)
-    classroom: str = Field(min_length=1, max_length=30)
+    grade: int | None = Field(default=None, ge=1, le=12)
+    classroom: str = Field(default='', max_length=30)
     student_number: str | None = Field(default=None, min_length=1, max_length=50)
 
 
@@ -100,7 +132,7 @@ class StudentEnrollment(StudentEnrollmentInput, AuthoredRecord):
     updated_at: datetime
 
 
-class StudentInput(InputModel):
+class StudentInput(EnrollmentState):
     """학생 기본 정보와 한 학년도의 학적. 번호는 선택 사항이다."""
 
     name: str = Field(min_length=1, max_length=100)
@@ -108,8 +140,8 @@ class StudentInput(InputModel):
     nickname: str | None = Field(default='', max_length=100)
     gender: Literal['남', '여', '기타'] | None = None
     student_number: str | None = Field(default=None, min_length=1, max_length=50)
-    grade: int = Field(ge=1, le=12)
-    classroom: str = Field(min_length=1, max_length=30)
+    grade: int | None = Field(default=None, ge=1, le=12)
+    classroom: str = Field(default='', max_length=30)
     birth_date: date | None = None
     guardian_contact: str = Field(default='', max_length=200)
     student_contact: str = Field(default='', max_length=200)

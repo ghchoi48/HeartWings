@@ -9,7 +9,7 @@ from maeumnarae.views.shared.delete_action import delete_button
 from pydantic import ValidationError
 
 from maeumnarae.core.database import DatabaseError
-from maeumnarae.core.models import FamilyInput, FamilyMember, SchoolSettings, Student, StudentInput, current_school_year
+from maeumnarae.core.models import ENROLLMENT_STATUSES, FamilyInput, FamilyMember, SchoolSettings, Student, StudentInput, current_school_year
 from maeumnarae.repositories.journals.counseling_repo import CounselingRepository
 from maeumnarae.repositories.students.student_repo import StudentRepository
 from maeumnarae.repositories.settings.school_settings_repo import SchoolSettingsRepository
@@ -34,6 +34,8 @@ def student_form_input(values: dict) -> StudentInput:
         data[field] = data.get(field) or None
         if isinstance(data[field], str):
             data[field] = data[field].strip() or None
+    if data.get('status', '재학') not in ('재학', '유예'):
+        data.update(classroom='', student_number=None)
     return StudentInput(**data)
 
 
@@ -115,13 +117,13 @@ class StudentView:
                                 delete_button(self.students.database, 'student', lambda: student, self.load_students,
                                               blocked=lambda: self.editor_open, icon_only=True)
                                 ui.button('학생 정보 수정', icon='edit', on_click=lambda: self.open_editor(student)).props('outline')
-                        ui.label(f'{student.school_year}학년도 · {student.grade}학년 {student.classroom}반 · 번호 {student.student_number or "미입력"}').classes('text-slate-500')
+                        ui.label(f'{student.school_year}학년도 · {student.enrollment_label} · 번호 {student.student_number or "미입력"}').classes('text-slate-500')
                         with ui.expansion('학년도별 학적 이력', icon='history').classes('w-full'):
                             for enrollment in enrollments:
                                 with ui.row().classes('w-full items-center flex-nowrap gap-2 border-b border-slate-100 py-2'):
                                     with ui.column().classes('flex-1 min-w-0 gap-1'):
                                         ui.label(f'{enrollment.school_year}학년도').classes('font-semibold')
-                                        ui.label(f'{enrollment.grade}학년 {enrollment.classroom}반 · 번호 {enrollment.student_number or "미입력"}').classes('text-sm text-slate-500 break-words')
+                                        ui.label(f'{enrollment.enrollment_label} · 번호 {enrollment.student_number or "미입력"}').classes('text-sm text-slate-500 break-words')
                                     delete = ui.button(icon='delete_outline',
                                         on_click=lambda year=enrollment.school_year: self.delete_enrollment(student.id, year)).props(
                                             f'flat round color=negative aria-label="{enrollment.school_year}학년도 학적 이력 삭제"')
@@ -374,14 +376,22 @@ class StudentView:
                                                 value=grade if grade in grade_options else None).props('outlined').classes('flex-1 min-w-0')
                     fields['classroom'] = ui.input('*반', value=initial.get('classroom', '')).props('outlined').classes('flex-1 min-w-0')
                     fields['student_number'] = ui.input('번호', value=initial.get('student_number') or '').props('outlined').classes('flex-1 min-w-0')
+                fields['status'] = ui.select(ENROLLMENT_STATUSES, label='학적 상태', value=initial.get('status', '재학')).props('outlined')
+                def update_grade_state():
+                    grade_not_applicable = fields['status'].value in ('졸업', '조기졸업', '자퇴', '전학')
+                    if grade_not_applicable:
+                        fields['grade'].value = None
+                    fields['grade'].set_enabled(not grade_not_applicable)
+                fields['status'].on_value_change(lambda _: update_grade_state())
+                update_grade_state()
                 def load_year(event):
                     for enrollment in enrollments:
                         if enrollment.school_year == event.value:
-                            for key in ('grade', 'classroom', 'student_number'):
+                            for key in ('grade', 'classroom', 'student_number', 'status'):
                                 fields[key].value = getattr(enrollment, key)
                             break
                 fields['school_year'].on_value_change(load_year)
-                if grade not in grade_options:
+                if grade not in grade_options and initial.get('status') not in ('졸업', '조기졸업', '자퇴', '전학'):
                     ui.label(f'기존 학년은 {grade}학년입니다. 현재 학교급에 맞는 학년을 선택해야 저장할 수 있습니다.').classes('text-sm text-amber-700')
                 with ui.row().classes('w-full flex-nowrap items-start'):
                     fields['birth_date'] = ui.date_input('생년월일', value=str(initial.get('birth_date') or '')).props('outlined').classes('flex-1 min-w-0')
@@ -398,7 +408,7 @@ class StudentView:
                         {key: element.value for key, element in fields.items()},
                         guardian_contact=student.guardian_contact if student else ''))
                 except ValidationError as error:
-                    invalid = list(dict.fromkeys(FIELD_LABELS.get(str(e['loc'][0]), '입력값') for e in error.errors()))
+                    invalid = list(dict.fromkeys(FIELD_LABELS.get(str(e['loc'][0]) if e['loc'] else '', '입력값') for e in error.errors()))
                     error_label.text = ', '.join(invalid) + ': 입력 형식과 길이를 확인하세요. 생년월일은 YYYY-MM-DD 형식입니다.'
                     return
                 saving = True
@@ -419,7 +429,8 @@ class StudentView:
                     save_button.enable()
                     cancel.enable()
 
-            with ui.row().classes('w-full justify-end'):
+            with ui.row().classes('w-full flex-nowrap items-center justify-end') as actions:
+                fields['status'].classes('w-32 mr-auto').move(actions)
                 cancel = ui.button('취소', on_click=lambda: dialog.submit(None)).props('flat')
                 save_button = ui.button('저장', icon='save', on_click=save)
         try:

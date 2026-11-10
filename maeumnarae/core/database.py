@@ -10,7 +10,7 @@ from threading import Lock, RLock
 from weakref import WeakValueDictionary
 from maeumnarae.core.models import SchoolSettings, current_school_year
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 5
 LEGACY_IMPORT_SCHEMAS = {
     'legacy_imports': '''CREATE TABLE IF NOT EXISTS legacy_imports (
         fingerprint TEXT PRIMARY KEY, imported_at TEXT NOT NULL)''',
@@ -258,7 +258,9 @@ SCHEMA = (
         id INTEGER PRIMARY KEY,
         name TEXT NOT NULL CHECK(length(trim(name)) > 0),
         student_number TEXT,
-        grade INTEGER NOT NULL CHECK(grade BETWEEN 1 AND 12),
+        grade INTEGER CHECK((status IN ('졸업','조기졸업','자퇴','전학') AND grade IS NULL) OR
+            (status NOT IN ('졸업','조기졸업','자퇴','전학') AND grade IS NOT NULL AND grade BETWEEN 1 AND 12)),
+        status TEXT NOT NULL DEFAULT '재학' CHECK(status IN ('재학','전학','자퇴','조기졸업','유예','졸업')),
         classroom TEXT NOT NULL,
         birth_date TEXT,
         guardian_contact TEXT NOT NULL,
@@ -277,8 +279,10 @@ SCHEMA = (
     """CREATE TABLE student_enrollments (
         student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
         school_year INTEGER NOT NULL CHECK(school_year BETWEEN 1900 AND 9999),
-        grade INTEGER NOT NULL CHECK(grade BETWEEN 1 AND 12),
-        classroom TEXT NOT NULL CHECK(length(trim(classroom)) > 0),
+        grade INTEGER CHECK((status IN ('졸업','조기졸업','자퇴','전학') AND grade IS NULL) OR
+            (status NOT IN ('졸업','조기졸업','자퇴','전학') AND grade IS NOT NULL AND grade BETWEEN 1 AND 12)),
+        status TEXT NOT NULL DEFAULT '재학' CHECK(status IN ('재학','전학','자퇴','조기졸업','유예','졸업')),
+        classroom TEXT NOT NULL CHECK(status != '재학' OR length(trim(classroom)) > 0),
         student_number TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
@@ -594,12 +598,17 @@ class Database:
             self._password = new_password
 
     @contextmanager
-    def _transaction(self, *, write: bool = False):
+    def _transaction(self, *, write: bool = False, rebuild_schema: bool = False):
         """잠금으로 보호된 세션 내부에서만 사용한다."""
         connection = self._connect()
         try:
+            if rebuild_schema:
+                # 부모 테이블 재구성 시 자식 이력을 삭제하지 않는다. 커밋 전 전체 FK를 검사한다.
+                connection.execute('PRAGMA foreign_keys = OFF')
             connection.execute('BEGIN IMMEDIATE' if write else 'BEGIN')
             yield connection
+            if rebuild_schema and connection.execute('PRAGMA foreign_key_check').fetchone():
+                raise DatabaseError('DB 업그레이드 중 연결 관계의 무결성 검사에 실패했습니다.')
             connection.commit()
             if write and connection.total_changes:
                 self.write_revision += 1
@@ -634,19 +643,56 @@ class Database:
             connection.execute('DROP TABLE school_settings_copy')
             connection.execute(next(sql for sql in SCHEMA if sql.startswith('CREATE TRIGGER "school_settings_snapshot_author"')))
 
+    def _migrate_v2_to_v3(self, connection) -> None:
+        connection.execute("ALTER TABLE students ADD COLUMN status TEXT NOT NULL DEFAULT '재학' CHECK(status IN ('재학','전학','자퇴','조기졸업','유예','졸업'))")
+        connection.execute('CREATE TEMP TABLE enrollment_copy AS SELECT * FROM student_enrollments')
+        connection.execute('DROP TABLE student_enrollments')
+        connection.execute(next(sql for sql in SCHEMA if sql.startswith('CREATE TABLE student_enrollments (')))
+        columns = ', '.join(row['name'] for row in connection.execute('PRAGMA table_info(enrollment_copy)'))
+        connection.execute(f'INSERT INTO student_enrollments ({columns}) SELECT {columns} FROM enrollment_copy')
+        connection.execute('DROP TABLE enrollment_copy')
+        connection.execute(next(sql for sql in SCHEMA if sql.startswith('CREATE TRIGGER student_enrollments_snapshot_author')))
+
+    def _migrate_v3_to_v4(self, connection) -> None:
+        """졸업·조기졸업·자퇴·전학 학년을 NULL로 바꾸며 과거 학적·학생 ID·연결 기록을 보존한다."""
+        for table in ('students', 'student_enrollments'):
+            objects = [row['sql'] for row in connection.execute(
+                "SELECT sql FROM sqlite_master WHERE tbl_name=? AND type IN ('index', 'trigger') AND sql IS NOT NULL",
+                (table,))]
+            connection.execute(f'CREATE TEMP TABLE grade_migration_copy AS SELECT * FROM {table}')
+            connection.execute("UPDATE grade_migration_copy SET grade=NULL WHERE status IN ('졸업','조기졸업','자퇴','전학')")
+            columns = ', '.join(row['name'] for row in connection.execute('PRAGMA table_info(grade_migration_copy)'))
+            connection.execute(f'DROP TABLE {table}')
+            connection.execute(next(sql for sql in SCHEMA if sql.startswith(
+                f'CREATE TABLE "{table}" (' if table == 'students' else f'CREATE TABLE {table} (')))
+            connection.execute(f'INSERT INTO {table} ({columns}) SELECT {columns} FROM grade_migration_copy')
+            connection.execute('DROP TABLE grade_migration_copy')
+            for sql in objects:
+                connection.execute(sql)
+
+    def _migrate_v4_to_v5(self, connection) -> None:
+        self._migrate_v3_to_v4(connection)
+
     def initialize(self, school: SchoolSettings | None = None, *, onboarding: bool = False) -> None:
         """최신 구조를 생성하거나 기존 DB를 한 트랜잭션에서 업그레이드한다."""
         if not self.path.exists() or self.path.stat().st_size == 0:
             validate_new_password(self._password or '')
-        with self._session_lock, self._transaction(write=True) as connection:
+        with self._session_lock, self._transaction(write=True, rebuild_schema=True) as connection:
             version = connection.execute('PRAGMA user_version').fetchone()[0]
             if version == SCHEMA_VERSION:
                 return
-            if version == 1:
-                self._migrate_v1_to_v2(connection)
+            if version in (1, 2, 3, 4):
+                if version == 1:
+                    self._migrate_v1_to_v2(connection)
+                if version <= 2:
+                    self._migrate_v2_to_v3(connection)
+                if version <= 3:
+                    self._migrate_v3_to_v4(connection)
+                else:
+                    self._migrate_v4_to_v5(connection)
                 if connection.execute('PRAGMA foreign_key_check').fetchone():
                     raise DatabaseError('DB 업그레이드 중 연결 관계의 무결성 검사에 실패했습니다.')
-                connection.execute('PRAGMA user_version = 2')
+                connection.execute(f'PRAGMA user_version = {SCHEMA_VERSION}')
                 return
             if version != 0 or connection.execute(
                 "SELECT 1 FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' LIMIT 1"

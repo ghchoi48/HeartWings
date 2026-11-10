@@ -13,6 +13,7 @@ from maeumnarae.core.database import Database, DatabaseError
 from maeumnarae.services.data_management.database_maintenance import (create_backup, reset_database, restore_backup,
                                                      soft_reset_database, reset_counseling_data)
 from maeumnarae.views.students.roster_import_view import RosterImportView
+from maeumnarae.views.students.year_preparation_view import YearPreparationView
 from maeumnarae.views.data_management.legacy_import_view import LegacyImportView
 from maeumnarae.views.shared.settings_card import settings_card
 from maeumnarae.views.reports.journal_export_view import JournalExportView
@@ -286,6 +287,12 @@ def build_database_settings(database: Database, on_roster_import=None) -> None:
                        'XLSX 파일로 새 명부를 추가합니다. 기존 정보는 변경하지 않으며 오류가 있으면 전체 등록을 중단합니다.', collapsible=True):
         for kind in ('students', 'teachers'):
             view = RosterImportView(database, kind, lambda: busy, set_busy, imported)
+            view.build()
+            import_views.append(view)
+    with settings_card('새 학년도 준비', 'school',
+                       '전체 명단으로 학생 진급과 교사 갱신을 검토하고 확정합니다.', collapsible=True):
+        for kind in ('students', 'teachers'):
+            view = YearPreparationView(database, kind, lambda: busy, set_busy, imported)
             view.build()
             import_views.append(view)
     legacy = LegacyImportView(database, lambda: busy, set_busy, imported)

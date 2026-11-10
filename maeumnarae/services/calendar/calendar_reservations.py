@@ -55,8 +55,8 @@ def save_reservation(database, *, kind, owner_id, case_id=None, title, starts_at
 def reservation_options(database):
     """본문 없이 선택에 필요한 라벨만 읽으며 목록 개수를 제한하지 않는다."""
     with database.session() as connection:
-        students = {row['id']: f"{row['name']} · {row['grade']}학년 {row['classroom']}반 · 번호 {row['student_number'] or '미입력'} (#{row['id']})"
-                    for row in connection.execute('SELECT id, name, grade, classroom, student_number FROM students ORDER BY grade, classroom, name, id')}
+        students = {row['id']: f"{row['name']} · {str(row['grade']) + '학년 ' + row['classroom'] + '반' if row['status'] == '재학' else row['status']} · 번호 {row['student_number'] or '미입력'} (#{row['id']})"
+                    for row in connection.execute('SELECT id, name, grade, classroom, student_number, status FROM students ORDER BY grade, classroom, name, id')}
         teachers = {row['id']: f"{row['name']} · {row['responsibilities'] or '담당 업무 미입력'} (#{row['id']})"
                     for row in connection.execute('SELECT id, name, responsibilities FROM teachers ORDER BY name, id')}
         groups = {row['id']: f"{row['name']} (#{row['id']})"

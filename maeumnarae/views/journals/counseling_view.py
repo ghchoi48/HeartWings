@@ -217,7 +217,7 @@ class CounselingView:
             self.log_message.text = '학생이 존재하지 않습니다. 학생 목록을 새로고침해 주세요.'
             return
         self.selected = student
-        self.student_heading.text = f'{student.name} · {student.grade}학년 {student.classroom}반'
+        self.student_heading.text = f'{student.name} · {student.enrollment_label}'
         self.add_case.enable()
         self.log_offset = 0
         await self.load_cases()
@@ -513,7 +513,7 @@ class CounselingView:
             if request != self.student_request:
                 return
         self.selected = student
-        self.student_heading.text = f'{student.name} · {student.grade}학년 {student.classroom}반'
+        self.student_heading.text = f'{student.name} · {student.enrollment_label}'
         self.add_case.enable()
         self.log_offset = 0
         await self.load_cases(preferred_id=entry.case_id)
@@ -532,7 +532,7 @@ class CounselingView:
             target = None
         with ui.column().classes('w-full min-w-0 gap-4') as panel:
             ui.label('상담 일지 수정' if entry else '새 상담 일지 작성').classes('text-2xl font-bold')
-            ui.label(f'{student.name} · {student.grade}학년 {student.classroom}반 · 학번 {student.student_number or "미입력"}').classes('text-slate-500')
+            ui.label(f'{student.name} · {student.enrollment_label} · 학번 {student.student_number or "미입력"}').classes('text-slate-500')
             fields['category'] = ui.input('상담 유형', value=TARGET_CATEGORIES.get(target, initial['category']))
             fields['category'].set_visibility(False)
             with ui.grid(columns=4).classes('w-full gap-4 items-start'):

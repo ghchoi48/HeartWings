@@ -123,7 +123,7 @@ def _text(cell) -> str:
     return str(value).strip()
 
 
-def parse_import(content: bytes, kind: ImportKind) -> ImportBatch:
+def parse_import(content: bytes, kind: ImportKind, *, target_year: int | None = None) -> ImportBatch:
     """손상/과대 파일, 필수 열, 수식, 모델 제약과 파일 내부 중복을 검사한다."""
     if not content or len(content) > MAX_FILE_BYTES:
         raise ValueError('10MB 이하의 XLSX 파일을 선택해 주세요.')
@@ -175,6 +175,10 @@ def parse_import(content: bytes, kind: ImportKind) -> ImportBatch:
                     data['birth_date'] = data.get('birth_date') or None
                     if not data.get('school_year'):
                         data.pop('school_year', None)
+                    if target_year is not None:
+                        if data.get('school_year') and str(data['school_year']) != str(target_year):
+                            raise ValueError('선택한 대상 학년도와 파일의 학년도가 다릅니다.')
+                        data['school_year'] = target_year
                     value = StudentInput(**data)
                     identity = (value.school_year, value.grade, value.classroom, value.student_number) if value.student_number else None
                 else:
@@ -188,7 +192,7 @@ def parse_import(content: bytes, kind: ImportKind) -> ImportBatch:
                 records.append(ImportRow(number, value))
             except ValidationError as error:
                 fields = ', '.join(dict.fromkeys(
-                    next(label for key, label, _ in columns if key == item['loc'][0])
+                    next((label for key, label, _ in columns if item['loc'] and key == item['loc'][0]), '입력값')
                     for item in error.errors()))
                 errors.append(f'{number}행: {fields}의 필수값, 형식 또는 길이를 확인하세요.')
             except (ValueError, TypeError) as error:

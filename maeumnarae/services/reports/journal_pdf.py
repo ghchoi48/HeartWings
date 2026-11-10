@@ -268,6 +268,8 @@ def journal_story(record):
         f'{record.grade}학년' if record.grade is not None else '',
         f'{record.classroom}반' if record.classroom else '',
         f'{record.student_number}번' if record.student_number else '') if v)
+    if record.enrollment_status and record.enrollment_status != '재학':
+        enrollment = record.enrollment_status
     session = f'{record.session_number}회기' if record.session_number else ''
     info = [paragraph('개인상담 일지', fontName='JournalTitle', fontSize=16,
                       leading=24, alignment=TA_CENTER, spaceAfter=6),

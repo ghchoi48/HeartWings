@@ -63,6 +63,7 @@ class PrintRecord:
     follow_up: str = ''
     details: tuple[tuple[str, str], ...] = ()
     attendance: tuple[dict, ...] = ()
+    enrollment_status: str = ''
     grade: int | None = None
     classroom: str = ''
     student_number: str = ''

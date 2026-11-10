@@ -129,7 +129,7 @@ class PsychologicalTestView:
             self.message.text = '학생이 존재하지 않습니다. 학생 목록을 새로고침해 주세요.'
             return
         self.selected = student
-        self.student_heading.text = f'{student.name} · {student.grade}학년 {student.classroom}반'
+        self.student_heading.text = f'{student.name} · {student.enrollment_label}'
         self.add.enable()
         await self.load_logs()
 

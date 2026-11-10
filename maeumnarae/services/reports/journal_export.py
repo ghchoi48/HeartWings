@@ -224,7 +224,7 @@ def export_ledger(database, options: ExportOptions) -> LedgerExportResult:
     snapshot = JournalExportRepository(database).snapshot(include_students=True)
     rows, issues, counts = export_rows(snapshot, options, include_student_ids=True)
     linked_ids = {int(key.strip()) for row in rows for key in str(row[8] or '').split(',') if key.strip()}
-    students = [(s['id'], s['grade'], s['classroom'], s['student_number'], s['gender'], s['name'])
+    students = [(s['id'], s['grade'] if s.get('status', '재학') == '재학' else s['status'], s['classroom'], s['student_number'], s['gender'], s['name'])
                 for s in snapshot.students if s['id'] in linked_ids]
     headers = ('상담분류', 'Wee클래스', '대분류', '중분류', '상담구분', '상담인원', '학년도',
                '상담일자', '학생 ID', '학년', '성별', '상담제목', '상담내용', '상담시간(시)',

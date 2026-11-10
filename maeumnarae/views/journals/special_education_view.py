@@ -344,7 +344,7 @@ class SpecialEducationView(CounselingView):
         local_start = initial['starts_at'].astimezone(KST)
         with ui.dialog().props('persistent') as dialog, ui.card().classes('w-full max-w-6xl p-6 gap-4'):
             ui.label('특별 교육 일지 수정' if entry else '새 특별 교육 일지 작성').classes('text-2xl font-bold')
-            ui.label(f'{student.name} · {student.grade}학년 {student.classroom}반 · 학번 {student.student_number or "미입력"}').classes('text-slate-500')
+            ui.label(f'{student.name} · {student.enrollment_label} · 학번 {student.student_number or "미입력"}').classes('text-slate-500')
             # 공용 일지 저장 흐름에 전달할 유형은 화면에서 편집하지 않는다.
             fields['category'] = ui.input(value=initial['category'])
             fields['category'].set_visibility(False)

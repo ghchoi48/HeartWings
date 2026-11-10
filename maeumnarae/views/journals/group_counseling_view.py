@@ -233,7 +233,7 @@ class GroupCounselingView:
                 offset = 0
                 while True:
                     students = await run.io_bound(self.students.list, limit=1000, offset=offset)
-                    student_options.update({student.id: f'{student.name} · {student.grade}학년 {student.classroom}반 · 번호 {student.student_number or "미입력"}' for student in students})
+                    student_options.update({student.id: f'{student.name} · {student.enrollment_label} · 번호 {student.student_number or "미입력"}' for student in students})
                     if len(students) < 1000:
                         break
                     offset += len(students)

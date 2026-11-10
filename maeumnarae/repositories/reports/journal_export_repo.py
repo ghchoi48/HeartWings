@@ -61,6 +61,6 @@ class JournalExportRepository:
             for row in connection.execute('SELECT group_id, student_id FROM group_counseling_members ORDER BY student_id'):
                 members.setdefault(row['group_id'], []).append(row['student_id'])
             students = tuple(dict(row) for row in connection.execute(
-                'SELECT id, grade, classroom, student_number, gender, name FROM students ORDER BY id'
+                'SELECT id, grade, classroom, student_number, gender, name, status FROM students ORDER BY id'
             )) if include_students else ()
         return JournalSnapshot(tuple(records), {key: tuple(value) for key, value in members.items()}, students)

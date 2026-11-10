@@ -60,7 +60,7 @@ class ReportingRepository:
             groups = {}
             # 아래 SQL 식은 고정된 내부 값이다. 사용자 입력은 모두 매개변수로 바인딩한다.
             for key, expression in [('categories', 'c.category'), ('months', "strftime('%Y-%m', substr(c.starts_at, 1, 19), '+9 hours')"),
-                                    ('grades', 's.grade')]:
+                                    ('grades', "CASE WHEN s.status='졸업' THEN '졸업' ELSE s.grade END")]:
                 rows = connection.execute(f'''SELECT {expression} AS label, count(*) AS count
                     FROM counseling c JOIN students s ON s.id=c.student_id
                     WHERE c.starts_at >= :start AND c.starts_at < :end AND c.status='completed'
