@@ -93,7 +93,7 @@ def _verify(database: Database, *, allow_legacy: bool = False) -> None:
     with database.session() as connection:
         version = connection.execute('PRAGMA user_version').fetchone()[0]
         tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-        supported_versions = {1, 2, 3, 4, SCHEMA_VERSION} if allow_legacy else {SCHEMA_VERSION}
+        supported_versions = {1, 2, 3, 4, 5, SCHEMA_VERSION} if allow_legacy else {SCHEMA_VERSION}
         if version not in supported_versions or not {'students', 'counseling'} <= tables:
             raise DatabaseError('지원하는 마음나래 DB 파일이 아닙니다.')
         if [row[0] for row in connection.execute('PRAGMA integrity_check')] != ['ok']:

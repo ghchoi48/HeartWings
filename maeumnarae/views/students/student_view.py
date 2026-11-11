@@ -34,7 +34,7 @@ def student_form_input(values: dict) -> StudentInput:
         data[field] = data.get(field) or None
         if isinstance(data[field], str):
             data[field] = data[field].strip() or None
-    if data.get('status', '재학') not in ('재학', '유예'):
+    if data.get('status', '재학') != '재학':
         data.update(classroom='', student_number=None)
     return StudentInput(**data)
 

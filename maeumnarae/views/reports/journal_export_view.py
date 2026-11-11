@@ -2,6 +2,7 @@
 from datetime import date, datetime, timedelta
 
 from nicegui import run, ui
+from maeumnarae.views.shared.search_fields import search_select
 
 from maeumnarae.core.database import DatabaseError
 from maeumnarae.repositories.reports.journal_export_repo import JournalExportRepository
@@ -28,7 +29,7 @@ class JournalExportView:
             with ui.row().classes('w-full items-end flex-nowrap overflow-x-auto'):
                 self.period = ui.select({'year': '학년도', 'custom': '기간 직접 입력'},
                                         value='year', label='내보낼 기간').props('outlined').classes('flex-1 min-w-[200px]')
-                self.year = ui.select({}, label='학년도', with_input=True).props('outlined').classes('flex-1 min-w-[200px]')
+                self.year = search_select({}, label='학년도', with_input=True).props('outlined').classes('flex-1 min-w-[200px]')
                 self.year.bind_visibility_from(self.period, 'value', lambda value: value == 'year')
                 self.start = ui.date_input('일지 시작일', value=str(date(current_year, 3, 1))).props('outlined').classes('flex-1 min-w-[200px]')
                 self.end = ui.date_input('일지 종료일', value=str(today)).props('outlined').classes('flex-1 min-w-[200px]')

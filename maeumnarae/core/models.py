@@ -87,11 +87,11 @@ def current_school_year() -> int:
     return today.year if today.month >= 3 else today.year - 1
 
 
-ENROLLMENT_STATUSES = ['재학', '전학', '자퇴', '조기졸업', '유예', '졸업']
+ENROLLMENT_STATUSES = ['재학', '전학', '자퇴', '조기졸업', '졸업']
 
 
 class EnrollmentState(InputModel):
-    status: Literal['재학', '전학', '자퇴', '조기졸업', '유예', '졸업'] = '재학'
+    status: Literal['재학', '전학', '자퇴', '조기졸업', '졸업'] = '재학'
 
     @model_validator(mode='before')
     @classmethod
@@ -109,10 +109,10 @@ class EnrollmentState(InputModel):
     @model_validator(mode='after')
     def validate_enrollment_state(self):
         if self.status not in ('졸업', '조기졸업', '자퇴', '전학') and self.grade is None:
-            raise ValueError('재학·유예 학적에는 학년을 입력하세요.')
+            raise ValueError('재학 학적에는 학년을 입력하세요.')
         if self.status == '재학' and not self.classroom:
             raise ValueError('재학 학생의 반을 입력하세요.')
-        if self.status not in ('재학', '유예') and (self.classroom or self.student_number):
+        if self.status != '재학' and (self.classroom or self.student_number):
             raise ValueError('비재학 학생의 반과 번호는 비워 주세요.')
         if self.student_number and not self.classroom:
             raise ValueError('번호가 있으면 반을 입력하세요.')

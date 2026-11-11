@@ -5,6 +5,7 @@ from datetime import date, datetime, timedelta, timezone
 from maeumnarae.views.journals.journal_pagination import PAGE_SIZE, load_page
 
 from nicegui import run, ui
+from maeumnarae.views.shared.search_fields import search_input
 from maeumnarae.views.journals.journal_defaults import default_duration_minutes
 from maeumnarae.views.reports.journal_print_view import list_print_tools
 
@@ -34,6 +35,7 @@ class ConsultationView:
         self.list_request = 0
         self.selection_request = 0
         self.editor_open = False
+        self.exclude_transferred = False
 
     def build(self) -> None:
         with ui.column().classes('w-full gap-5 p-4 md:p-8'):
@@ -52,8 +54,12 @@ class ConsultationView:
                         'flat :rows-per-page-options="[10, 20, 30]" rows-per-page-label="페이지당 교사 수" '
                         'no-data-label="등록된 교사가 없습니다" no-results-label="검색 결과가 없습니다"')
                     with self.table.add_slot('top'):
-                        ui.input('교사 검색', placeholder='이름, 내선번호, 담당업무').props(
-                            'outlined dense clearable debounce=300').classes('w-full').bind_value(self.table, 'filter')
+                        search = search_input('교사 검색', placeholder='이름, 내선번호, 담당업무').props(
+                            'outlined dense clearable').classes('w-full').bind_value(self.table, 'filter')
+                        with search.add_slot('append'):
+                            ui.checkbox('전출자 제외', value=self.exclude_transferred,
+                                        on_change=self._change_transfer_filter).props(
+                                            'dense').classes('text-xs').on('click.stop', lambda: None)
                     self.table.on('rowClick', self.row_clicked, js_handler='(event, row) => emit(row.id)')
                 self.log_panel = ui.column().classes('w-full min-w-0')
                 self.show_logs()
@@ -67,7 +73,8 @@ class ConsultationView:
         try:
             teachers = []
             while True:
-                batch = await run.io_bound(self.teachers.list, limit=1000, offset=len(teachers))
+                batch = await run.io_bound(self.teachers.list, limit=1000, offset=len(teachers),
+                                           exclude_transferred=self.exclude_transferred)
                 if request != self.list_request:
                     return
                 teachers.extend(batch)
@@ -83,6 +90,13 @@ class ConsultationView:
         finally:
             if request == self.list_request:
                 self.table.props(remove='loading')
+
+    async def _change_transfer_filter(self, event) -> None:
+        self.exclude_transferred = bool(event.value)
+        self.table.pagination['page'] = 1
+        self.table.props('no-data-label="조건에 맞는 교사가 없습니다"' if event.value
+                         else 'no-data-label="등록된 교사가 없습니다"')
+        await self.reload()
 
     async def row_clicked(self, event) -> None:
         await self.select_teacher(event.args)

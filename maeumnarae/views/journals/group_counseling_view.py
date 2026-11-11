@@ -7,6 +7,7 @@ from collections.abc import Awaitable, Callable
 from maeumnarae.views.journals.journal_pagination import PAGE_SIZE, load_page
 
 from nicegui import run, ui
+from maeumnarae.views.shared.search_fields import search_input, search_select
 from maeumnarae.views.journals.journal_defaults import default_duration_minutes
 from maeumnarae.views.reports.journal_print_view import list_print_tools
 
@@ -53,7 +54,7 @@ class GroupCounselingView:
                     ], rows=[], row_key='id', pagination=10).classes('w-full').props(
                         'flat no-data-label="등록된 집단 상담이 없습니다" no-results-label="검색 결과가 없습니다"')
                     with self.table.add_slot('top'):
-                        ui.input('집단 검색').props('outlined dense clearable debounce=300').classes('w-full').bind_value(self.table, 'filter')
+                        search_input('집단 검색').props('outlined dense clearable').classes('w-full').bind_value(self.table, 'filter')
                     self.table.on('rowClick', self.row_clicked, js_handler='(event, row) => emit(row.id)')
                     self.list_message = ui.label().classes('text-sm text-red-700')
                 with ui.card().classes('w-full min-w-0 rounded-2xl shadow-sm p-5 gap-4'):
@@ -229,11 +230,18 @@ class GroupCounselingView:
                 ui.notify('이 집단의 상담 일지를 찾을 수 없습니다.', type='warning')
                 return
             student_options = {}
-            if not log:
+            if not log and group and group.school_year is not None:
+                student_options = await run.io_bound(
+                    self.repository.student_options_for_year, group.id, group.school_year)
+            elif not log:
                 offset = 0
                 while True:
                     students = await run.io_bound(self.students.list, limit=1000, offset=offset)
-                    student_options.update({student.id: f'{student.name} · {student.enrollment_label} · 번호 {student.student_number or "미입력"}' for student in students})
+                    student_options.update({
+                        student.id: f'{student.name} · {student.enrollment_label} · 번호 {student.student_number or "미입력"}'
+                        for student in students
+                        if student.status == '재학' or (group and student.id in group.student_ids)
+                    })
                     if len(students) < 1000:
                         break
                     offset += len(students)
@@ -307,9 +315,9 @@ class GroupCounselingView:
                                 'outlined maxlength=20000').classes('w-full')
                         fields['purpose'] = ui.textarea('상담 목표', value=group.purpose if group else '').props(
                             'outlined maxlength=20000').classes('w-full')
-                        fields['student_ids'] = ui.select(student_options, label='참여 학생', multiple=True,
+                        fields['student_ids'] = search_select(student_options, label='참여 학생', multiple=True,
                                                          value=list(group.student_ids) if group else [], with_input=True).props(
-                            'outlined use-chips').classes('w-full')
+                            'outlined use-chips input-debounce=0').classes('w-full')
                         ui.label('연결한 학생의 타임라인에 이 집단의 모든 상담 일지가 표시됩니다.').classes('text-sm text-slate-500')
                         fields['notes'] = ui.textarea('비고', value=group.notes if group else '').props(
                             'outlined maxlength=20000').classes('w-full')

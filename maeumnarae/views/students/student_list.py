@@ -4,6 +4,7 @@ from collections.abc import Awaitable, Callable
 from inspect import isawaitable
 
 from nicegui import events, run, ui
+from maeumnarae.views.shared.search_fields import search_input
 
 from maeumnarae.core.database import DatabaseError
 from maeumnarae.repositories.students.student_repo import StudentRepository
@@ -35,13 +36,13 @@ class StudentList:
                 for name, label in [('name', '이름'), ('nickname', '별명'), ('gender', '성별'), ('grade', '학년'), ('classroom', '반')]
             ]
             self.table = ui.table(columns=columns, rows=[], row_key='id', pagination={
-                'rowsPerPage': self.page_size, 'sortBy': 'name', 'descending': False, 'page': 1,
+                'rowsPerPage': self.page_size, 'sortBy': None, 'descending': False, 'page': 1,
             }).classes('w-full').props(
                 'flat :rows-per-page-options="[10, 20, 30]" rows-per-page-label="페이지당 학생 수" '
                 'no-data-label="등록된 학생이 없습니다" no-results-label="검색 결과가 없습니다"')
             with self.table.add_slot('top'):
-                search = ui.input('학생 검색', placeholder='이름, 별명, 성별, 학년, 반').props(
-                    'outlined dense clearable debounce=300').classes('w-full').bind_value(self.table, 'filter')
+                search = search_input('학생 검색', placeholder='이름, 별명, 성별, 학년, 반').props(
+                    'outlined dense clearable').classes('w-full').bind_value(self.table, 'filter')
                 if special_education_filter:
                     with search.add_slot('append'):
                         ui.checkbox('일지있음',

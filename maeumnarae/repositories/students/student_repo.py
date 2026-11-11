@@ -110,7 +110,7 @@ class StudentRepository:
                   AND (:grade IS NULL OR grade = :grade)
                   AND (:has_special_education_logs = 0 OR EXISTS (
                       SELECT 1 FROM special_education_logs WHERE student_id = students.id))
-                ORDER BY grade, classroom, name, id LIMIT :limit OFFSET :offset''',
+                ORDER BY grade IS NULL, grade, classroom, name, id LIMIT :limit OFFSET :offset''',
                 dict(search=search.strip(), grade=grade, limit=limit, offset=offset,
                      has_special_education_logs=has_special_education_logs)).fetchall()
             return [Student.model_validate(dict(row)) for row in rows]

@@ -3,6 +3,7 @@ from dataclasses import replace
 from datetime import date, datetime
 
 from nicegui import run, ui
+from maeumnarae.views.shared.search_fields import search_select
 
 from maeumnarae.core.database import DatabaseError
 from maeumnarae.core.models import current_school_year
@@ -183,7 +184,7 @@ def build_all_print(database):
         with ui.row().classes('w-full items-end flex-nowrap overflow-x-auto'):
             period = ui.select({'year': '학년도', 'custom': '기간 직접 입력'},
                                value='year', label='내보낼 기간').props('outlined').classes('flex-1 min-w-[200px]')
-            year = ui.select({}, label='학년도', with_input=True).props('outlined').classes('flex-1 min-w-[200px]')
+            year = search_select({}, label='학년도', with_input=True).props('outlined').classes('flex-1 min-w-[200px]')
             year.bind_visibility_from(period, 'value', backward=lambda value: value == 'year')
             start = ui.date_input('시작일', value=f'{current_school_year()}-03-01').props('outlined').classes('flex-1 min-w-[200px]')
             end = ui.date_input('종료일', value=datetime.now(KST).date().isoformat()).props('outlined').classes('flex-1 min-w-[200px]')

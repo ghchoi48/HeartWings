@@ -6,6 +6,7 @@ from maeumnarae.views.shared.time_inputs import storage_time, time_input
 from maeumnarae.core.secure_upload import SecureUpload
 
 from nicegui import run, ui
+from maeumnarae.views.shared.search_fields import search_select
 import re
 
 from maeumnarae.core.database import DatabaseError
@@ -240,7 +241,7 @@ class LegacyImportView:
             progress = ui.label()
             choices = {f'{sheet}:{number}': f'{sheet} {number}행 · {text(row.get("성명/집단명"))}'
                        for (sheet, number), row in records.items() if (sheet, number) in errors}
-            selector = ui.select(choices, label='수정할 행', value=next(iter(choices))).classes('w-full').props('use-input')
+            selector = search_select(choices, label='수정할 행', value=next(iter(choices))).classes('w-full').props('use-input')
             fields = ui.column().classes('w-full')
             controls = {}
             state = {"saving": False}

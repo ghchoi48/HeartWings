@@ -1,5 +1,6 @@
 """일정 추가 창의 예약 일지 전용 입력."""
 from nicegui import run, ui
+from maeumnarae.views.shared.search_fields import search_select
 
 from maeumnarae.core.database import DatabaseError
 from maeumnarae.repositories.journals.case_repo import CaseRepository
@@ -18,9 +19,9 @@ class ReservationFields:
         students, teachers, groups = options
         with ui.column().classes('w-full') as self.panel:
             self.kind = ui.select(KINDS, label='일지 종류', value='individual').props('outlined').classes('w-full')
-            self.student = ui.select(students, label='학생', with_input=True).props('outlined clearable').classes('w-full')
-            self.teacher = ui.select(teachers, label='교직원', with_input=True).props('outlined clearable').classes('w-full')
-            self.group = ui.select(groups, label='집단', with_input=True).props('outlined clearable').classes('w-full')
+            self.student = search_select(students, label='학생', with_input=True).props('outlined clearable').classes('w-full')
+            self.teacher = search_select(teachers, label='교직원', with_input=True).props('outlined clearable').classes('w-full')
+            self.group = search_select(groups, label='집단', with_input=True).props('outlined clearable').classes('w-full')
             self.case = ui.select({}, label='상담 사례').props('outlined').classes('w-full')
             self.hint = ui.label().classes('text-sm text-slate-500')
             with time_row:

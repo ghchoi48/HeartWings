@@ -260,7 +260,7 @@ SCHEMA = (
         student_number TEXT,
         grade INTEGER CHECK((status IN ('졸업','조기졸업','자퇴','전학') AND grade IS NULL) OR
             (status NOT IN ('졸업','조기졸업','자퇴','전학') AND grade IS NOT NULL AND grade BETWEEN 1 AND 12)),
-        status TEXT NOT NULL DEFAULT '재학' CHECK(status IN ('재학','전학','자퇴','조기졸업','유예','졸업')),
+        status TEXT NOT NULL DEFAULT '재학' CHECK(status IN ('재학','전학','자퇴','조기졸업','졸업')),
         classroom TEXT NOT NULL,
         birth_date TEXT,
         guardian_contact TEXT NOT NULL,
@@ -281,7 +281,7 @@ SCHEMA = (
         school_year INTEGER NOT NULL CHECK(school_year BETWEEN 1900 AND 9999),
         grade INTEGER CHECK((status IN ('졸업','조기졸업','자퇴','전학') AND grade IS NULL) OR
             (status NOT IN ('졸업','조기졸업','자퇴','전학') AND grade IS NOT NULL AND grade BETWEEN 1 AND 12)),
-        status TEXT NOT NULL DEFAULT '재학' CHECK(status IN ('재학','전학','자퇴','조기졸업','유예','졸업')),
+        status TEXT NOT NULL DEFAULT '재학' CHECK(status IN ('재학','전학','자퇴','조기졸업','졸업')),
         classroom TEXT NOT NULL CHECK(status != '재학' OR length(trim(classroom)) > 0),
         student_number TEXT,
         created_at TEXT NOT NULL,
@@ -660,6 +660,9 @@ class Database:
                 "SELECT sql FROM sqlite_master WHERE tbl_name=? AND type IN ('index', 'trigger') AND sql IS NOT NULL",
                 (table,))]
             connection.execute(f'CREATE TEMP TABLE grade_migration_copy AS SELECT * FROM {table}')
+            connection.execute("""UPDATE grade_migration_copy SET status='재학',
+                classroom=CASE WHEN length(trim(classroom))=0 THEN '미배정' ELSE classroom END
+                WHERE status='유예'""")
             connection.execute("UPDATE grade_migration_copy SET grade=NULL WHERE status IN ('졸업','조기졸업','자퇴','전학')")
             columns = ', '.join(row['name'] for row in connection.execute('PRAGMA table_info(grade_migration_copy)'))
             connection.execute(f'DROP TABLE {table}')

@@ -4,6 +4,7 @@ from datetime import datetime
 from maeumnarae.views.journals.journal_pagination import PAGE_SIZE, load_page
 
 from nicegui import run, ui
+from maeumnarae.views.shared.search_fields import search_select
 from maeumnarae.views.journals.journal_defaults import default_duration_minutes
 from maeumnarae.views.reports.journal_print_view import list_print_tools
 
@@ -205,7 +206,7 @@ class PsychologicalTestView:
             title_options = list(TEST_NAMES)
             if entry and entry.title not in title_options:
                 title_options.append(entry.title)
-            title = ui.select(title_options, label='검사명 *', value=entry.title if entry else None,
+            title = search_select(title_options, label='검사명 *', value=entry.title if entry else None,
                               with_input=True, new_value_mode='add-unique',
                               on_change=lambda event: title_text.update(value=event.value or '')).props(
                 'outlined maxlength=200 placeholder="검사명의 일부를 입력하거나 직접 작성하세요"').classes('w-full')

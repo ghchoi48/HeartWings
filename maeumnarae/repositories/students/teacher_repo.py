@@ -24,12 +24,15 @@ class TeacherRepository:
                 saved.append(Teacher.model_validate(dict(row)))
         return saved
 
-    def list(self, *, limit: int = 100, offset: int = 0) -> list[Teacher]:
+    def list(self, *, limit: int = 100, offset: int = 0,
+             exclude_transferred: bool = False) -> list[Teacher]:
         check_page(limit, offset)
         with self.database.session() as connection:
             rows = connection.execute(
-                'SELECT * FROM teachers ORDER BY name, id LIMIT ? OFFSET ?',
-                (limit, offset)).fetchall()
+                """SELECT * FROM teachers
+                WHERE (? = 0 OR trim(extension) != '인사이동(전출)')
+                ORDER BY name, id LIMIT ? OFFSET ?""",
+                (exclude_transferred, limit, offset)).fetchall()
             return [Teacher.model_validate(dict(row)) for row in rows]
 
     def search(self, query: str, *, limit: int = 50) -> list[Teacher]:

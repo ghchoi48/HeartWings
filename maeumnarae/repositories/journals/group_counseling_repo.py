@@ -17,6 +17,29 @@ class GroupCounselingRepository:
             return connection.execute('SELECT COUNT(*) FROM group_counseling_logs WHERE group_id=?',
                                       (group_id,)).fetchone()[0]
 
+    def student_options_for_year(self, group_id: int, school_year: int) -> dict[int, str]:
+        """해당 학년도 재학생과 기존 참여자의 당시 학적을 선택 목록으로 반환한다."""
+        with self.database.session() as connection:
+            rows = connection.execute('''SELECT s.id, s.name, e.grade, e.classroom,
+                e.student_number, e.status, e.school_year
+                FROM students s LEFT JOIN student_enrollments e
+                    ON e.student_id=s.id AND e.school_year=:school_year
+                WHERE e.status='재학' OR EXISTS (
+                    SELECT 1 FROM group_counseling_members m
+                    WHERE m.group_id=:group_id AND m.student_id=s.id)
+                ORDER BY e.grade IS NULL, e.grade, e.classroom, s.name, s.id''',
+                dict(group_id=group_id, school_year=school_year)).fetchall()
+        options = {}
+        for row in rows:
+            if row['school_year'] is None:
+                label = f'{school_year}학년도 학적 미등록'
+            else:
+                enrollment = (f"{row['grade']}학년 {row['classroom']}반"
+                              if row['status'] == '재학' else row['status'])
+                label = f"{school_year}학년도 {enrollment} · 번호 {row['student_number'] or '미입력'}"
+            options[row['id']] = f"{row['name']} · {label}"
+        return options
+
     @staticmethod
     def _group(connection, row) -> GroupCounseling:
         members = connection.execute('''SELECT s.id, s.name, s.grade, s.classroom, s.student_number

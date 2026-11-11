@@ -27,6 +27,7 @@ class YearDraft:
     rows: list[DraftRow]
     snapshot: str
     missing_edits: dict[int, dict] = field(default_factory=dict)
+    retained_ids: set[int] = field(default_factory=set)
     consumed: bool = False
 
     @property
@@ -56,12 +57,13 @@ class YearDraft:
         row.person_id, row.replacement_id = person_id, replacement_id
         row.confirmed = True
         row.edits.clear()
-        if person_id is not None and self.missing_edits.get(person_id, {}).get('status') == '유예':
-            row.edits['status'] = '유예'
+        if person_id in self.retained_ids:
+            row.edits['status'] = '재학'
 
     def retain(self, person_id):
         """유예 재매칭 후보를 반환한다. 모호한 경우 UI에서 직접 연결한다."""
-        self.missing_edits.setdefault(person_id, {})['status'] = '유예'
+        self.retained_ids.add(person_id)
+        self.missing_edits.setdefault(person_id, {})['status'] = '재학'
         old = self.previous(person_id)
         candidates = [r for r in self.rows if r.person_id is None
                       and r.source['name'] == old['name'] and r.source['grade'] == old['grade']]
@@ -69,6 +71,10 @@ class YearDraft:
                  and self.previous(pid)['grade'] == old['grade']]
         if len(candidates) == len(peers) == 1:
             self.link(candidates[0].key, person_id)
+        else:
+            for row in candidates:
+                row.candidates = tuple(dict.fromkeys((*row.candidates, *peers)))
+                row.confirmed = False
         return candidates
 
     def entries(self):
@@ -87,7 +93,7 @@ class YearDraft:
             value.update(row.edits)
             if self.kind == 'students':
                 value['school_year'] = self.target_year
-                if row.person_id and value.get('status') not in ('재학', '유예'):
+                if row.person_id and value.get('status') != '재학':
                     base = self.enrollments.get((row.person_id, self.base_year))
                     value['grade'] = (base or before)['grade']
                 if value.get('status') in ('졸업', '조기졸업', '자퇴', '전학'):
@@ -95,6 +101,8 @@ class YearDraft:
             action = ('신규' if row.person_id is None else '진급') if self.kind == 'students' else ('신규' if row.person_id is None else '갱신')
             if self.kind == 'students' and value.get('status') != '재학':
                 action = value['status']
+            elif self.kind == 'students' and row.person_id in self.retained_ids:
+                action = '유예'
             result.append(dict(key=row.key, person_id=row.person_id, before=before, value=value,
                                action=action, confirmed=row.confirmed, error=''))
         for pid in self.people:
@@ -118,6 +126,8 @@ class YearDraft:
                 if value.get('status') in ('졸업', '조기졸업', '자퇴', '전학'):
                     value['grade'] = None
                 action = value.get('status') or '미해결'
+                if value.get('status') == '재학' and pid in self.retained_ids:
+                    action = '유예'
                 confirmed = bool(value.get('status'))
             result.append(dict(key=f'old:{pid}', person_id=pid, before=before, value=value,
                                action=action, confirmed=confirmed, error=''))
@@ -139,7 +149,7 @@ class YearDraft:
                 if self.kind == 'students':
                     if value.grade is not None and not 1 <= value.grade <= self.max_grade:
                         errors.append('학교급에 맞는 학년을 선택하세요.')
-                    if value.status == '유예' and entry['person_id']:
+                    if value.status == '재학' and entry['person_id'] in self.retained_ids:
                         base = self.enrollments.get((entry['person_id'], self.base_year))
                         if base and value.grade != base['grade']:
                             errors.append('유예 학생은 기준 학년도와 같은 학년이어야 합니다.')
@@ -175,7 +185,7 @@ def prepare_draft(batch: ImportBatch, base_year, max_grade, people, enrollments,
                 continue
             target = enrollments.get((pid, base_year + 1))
             base = enrollments.get((pid, base_year))
-            if (target and target['grade'] == value['grade']) or (base and base['status'] in ('재학', '유예')
+            if (target and target['grade'] == value['grade']) or (base and base['status'] == '재학'
                     and value['grade'] >= 2 and base['grade'] == value['grade'] - 1):
                 candidates.append(pid)
         draft.rows.append(DraftRow(f'file:{imported.number}', value, candidates=tuple(candidates), confirmed=not candidates))

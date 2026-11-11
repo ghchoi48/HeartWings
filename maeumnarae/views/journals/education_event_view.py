@@ -2,6 +2,7 @@
 from datetime import datetime
 
 from nicegui import run, ui
+from maeumnarae.views.shared.search_fields import search_input
 from maeumnarae.views.journals.journal_defaults import default_duration_minutes
 from maeumnarae.views.reports.journal_print_view import print_dialog
 from maeumnarae.services.reports.journal_print_models import PrintRequest
@@ -82,7 +83,7 @@ class EducationEventView:
                         'table-style="width: auto" '
                         ':rows-per-page-options="[10]" :pagination-label="(first, last, total) => `${Math.max(1, Math.ceil(first / 10))}페이지/${Math.max(1, Math.ceil(total / 10))}페이지`" flat no-data-label="등록된 교육/행사가 없습니다" no-results-label="검색 결과가 없습니다"')
                     with self.table.add_slot('top'):
-                        ui.input('교육/행사 검색').props('outlined dense clearable debounce=300').classes('w-full').bind_value(self.table, 'filter')
+                        search_input('교육/행사 검색').props('outlined dense clearable').classes('w-full').bind_value(self.table, 'filter')
                     self.table.on('rowClick', self.row_clicked, js_handler='(event, row) => emit(row.id)')
                     self.table.add_slot('body-cell-actions', """
                         <q-td :props="props" auto-width class="whitespace-nowrap">

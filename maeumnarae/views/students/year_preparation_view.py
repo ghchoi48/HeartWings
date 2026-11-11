@@ -3,6 +3,7 @@ from collections import Counter
 from copy import deepcopy
 
 from nicegui import run, ui
+from maeumnarae.views.shared.search_fields import search_input, search_select
 
 from maeumnarae.core.database import DatabaseError
 from maeumnarae.core.models import ENROLLMENT_STATUSES, current_school_year
@@ -39,7 +40,7 @@ class YearPreparationView:
             ui.label('새 학년도 전체 명단을 업로드하세요. 명단에 없는 기존 인원도 검토 대상입니다. 최종 확정 전에는 저장되지 않습니다.').classes('text-sm')
             current_year = current_school_year()
             with ui.row().classes('w-full items-center flex-nowrap overflow-x-auto'):
-                self.year = ui.select({current_year: f'{current_year}학년도'}, value=current_year,
+                self.year = search_select({current_year: f'{current_year}학년도'}, value=current_year,
                                       label='기준 학년도', with_input=True).props('outlined').classes('w-48 min-w-[200px]')
                 ui.label('→').classes('text-xl text-slate-500 shrink-0')
                 self.target = ui.label(f'대상 학년도: {current_year + 1}학년도').classes('whitespace-nowrap')
@@ -55,7 +56,7 @@ class YearPreparationView:
             ui.label('검토 내용은 이 화면에서만 유지됩니다. 변경 전후를 확인하고 오류·미해결 항목을 모두 처리하세요.').classes('text-sm')
             self.summary = ui.label()
             with ui.row().classes('w-full shrink-0 items-center flex-nowrap overflow-x-auto'):
-                self.search = ui.input('이름 검색', on_change=lambda _: self.refresh()).classes('w-64')
+                self.search = search_input('이름 검색', on_change=lambda _: self.refresh()).classes('w-64')
                 self.action = ui.select(['전체'], value='전체', label='처리 종류', on_change=lambda _: self.refresh()).classes('w-40')
                 self.unresolved = ui.checkbox('오류·미해결만', on_change=lambda _: self.refresh())
                 self.fix_errors_button = ui.button('오류 수정', icon='edit', on_click=self.edit_first_error).classes('ml-auto shrink-0')
@@ -271,27 +272,29 @@ class YearPreparationView:
                         options = {'': '명부 연결 없음 (누락 상태 지정)'}
                         options.update({r.key: f'{r.key} · ' + self.describe(r.source) for r in candidates})
                         with ui.row().classes('w-full flex-nowrap items-center') as connection_row:
-                            target = ui.select(options, value='', label='진급 학년도 명부 검색·연결', with_input=True).props('filled').classes('flex-1 min-w-0')
+                            target = search_select(options, value='', label='진급 학년도 명부 검색·연결', with_input=True).props('filled').classes('flex-1 min-w-0')
                         ui.label('왼쪽 기준 학년도 학생과 동일한 학생을 진급 명부에서 선택한 뒤 편집 반영을 누르세요.').classes('text-sm')
                     elif row:
                         candidates = list(row.candidates) + [pid for pid in self.draft.people if pid not in row.candidates]
                         options = {0: '신규 학생' if self.kind == 'students' else '새 교사 (연결 없음)'}
                         options.update({pid: f'ID {pid} · ' + self.describe(self.draft.previous(pid)) for pid in candidates})
-                        selected = ui.select(options, value=row.person_id or 0, label='기존 인원 검색·연결', with_input=True).classes('w-full')
+                        selected = search_select(options, value=row.person_id or 0, label='기존 인원 검색·연결', with_input=True).classes('w-full')
                         replacement = None
                         if self.kind == 'teachers':
-                            replacement = ui.select(options, value=row.replacement_id or 0, label='다른 사람인 경우: 교체할 기존 교사', with_input=True).classes('w-full')
+                            replacement = search_select(options, value=row.replacement_id or 0, label='다른 사람인 경우: 교체할 기존 교사', with_input=True).classes('w-full')
 
                     if row is None and self.kind == 'students':
                         def retain():
                             nonlocal next_key
-                            candidates = self.draft.retain(entry['person_id'])
+                            self.draft.retain(entry['person_id'])
                             self.refresh()
                             entries = self.draft.validate()
                             index = next((i for i, item in enumerate(entries) if item['key'] == key), -1)
                             next_key = next((item['key'] for item in entries[index + 1:] + entries[:index + 1]
                                              if item['error']), None)
-                            ui.notify('유예로 지정했습니다. 후보가 여러 명이면 파일 행에서 기존 학생을 직접 연결하세요.' if len(candidates) > 1 else '유예 처리와 동일 학년 재매칭을 반영했습니다.')
+                            linked = any(r.person_id == entry['person_id'] for r in self.draft.rows)
+                            ui.notify('재학 상태를 유지하고 동일 학년 학생을 연결했습니다.' if linked else
+                                      '재학 상태를 유지합니다. 동명이인을 확인하여 명부를 연결하거나 학년·반을 입력하세요.')
                             advance()
                         retain_button = ui.button('유예 처리', on_click=retain).props('outline').classes('shrink-0')
                         if reverse:
@@ -388,15 +391,13 @@ class YearPreparationView:
                 if self.kind == 'students':
                     changes['student_number'] = changes['student_number'] or None
                     changes['birth_date'] = changes['birth_date'] or None
-                    if changes.get('status') not in ('재학', '유예'):
+                    if changes.get('status') != '재학':
                         changes.update(classroom='', student_number=None)
                 edited_row = next((r for r in draft.rows if r.key == edit_key), None)
                 if edited_row:
                     edited_row.edits.update(changes)
                 else:
                     draft.missing_edits.setdefault(entry['person_id'], {}).update(changes)
-                    if self.kind == 'students' and changes.get('status') == '유예':
-                        draft.retain(entry['person_id'])
                 entries = draft.validate()
                 current = next((e for e in entries if e['key'] == edit_key), None)
                 if current and current['error']:
