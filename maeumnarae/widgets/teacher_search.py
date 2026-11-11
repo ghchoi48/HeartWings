@@ -19,7 +19,7 @@ class TeacherSearch:
             self.query = ui.input('교사 이름, 내선 번호 또는 담당 업무').props('outlined dense').classes('flex-1 min-w-0')
             self.query.on('keydown.enter', self.search)
             ui.button(icon='search', on_click=self.search).props('flat round aria-label="교사 검색 실행"')
-        ui.label('검색하면 가장 잘 일치하는 교사 1명을 표시합니다.').classes('text-xs text-slate-400')
+        ui.label('가장 잘 일치하는 교사 1명을 표시합니다.').classes('text-xs text-slate-400')
         self.results = ui.column().classes('w-full gap-3 max-h-80 overflow-auto')
         with self.results:
             ui.label('교사 이름, 내선 번호 또는 담당 업무를 입력해 검색하세요.').classes('text-sm text-slate-400 py-4')
@@ -34,7 +34,7 @@ class TeacherSearch:
                 ui.label('교사 이름, 내선 번호 또는 담당 업무를 입력해 검색하세요.').classes('text-sm text-slate-400 py-4')
             return
         try:
-            teachers = await run.io_bound(self.repository.search, query, limit=1)
+            teachers = await run.io_bound(self.repository.search, query, limit=1, exclude_transferred=True)
         except DatabaseError as error:
             ui.notify(str(error), type='negative')
             return
