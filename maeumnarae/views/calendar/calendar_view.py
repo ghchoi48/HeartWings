@@ -360,6 +360,8 @@ class CalendarView:
                         with ui.button(on_click=lambda entry=entry: self.open_event(entry)).props(
                                 'unelevated dense no-caps align=left' if entry.all_day else 'flat dense no-caps align=left').classes(
                                     'min-w-0 text-xs h-7').style(style) as bar:
+                            if event_dates(entry)[1] < today:
+                                bar.classes('opacity-60')
                             if name:
                                 bar.tooltip(name)
                             bar.props['aria-label'] = caption
@@ -378,6 +380,8 @@ class CalendarView:
                                 caption = event_caption(entry, hide_names=self.hide_names.value)
                                 with ui.button(on_click=lambda entry=entry: self.open_event(entry)).props('flat dense no-caps align=left').classes(
                                         'w-full text-xs').style(f'border-left:3px solid {entry.color}; color:var(--app-calendar-timed-text, #000000) !important') as event_button:
+                                    if day < today:
+                                        event_button.classes('opacity-60')
                                     self.bind_event_drag(event_button, entry)
                                     ui.label(caption).classes('flex-1 min-w-0 break-words text-left')
                                     render_event_icons(entry)

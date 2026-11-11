@@ -6,6 +6,7 @@ from datetime import date, datetime, timedelta, timezone
 from maeumnarae.views.journals.journal_pagination import PAGE_SIZE, load_page
 
 from nicegui import run, ui
+from maeumnarae.views.journals.journal_selection import JournalSelection
 from maeumnarae.views.journals.journal_defaults import default_duration_minutes
 from maeumnarae.views.reports.journal_print_view import list_print_tools
 
@@ -88,6 +89,7 @@ class CounselingView:
         self.student_request = 0
         self.log_request = 0
         self.report_open = False
+        self.journal_selection = JournalSelection()
         self.editor_saving = False
         self.editor_request = 0
         self.editor_fields = {}
@@ -119,6 +121,7 @@ class CounselingView:
                 confirm.delete()
 
     def clear_editor(self) -> None:
+        self.journal_selection.select(None)
         self.editor_request += 1
         self.editor_fields = {}
         self.editor_original = {}
@@ -192,6 +195,7 @@ class CounselingView:
         self.set_case_actions_enabled(False)
         self.case_message.text = ''
         self.add_case.disable()
+        self.journal_selection.rows.clear()
         self.logs.clear()
         self.log_message.text = ''
         self.log_page_label.text = ''
@@ -249,6 +253,7 @@ class CounselingView:
         self.log_request += 1
         self.selected_case = None
         self.add.disable()
+        self.journal_selection.rows.clear()
         self.logs.clear()
         self.case_options = {}
         self.case_select.set_options({}, value=None)
@@ -384,6 +389,7 @@ class CounselingView:
             return
         self.log_request += 1
         request = self.log_request
+        self.journal_selection.rows.clear()
         self.logs.clear()
         self.log_previous.disable()
         self.log_next.disable()
@@ -406,7 +412,8 @@ class CounselingView:
                 with ui.row().classes(
                         'w-full items-center justify-between border rounded-xl p-4 cursor-pointer hover:bg-slate-50 focus-visible:outline'
                 ).props('role=button tabindex=0 aria-label="일지 열기"').on('click', open_log).on(
-                        'keydown.enter.self.prevent', open_log).on('keydown.space.self.prevent', open_log):
+                        'keydown.enter.self.prevent', open_log).on('keydown.space.self.prevent', open_log) as row:
+                    self.journal_selection.register(entry.id, row)
                     with ui.column().classes('gap-1'):
                         ui.label(entry.counseling_area or '상담 분야 미지정').classes('font-semibold')
                         ui.label(f'{entry.starts_at.astimezone(KST):%Y.%m.%d %H:%M} · {STATUSES[entry.status]} · {entry.category} · {entry.duration_minutes}분').classes('text-sm text-slate-500')
@@ -441,6 +448,7 @@ class CounselingView:
             if entry is None or entry.student_id != student.id or entry.case_id != case.id:
                 ui.notify('상담 일지를 찾을 수 없습니다. 목록을 새로고침해 주세요.', type='warning')
                 return
+        self.journal_selection.select(entry.id if entry else None)
         self.editor_container.clear()
         with self.editor_container:
             _, fields, message, save_button = self.build_editor(student, entry)
@@ -475,6 +483,7 @@ class CounselingView:
             except DatabaseError as error:
                 message.text = str(error)
             else:
+                self.journal_selection.select(entry.id)
                 self.editor_original = {key: field.value for key, field in fields.items()}
                 message.text = '상담 일지를 저장했습니다.'
                 ui.notify(f'{self.log_name}를 저장했습니다.', type='positive')

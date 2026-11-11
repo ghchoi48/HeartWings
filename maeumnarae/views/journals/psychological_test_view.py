@@ -4,6 +4,7 @@ from datetime import datetime
 from maeumnarae.views.journals.journal_pagination import PAGE_SIZE, load_page
 
 from nicegui import run, ui
+from maeumnarae.views.journals.journal_selection import JournalSelection
 from maeumnarae.views.shared.search_fields import search_select
 from maeumnarae.views.journals.journal_defaults import default_duration_minutes
 from maeumnarae.views.reports.journal_print_view import list_print_tools
@@ -34,6 +35,7 @@ class PsychologicalTestView:
             self.pdf_tools.set_scope(None)
         self.request = 0
         self.offset = 0
+        self.journal_selection = JournalSelection()
         self.editor_saving = False
         self.editor_request = 0
         self.editor_values = lambda: ()
@@ -60,6 +62,7 @@ class PsychologicalTestView:
             confirm.delete()
 
     def clear_editor(self):
+        self.journal_selection.select(None)
         self.editor_request += 1
         self.editor_values = lambda: ()
         self.editor_original = ()
@@ -109,6 +112,7 @@ class PsychologicalTestView:
             self.pdf_tools.set_scope(None)
         self.offset = 0
         self.add.disable()
+        self.journal_selection.rows.clear()
         self.logs.clear()
         self.previous.disable()
         self.next.disable()
@@ -148,6 +152,7 @@ class PsychologicalTestView:
             return
         self.request += 1
         request = self.request
+        self.journal_selection.rows.clear()
         self.logs.clear()
         self.previous.disable()
         self.next.disable()
@@ -172,7 +177,8 @@ class PsychologicalTestView:
                 with ui.row().classes(
                         'w-full items-center justify-between border rounded-xl p-4 cursor-pointer hover:bg-slate-50 focus-visible:outline'
                 ).props('role=button tabindex=0 aria-label="일지 열기"').on('click', open_log).on(
-                        'keydown.enter.self.prevent', open_log).on('keydown.space.self.prevent', open_log):
+                        'keydown.enter.self.prevent', open_log).on('keydown.space.self.prevent', open_log) as row:
+                    self.journal_selection.register(entry.id, row)
                     with ui.column().classes('gap-1 min-w-0 flex-1'):
                         ui.label(entry.title).classes('font-semibold break-words w-full')
                         details = [f'{entry.test_date:%Y.%m.%d}' + (f' {entry.test_time}' if entry.test_time else ''), entry.target]
@@ -197,6 +203,7 @@ class PsychologicalTestView:
         if not await self.confirm_editor_discard():
             return
         self.clear_editor()
+        self.journal_selection.select(entry.id if entry else None)
         request = self.editor_request
         now = datetime.now(KST)
         with self.editor_container:
@@ -257,6 +264,7 @@ class PsychologicalTestView:
             except DatabaseError as error:
                 message.text = str(error)
             else:
+                self.journal_selection.select(entry.id)
                 self.editor_original = current_values()
                 message.text = '심리검사 일지를 저장했습니다.'
                 ui.notify('심리검사 일지를 저장했습니다.', type='positive')

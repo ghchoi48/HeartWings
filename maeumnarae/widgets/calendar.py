@@ -5,7 +5,7 @@ from nicegui import run, ui
 
 from maeumnarae.core.database import DatabaseError
 from maeumnarae.repositories.calendar.calendar_repo import CalendarRepository
-from maeumnarae.services.calendar.calendar_dates import visible_days, events_by_date, shift_month
+from maeumnarae.services.calendar.calendar_dates import visible_days, event_dates, events_by_date, shift_month
 from maeumnarae.services.calendar.calendar_holidays import korean_holidays
 from maeumnarae.services.reports.reporting import KST
 from maeumnarae.services.calendar.school_calendar import load_school_events
@@ -135,6 +135,7 @@ class CalendarWidget:
     def render(self):
         if self.body.is_deleted:
             return
+        self.today_date = datetime.now(KST).date()
         self.heading.text = f'{self.anchor:%Y년 %m월}'
         self.body.clear()
         with self.body:
@@ -157,9 +158,13 @@ class CalendarWidget:
                                      else 'text-slate-800 dark:text-slate-200')
                             ui.label(str(day.day)).classes(color)
                             with ui.row().classes('h-2 gap-1 justify-center'):
-                                colors = list(dict.fromkeys(e.color for e in self.events.get(day, [])))[:3]
-                                for color in colors:
-                                    ui.element('span').classes('w-1 h-1 rounded-full').style(f'background:{color}')
+                                colors = list(dict.fromkeys(
+                                    (e.color, event_dates(e)[1] < self.today_date)
+                                    for e in self.events.get(day, [])))[:3]
+                                for color, past in colors:
+                                    ui.element('span').classes(
+                                        'w-1 h-1 rounded-full' + (' opacity-60' if past else '')
+                                    ).style(f'background:{color}')
             ui.label(f'{self.selected:%m월 %d일}').classes('font-semibold')
             if self.selected in self.holidays:
                 ui.label(self.holidays[self.selected]).classes('text-sm text-red-600 dark:text-red-400')
@@ -168,7 +173,8 @@ class CalendarWidget:
                 ui.label('일정이 없습니다').classes('text-sm')
             for entry in entries:
                 with ui.button(on_click=lambda entry=entry: self.open_event(entry)).props('flat no-caps align=left').classes(
-                        'w-full min-w-0').style('color:var(--app-calendar-timed-text, #000000) !important'):
+                        'w-full min-w-0' + (' opacity-60' if event_dates(entry)[1] < self.today_date else '')
+                ).style('color:var(--app-calendar-timed-text, #000000) !important'):
                     with ui.row().classes('w-full items-center gap-1 flex-nowrap'):
                         ui.element('span').classes('w-2 h-2 rounded-full shrink-0').style(f'background:{entry.color}')
                         ui.label(event_caption(entry)).classes('truncate min-w-0').tooltip(event_name(entry))
