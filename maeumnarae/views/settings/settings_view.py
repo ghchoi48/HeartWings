@@ -1,11 +1,16 @@
 """일반, 화면, 시스템, DB, 내보내기, 프로그램 정보 탭으로 구성한 설정 화면."""
 
 from collections.abc import Callable
+from pathlib import Path
+from subprocess import SubprocessError
+import sys
 
-from nicegui import ui
+from nicegui import run, ui
 
 from maeumnarae.core.database import Database
+from maeumnarae.core.desktop import open_folder
 from maeumnarae.core.models import SchoolSettings
+from maeumnarae.core.paths import PROJECT_ROOT
 from maeumnarae.repositories.settings.school_settings_repo import SchoolSettingsRepository
 from maeumnarae.views.settings.display_settings import DisplaySettings
 from maeumnarae.views.shell.auto_lock import AutoLock
@@ -27,6 +32,17 @@ def build_settings(display: DisplaySettings | None = None,
                    auto_lock: AutoLock | None = None) -> None:
     """설정 종류별 탭을 만들고 기존 설정 컨트롤을 배치한다."""
     display = display or DisplaySettings()
+
+    async def open_installation_folder():
+        folder_button.disable()
+        try:
+            folder = Path(sys.executable).resolve().parent if getattr(sys, 'frozen', False) else PROJECT_ROOT
+            await run.io_bound(open_folder, folder)
+        except (OSError, SubprocessError):
+            ui.notify('설치 폴더를 열지 못했습니다. 폴더 위치와 접근 권한을 확인해 주세요.', type='negative')
+        finally:
+            folder_button.enable()
+
     with ui.column().classes('w-full max-w-7xl mx-auto gap-6 p-4 md:p-8'):
         with ui.column().classes('gap-2'):
             ui.label('설정').classes('text-3xl font-bold text-slate-800')
@@ -50,6 +66,10 @@ def build_settings(display: DisplaySettings | None = None,
                                    '보기 편한 화면으로 맞춤 설정하세요.', '즉시 적용'):
                     display.build_controls()
             with ui.tab_panel('system').classes('p-0'):
+                with settings_card('설치 폴더', 'folder_open',
+                                   '마음나래 프로그램이 설치된 폴더를 엽니다.'):
+                    folder_button = ui.button('설치 폴더 열기', icon='folder_open',
+                                              on_click=open_installation_folder).props('outline')
                 if auto_lock is not None:
                     with settings_card('자동 잠금', 'timer',
                                        '일정 시간 조작이 없으면 DB를 잠급니다.', '즉시 적용'):

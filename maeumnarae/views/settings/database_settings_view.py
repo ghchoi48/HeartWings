@@ -1,10 +1,6 @@
-"""DB 폴더 열기, 암호화 백업 다운로드, 파일 업로드 복원 컨트롤."""
+"""암호화 백업 다운로드, 파일 업로드 복원 컨트롤."""
 
 from datetime import datetime
-from subprocess import SubprocessError
-
-from maeumnarae.core.desktop import open_folder
-
 from maeumnarae.core.secure_upload import SecureUpload, MAX_BACKUP_BYTES
 
 from nicegui import events, run, ui
@@ -29,7 +25,7 @@ def build_database_settings(database: Database, on_roster_import=None) -> None:
     def set_busy(value: bool):
         nonlocal busy
         busy = value
-        for control in (folder_button, backup, open_restore, upload, password, confirm, restore, cancel,
+        for control in (backup, open_restore, upload, password, confirm, restore, cancel,
                         open_reset, reset_confirm, reset, reset_cancel,
                         open_counseling_reset, counseling_confirm, counseling_reset, counseling_cancel,
                         open_soft_reset, new_counselor, soft_confirm, soft_reset, soft_cancel):
@@ -42,17 +38,6 @@ def build_database_settings(database: Database, on_roster_import=None) -> None:
             restore.props('loading')
         else:
             restore.props(remove='loading')
-
-    async def open_database_folder():
-        if busy:
-            return
-        set_busy(True)
-        try:
-            await run.io_bound(open_folder, database.path.resolve().parent)
-        except (OSError, SubprocessError):
-            ui.notify('DB 폴더를 열지 못했습니다. 폴더 위치와 접근 권한을 확인해 주세요.', type='negative')
-        finally:
-            set_busy(False)
 
     async def download_backup():
         if busy:
@@ -194,8 +179,6 @@ def build_database_settings(database: Database, on_roster_import=None) -> None:
             counseling_reset.props(remove='loading')
 
     with settings_card('DB 관리', 'storage', '상담 데이터의 보관 상태와 백업을 관리하세요.', collapsible=True):
-        folder_button = ui.button('DB 폴더 열기', icon='folder_open', on_click=open_database_folder).props('outline')
-        ui.separator()
         with ui.element('div').classes('grid grid-cols-1 md:grid-cols-3 gap-6 w-full'):
             for kind in ('personal', 'counseling_school'):
                 with ui.column().classes('w-full min-w-0 gap-3 rounded-xl border border-slate-200 p-5'):
