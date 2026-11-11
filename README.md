@@ -124,9 +124,9 @@ python scripts/build_desktop.py
 ```
 
 - **Windows:** x64 Python(Tcl/Tk 포함), Inno Setup 6.3 이상이 필요합니다. `ISCC.exe`를 PATH에 추가하거나 `ISCC_PATH`에 전체 경로를 지정할 수 있습니다. 설치 프로그램은 WebView2 Runtime이 없으면 다운로드하여 설치합니다.
-- **macOS:** 대상 CPU의 macOS에서 빌드합니다. 배포 시 필요한 서명·공증은 별도로 진행합니다.
+- **macOS:** 대상 CPU의 macOS에서 빌드합니다. 앱 빌드 후 macOS 기본 도구인 `hdiutil`로 DMG 생성과 검증까지 자동 진행합니다. DMG를 열고 마음나래 앱을 `Applications` 바로가기로 드래그해 설치합니다.
 
-Windows 설치 파일은 `dist/installer/maeumnarae-<버전>-windows-x64-setup.exe`, macOS 산출물은 `dist/마음나래.app` 및 ZIP입니다.
+Windows 설치 파일은 `dist/installer/maeumnarae-<버전>-windows-x64-setup.exe`, macOS 는`dist/maeumnarae-<버전>-macos-<CPU>.dmg`입니다.
 
 아이콘과 시작 화면은 저장소에 포함되어 있습니다. 이미지를 변경할 때는 `scripts/build_icons.py`, `scripts/build_splash.py`로 재생성할 수 있습니다. 글꼴 변환 절차와 라이선스는 `resources/fonts/`와 `resources/licenses/`에 있습니다.
 

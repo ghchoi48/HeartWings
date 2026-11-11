@@ -5,12 +5,14 @@ import argparse
 import os
 from pathlib import Path
 import platform
+import plistlib
 import re
 import runpy
 import shutil
 import struct
 import subprocess
 import sys
+import tempfile
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -55,8 +57,53 @@ def windows_metadata() -> tuple[str, str]:
     return name, version
 
 
+def build_macos_dmg(name: str, version: str) -> Path:
+    """앱과 Applications 바로가기를 담은 압축 DMG를 생성한다."""
+    dist = ROOT / 'dist'
+    app = dist / '마음나래.app'
+    if not app.is_dir():
+        raise RuntimeError(f'DMG에 포함할 앱을 찾을 수 없습니다: {app}')
+    output = dist / f'maeumnarae-{version}-macos-{platform.machine()}.dmg'
+    with tempfile.TemporaryDirectory(prefix='dmg-', dir=dist) as temporary:
+        staging = Path(temporary) / 'contents'
+        staging.mkdir()
+        subprocess.run(['ditto', str(app), str(staging / app.name)], check=True)
+        (staging / 'Applications').symlink_to('/Applications', target_is_directory=True)
+        # Finder의 640×400 콘텐츠 영역과 같은 크기로 배경을 만든다.
+        from PIL import Image, ImageDraw
+        background = staging / '.background'
+        background.mkdir()
+        canvas = Image.new('RGB', (1280, 800), '#f6f8fb')
+        draw = ImageDraw.Draw(canvas)
+        draw.line([(574, 400), (706, 400)], fill='#71839b', width=10)
+        draw.line([(676, 370), (706, 400), (676, 430)], fill='#71839b', width=10)
+        canvas.resize((640, 400), Image.Resampling.LANCZOS).save(background / 'install.png')
+        writable = Path(temporary) / 'writable.dmg'
+        subprocess.run(['hdiutil', 'create', '-volname', name, '-srcfolder', str(staging),
+                        '-format', 'UDRW', '-fs', 'HFS+', str(writable)], check=True)
+        mount = Path(temporary) / 'mount'
+        attached = subprocess.run(['hdiutil', 'attach', '-readwrite', '-nobrowse', '-plist',
+                                   '-mountpoint', str(mount), str(writable)],
+                                  check=True, capture_output=True)
+        device = next(entity['dev-entry'] for entity in
+                      plistlib.loads(attached.stdout)['system-entities'] if 'mount-point' in entity)
+        try:
+            subprocess.run(['osascript', str(ROOT / 'packaging/macos-dmg.applescript'),
+                            str(mount), app.name], check=True)
+            if not (mount / '.DS_Store').is_file():
+                raise RuntimeError('DMG의 Finder 화면 설정이 저장되지 않았습니다.')
+        finally:
+            subprocess.run(['hdiutil', 'detach', device], check=True)
+        image = Path(temporary) / 'installer.dmg'
+        subprocess.run(['hdiutil', 'convert', str(writable), '-format', 'UDZO',
+                        '-o', str(image)], check=True)
+        subprocess.run(['hdiutil', 'verify', str(image)], check=True)
+        image.replace(output)
+    return output
+
+
 def main() -> None:
-    """macOS는 ZIP, Windows는 Inno Setup 설치 파일까지 생성한다."""
+    """macOS는 DMG, Windows는 Inno Setup 설치 파일까지 생성한다."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--sources-only', action='store_true',
                         help='실행 파일 없이 현재 환경의 소스 자료만 생성 (미검증으로 표시)')
@@ -95,9 +142,9 @@ def main() -> None:
         print(f'설치 파일: {ROOT / "dist" / "installer" / f"maeumnarae-{version}-windows-x64-setup.exe"}')
         artifacts.append(ROOT / 'dist/installer' / f'maeumnarae-{version}-windows-x64-setup.exe')
     elif sys.platform == 'darwin':
-        subprocess.run(['ditto', '-c', '-k', '--sequesterRsrc', '--keepParent',
-                        str(ROOT / 'dist' / '마음나래.app'), str(ROOT / 'dist' / 'maeumnarae-macos.zip')], check=True)
-        artifacts.append(ROOT / 'dist/maeumnarae-macos.zip')
+        dmg = build_macos_dmg(name, version)
+        artifacts.append(dmg)
+        print(f'설치 파일: {dmg}')
     else:
         archive = shutil.make_archive(str(ROOT / 'dist' / f'maeumnarae-{version}-linux-{platform.machine()}'),
                                       'gztar', root_dir=ROOT / 'dist', base_dir='maeumnarae')

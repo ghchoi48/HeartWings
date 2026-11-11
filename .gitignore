@@ -22,6 +22,7 @@
 !/packaging/maeumnarae-data.spec
 !/packaging/maeumnarae.spec
 !/packaging/maeumnarae.iss
+!/packaging/macos-dmg.applescript
 !/packaging/prepare_local_pyxlsb.py
 !/packaging/prepare_pyxlsb_sources.py
 !/packaging/release_sources.py
