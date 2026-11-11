@@ -35,7 +35,7 @@ class ConsultationView:
         self.list_request = 0
         self.selection_request = 0
         self.editor_open = False
-        self.exclude_transferred = False
+        self.exclude_transferred = True
 
     def build(self) -> None:
         with ui.column().classes('w-full gap-5 p-4 md:p-8'):
@@ -52,7 +52,7 @@ class ConsultationView:
                         'rowsPerPage': 10, 'sortBy': 'name', 'descending': False, 'page': 1,
                     }).classes('w-full').props(
                         'flat :rows-per-page-options="[10, 20, 30]" rows-per-page-label="페이지당 교사 수" '
-                        'no-data-label="등록된 교사가 없습니다" no-results-label="검색 결과가 없습니다"')
+                        'no-data-label="조건에 맞는 교사가 없습니다" no-results-label="검색 결과가 없습니다"')
                     with self.table.add_slot('top'):
                         search = search_input('교사 검색', placeholder='이름, 내선번호, 담당업무').props(
                             'outlined dense clearable').classes('w-full').bind_value(self.table, 'filter')
