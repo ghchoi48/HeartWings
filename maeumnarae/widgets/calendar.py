@@ -12,6 +12,7 @@ from maeumnarae.services.calendar.school_calendar import load_school_events
 from maeumnarae.services.calendar.google_calendar import load_google_events
 from maeumnarae.views.calendar.google_calendar_editor import show_google_event
 from maeumnarae.views.calendar.calendar_event_editor import open_event_editor
+from maeumnarae.views.calendar.calendar_loading import show_calendar_skeleton
 from maeumnarae.views.calendar.calendar_view import event_caption, event_name, render_event_icons, show_school_event
 
 REFRESH_SECONDS = 15 * 60
@@ -36,6 +37,7 @@ class CalendarWidget:
         self.request = 0
         self.loading = False
         self.editor_open = False
+        self._initial_loading = False
 
     def build_header_actions(self):
         ui.button('전체 캘린더', icon='open_in_new', on_click=self.on_calendar).props(
@@ -55,6 +57,8 @@ class CalendarWidget:
         self.message = ui.label().classes('text-xs')
         self.message.bind_visibility_from(self.message, 'text', backward=lambda text: bool(text))
         self.body = ui.column().classes('w-full gap-2')
+        self._initial_loading = True
+        show_calendar_skeleton(self.body, visible_days(self.anchor, 'month'), compact=True)
         ui.timer(0, self.reload, once=True)
         ui.timer(REFRESH_SECONDS, self.refresh_periodically)
 
@@ -98,6 +102,8 @@ class CalendarWidget:
         request = self.request
         self.loading = True
         days = visible_days(self.anchor, 'month')
+        if self._initial_loading and not self.body.default_slot.children:
+            show_calendar_skeleton(self.body, days, compact=True)
         self.message.text = '일정을 불러오는 중입니다…'
         self.add.disable()
         try:
@@ -125,7 +131,9 @@ class CalendarWidget:
             self.holidays = holidays
             self.events = events_by_date(local + list(school.values()) + google, days)
             self.message.text = ' · '.join(m for m in (message, '연동 일정을 확인하는 중입니다…') if m)
+            self._initial_loading = False
             self.render()
+            self.body.props('aria-busy=false')
 
             def refresh():
                 google, google_message = load_google_events(
@@ -142,6 +150,9 @@ class CalendarWidget:
             self.render()
         except DatabaseError as error:
             if request == self.request and not self.body.is_deleted:
+                if self._initial_loading:
+                    self.body.clear()
+                    self.body.props('aria-busy=false')
                 self.message.text = f'{error} · 새로고침을 눌러 다시 시도해 주세요.'
         finally:
             if request == self.request:
@@ -150,7 +161,7 @@ class CalendarWidget:
                     self.update_add_state()
 
     def render(self):
-        if self.body.is_deleted:
+        if self.body.is_deleted or self._initial_loading:
             return
         self.today_date = datetime.now(KST).date()
         self.heading.text = f'{self.anchor:%Y년 %m월}'

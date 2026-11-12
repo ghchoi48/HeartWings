@@ -7,6 +7,7 @@ from datetime import date, datetime, timedelta
 from nicegui import run, ui
 
 from maeumnarae.views.calendar.calendar_event_editor import open_event_editor
+from maeumnarae.views.calendar.calendar_loading import show_calendar_skeleton
 from maeumnarae.services.calendar.calendar_dates import visible_days, event_dates, events_by_date
 
 from pydantic import ValidationError
@@ -123,6 +124,7 @@ class CalendarView:
         self.loaded_revision = None
         self.refreshing = False
         self.moving_event = False
+        self._initial_loading = False
 
     def build(self) -> None:
         with ui.column().classes('w-full gap-5 p-4 md:p-8'):
@@ -157,6 +159,8 @@ class CalendarView:
                 self.message = ui.label().classes('text-sm text-slate-500')
                 with ui.element('div').classes('w-full overflow-x-auto'):
                     self.grid = ui.column().classes('w-full gap-0').style('min-width:700px')
+                    self._initial_loading = True
+                    show_calendar_skeleton(self.grid, visible_days(self.anchor, self.mode.value))
         ui.timer(0.01, self.reload, once=True)
         ui.timer(0.5, self.refresh_if_changed)
         ui.timer(REFRESH_SECONDS, self.refresh_google)
@@ -259,6 +263,8 @@ class CalendarView:
         self.refreshing = True
         days = visible_days(self.anchor, self.mode.value)
         revision = self.repository.database.write_revision
+        if self._initial_loading and not self.grid.default_slot.children:
+            show_calendar_skeleton(self.grid, days)
         self.previous_button.text = '이전 주' if self.mode.value == 'week' else '이전 달'
         self.next_button.text = '다음 주' if self.mode.value == 'week' else '다음 달'
         self.heading.text = f'{self.anchor:%Y년 %m월}' if self.mode.value == 'month' else f'{days[0]:%Y.%m.%d} ~ {days[-1]:%m.%d}'
@@ -278,7 +284,9 @@ class CalendarView:
                         element.enable()
             self.holiday_days = holiday_days
             self.events_by_day = events_by_date(events, days)
+            self._initial_loading = False
             self.render_grid()
+            self.grid.props('aria-busy=false')
             count = sum(item.visible for item in calendars)
             self.message.text = (f'선택한 캘린더 {count}개 · 표시 기간 일정 {len(events)}건'
                                  if count else '캘린더 목록 버튼에서 표시할 캘린더를 선택해 주세요.')
@@ -319,12 +327,17 @@ class CalendarView:
             display(local + remote, message)
         except DatabaseError as error:
             if current():
+                if self._initial_loading:
+                    self.grid.clear()
+                    self.grid.props('aria-busy=false')
                 self.message.text = str(error)
         finally:
             if request == self.count_request:
                 self.refreshing = False
 
     def render_grid(self):
+        if self._initial_loading:
+            return
         today = datetime.now(KST).date()
         days = visible_days(self.anchor, self.mode.value)
         hidden = ({5} if self.hide_saturday.value else set()) | ({6} if self.hide_sunday.value else set())
