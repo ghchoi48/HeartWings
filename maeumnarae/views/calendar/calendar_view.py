@@ -228,11 +228,7 @@ class CalendarView:
         """다른 화면에서 커밋한 변경을 반영하고 편집 중에는 갱신을 미룬다."""
         if not self.is_active() or self.grid.is_deleted or self.repository.database.is_locked or self.refreshing or self.editor_open or self.loaded_revision == self.repository.database.write_revision:
             return
-        self.refreshing = True
-        try:
-            await self.reload()
-        finally:
-            self.refreshing = False
+        await self.reload()
 
     async def today(self) -> None:
         self.anchor = self.selected = datetime.now(KST).date()
@@ -260,133 +256,199 @@ class CalendarView:
             return
         self.count_request += 1
         request = self.count_request
+        self.refreshing = True
         days = visible_days(self.anchor, self.mode.value)
         revision = self.repository.database.write_revision
         self.previous_button.text = '이전 주' if self.mode.value == 'week' else '이전 달'
         self.next_button.text = '다음 주' if self.mode.value == 'week' else '다음 달'
         self.heading.text = f'{self.anchor:%Y년 %m월}' if self.mode.value == 'month' else f'{days[0]:%Y.%m.%d} ~ {days[-1]:%m.%d}'
-        self.grid.clear()
-        self.events_by_day = {}
-        self.holiday_days = {}
-        self.message.text = '일정을 불러오는 중입니다…'
-        try:
-            calendars = await run.io_bound(self.repository.list)
-            if request != self.count_request or not self.is_active() or self.grid.is_deleted:
-                return
-            selected_ids = [item.id for item in calendars if item.visible]
-            event_calendar_ids = [item.id for item in calendars if item.visible and item.source != 'holidays']
-            events = await run.io_bound(self.repository.events, days[0], days[-1], event_calendar_ids)
-            holiday_days = await run.io_bound(korean_holidays, days[0], days[-1])
-            school_events, school_message = await run.io_bound(
-                load_school_events, self.repository.database, calendars, days[0], days[-1])
-            events.extend(school_events)
-            google_events, google_message = await run.io_bound(
-                load_google_events, self.repository.database, calendars, days[0], days[-1], force)
-            events.extend(google_events)
-        except DatabaseError as error:
-            if request == self.count_request and not self.grid.is_deleted and not self.repository.database.is_locked:
-                self.message.text = str(error)
+
+        def current():
+            return (request == self.count_request and self.is_active()
+                    and not self.grid.is_deleted and not self.repository.database.is_locked)
+
+        def display(events, message):
+            if self.calendars != calendars or not self.calendar_list.default_slot.children:
+                self.calendars = calendars
                 self.render_calendars()
-            return
-        if request != self.count_request or not self.is_active() or self.grid.is_deleted or self.repository.database.is_locked:
-            return
-        self.loaded_revision = revision
-        self.calendars = calendars
-        self.holiday_days = holiday_days
-        self.render_calendars()
-        self.events_by_day = events_by_date(events, days)
-        self.render_grid()
-        self.message.text = f'선택한 캘린더 {len(selected_ids)}개 · 표시 기간 일정 {len(events)}건' if selected_ids else '캘린더 목록 버튼에서 표시할 캘린더를 선택해 주세요.'
-        if school_message:
-            self.message.text += ' · ' + school_message
-        if google_message:
-            self.message.text += ' · ' + google_message
+            else:
+                # A visibility save may have disabled these controls.
+                for element in self.calendar_list.descendants():
+                    if isinstance(element, ui.checkbox):
+                        element.enable()
+            self.holiday_days = holiday_days
+            self.events_by_day = events_by_date(events, days)
+            self.render_grid()
+            count = sum(item.visible for item in calendars)
+            self.message.text = (f'선택한 캘린더 {count}개 · 표시 기간 일정 {len(events)}건'
+                                 if count else '캘린더 목록 버튼에서 표시할 캘린더를 선택해 주세요.')
+            if message:
+                self.message.text += ' · ' + message
+
+        try:
+            def cached():
+                calendars = self.repository.list()
+                ids = [item.id for item in calendars if item.visible and item.source != 'holidays']
+                local = self.repository.events(days[0], days[-1], ids)
+                holidays = korean_holidays(days[0], days[-1])
+                google, message = load_google_events(
+                    self.repository.database, calendars, days[0], days[-1], cache_only=True)
+                return calendars, local, holidays, google, message
+
+            calendars, local, holiday_days, google, message = await run.io_bound(cached)
+            if not current():
+                return
+            # Keep already displayed school events until their remote refresh completes.
+            school = {(e.calendar_id, e.id): e for entries in self.events_by_day.values()
+                      for e in entries if e.source == 'neis'} if any(
+                          c.visible and c.source == 'neis' for c in calendars) else {}
+            display(local + list(school.values()) + google,
+                    ' · '.join(m for m in (message, '연동 일정을 확인하는 중입니다…') if m))
+
+            def refresh():
+                google, google_message = load_google_events(
+                    self.repository.database, calendars, days[0], days[-1], force)
+                school, school_message = load_school_events(
+                    self.repository.database, calendars, days[0], days[-1])
+                return google + school, ' · '.join(m for m in (school_message, google_message) if m)
+
+            remote, message = await run.io_bound(refresh)
+            if not current():
+                return
+            self.loaded_revision = revision
+            display(local + remote, message)
+        except DatabaseError as error:
+            if current():
+                self.message.text = str(error)
+        finally:
+            if request == self.count_request:
+                self.refreshing = False
 
     def render_grid(self):
-        self.grid.clear()
-        self.grid.props('data-calendar-drop-surface')
         today = datetime.now(KST).date()
         days = visible_days(self.anchor, self.mode.value)
         hidden = ({5} if self.hide_saturday.value else set()) | ({6} if self.hide_sunday.value else set())
         columns = f'grid-cols-{7 - len(hidden)}'
-        with self.grid:
-            with ui.element('div').classes(f'grid {columns} w-full'):
-                for index, label in enumerate(['일', '월', '화', '수', '목', '금', '토']):
-                    if (index + 6) % 7 in hidden:
-                        continue
-                    ui.label(label).classes('text-center p-2 bg-slate-50 font-semibold ' + (
-                        'text-red-500' if index == 0 else 'text-blue-500' if index == 6 else 'text-slate-600'))
-            for offset in range(0, len(days), 7):
-                week = [day for day in days[offset:offset + 7] if day.weekday() not in hidden]
-                segments = week_event_segments(week, self.events_by_day)
-                lanes = max((s[3] + 1 for s in segments), default=0)
-                with ui.element('div').classes(f'relative grid {columns} w-full isolate') as week_grid:
-                    self.bind_week_interactions(week_grid, week)
-                    with ui.element('div').classes(f'absolute inset-0 grid {columns} pointer-events-none -z-10'):
-                        for day in week:
-                            selection = ('ring-2 ring-inset app-primary-ring'
-                                         if day == self.selected else '')
-                            ui.element('div').classes(f'border border-slate-200 bg-white {selection}')
-                    for col, day in enumerate(week):
-                        with ui.column().classes('min-w-0 p-2 gap-1').style(f'grid-column:{col + 1}; grid-row:1'):
-                            label = f'{day.month}/{day.day}' + (' · 오늘' if day == today else '')
-                            button = ui.button(label).props(
-                                f'flat dense data-calendar-date aria-pressed={str(day == self.selected).lower()}').classes('w-full')
-                            button.on('click', lambda e, day=day: self.choose(day), js_handler='''event => {
-                                const button = event.currentTarget;
-                                clearTimeout(button.calendarClickTimer);
-                                button.calendarClickTimer = setTimeout(() => emit({}), 350);
-                            }''')
-                            if day.weekday() == 6 or day in self.holiday_days:
-                                button.props('color=red-7')
-                            elif day.weekday() == 5:
-                                button.props('color=blue-7')
-                            if day.month != self.anchor.month and self.mode.value == 'month' and day != self.selected:
-                                button.classes('opacity-50')
-                            if day in self.holiday_days and any(item.visible and item.source == 'holidays' for item in self.calendars):
-                                ui.label(self.holiday_days[day]).classes('w-full text-xs break-words').style(f'color:{HOLIDAY_COLOR}')
-                    for entry, col, span, lane, first, last in segments:
-                        name = event_name(entry, hide_names=self.hide_names.value)
-                        caption = event_caption(entry, hide_names=self.hide_names.value)
-                        style = (f'grid-column:{col + 1} / span {span}; grid-row:{lane + 2}; '
-                                 f'margin:2px {"4px" if last else "0"} 2px {"4px" if first else "0"}; '
-                                 f'border-radius:{"6px" if first else "0"} {"6px" if last else "0"} '
-                                 f'{"6px" if last else "0"} {"6px" if first else "0"};')
-                        if entry.all_day:
-                            foreground = contrasting_text_color(entry.color)
-                            style += f'background:{entry.color} !important; color:{foreground} !important;'
-                        else:
-                            style += f'color:var(--app-calendar-timed-text, #000000) !important; border:1px solid {entry.color};'
-                        with ui.button(on_click=lambda entry=entry: self.open_event(entry)).props(
-                                'unelevated dense no-caps align=left' if entry.all_day else 'flat dense no-caps align=left').classes(
-                                    'min-w-0 text-xs h-7').style(style) as bar:
-                            if event_dates(entry)[1] < today:
-                                bar.classes('opacity-60')
-                            if name:
-                                bar.tooltip(name)
-                            bar.props['aria-label'] = caption
-                            self.bind_event_drag(bar, entry)
-                            if first:
-                                ui.label(caption).classes('flex-1 min-w-0 truncate text-left')
-                                render_event_icons(entry)
-                    for col, day in enumerate(week):
-                        height = 'min-h-64' if self.mode.value == 'week' else 'min-h-20'
-                        with ui.column().classes(f'min-w-0 p-2 gap-1 {height} max-h-96 overflow-y-auto').style(
-                                f'grid-column:{col + 1}; grid-row:{lanes + 2}'):
-                            entries = [e for e in self.events_by_day.get(day, [])
-                                       if not e.all_day and event_dates(e)[0] == event_dates(e)[1]]
-                            limit = len(entries) if day == self.selected else (10 if self.mode.value == 'week' else 3)
-                            for entry in entries[:limit]:
-                                caption = event_caption(entry, hide_names=self.hide_names.value)
-                                with ui.button(on_click=lambda entry=entry: self.open_event(entry)).props('flat dense no-caps align=left').classes(
-                                        'w-full text-xs').style(f'border-left:3px solid {entry.color}; color:var(--app-calendar-timed-text, #000000) !important') as event_button:
-                                    if day < today:
-                                        event_button.classes('opacity-60')
-                                    self.bind_event_drag(event_button, entry)
-                                    ui.label(caption).classes('flex-1 min-w-0 break-words text-left')
-                                    render_event_icons(entry)
-                            if len(entries) > limit:
-                                ui.button(f'+{len(entries) - limit}개 더 보기', on_click=lambda day=day: self.choose(day)).props('flat dense').classes('text-xs')
+        layout = (tuple(days), self.mode.value, frozenset(hidden), self.anchor.month)
+        if getattr(self, '_grid_layout', None) != layout:
+            self.grid.clear()
+            self.grid.props('data-calendar-drop-surface')
+            self._grid_layout = layout
+            self._week_regions = []
+            self._week_snapshots = {}
+            self._timed_regions = {}
+            self._timed_snapshots = {}
+            with self.grid:
+                with ui.element('div').classes(f'grid {columns} w-full'):
+                    for index, label in enumerate(['일', '월', '화', '수', '목', '금', '토']):
+                        if (index + 6) % 7 not in hidden:
+                            ui.label(label).classes('text-center p-2 bg-slate-50 font-semibold ' + (
+                                'text-red-500' if index == 0 else 'text-blue-500' if index == 6 else 'text-slate-600'))
+                for offset in range(0, len(days), 7):
+                    week = [day for day in days[offset:offset + 7] if day.weekday() not in hidden]
+                    region = ui.element('div').classes('w-full')
+                    self._week_regions.append((week, region))
+        show_holidays = any(c.visible and c.source == 'holidays' for c in self.calendars)
+        for index, (week, region) in enumerate(self._week_regions):
+            snapshot = (today, self.selected if self.selected in week else None,
+                        self.hide_names.value, show_holidays,
+                        [(day, self.holiday_days.get(day),
+                          [e.model_dump() for e in self.events_by_day.get(day, [])
+                           if e.all_day or event_dates(e)[0] != event_dates(e)[1]]) for day in week])
+            if self._week_snapshots.get(index) == snapshot:
+                continue
+            region.clear()
+            with region:
+                self.render_week(week, columns, today)
+            self._week_snapshots[index] = snapshot
+        for day, region in self._timed_regions.items():
+            entries = [e for e in self.events_by_day.get(day, [])
+                       if not e.all_day and event_dates(e)[0] == event_dates(e)[1]]
+            snapshot = (today, day == self.selected, self.hide_names.value,
+                        [e.model_dump() for e in entries])
+            if self._timed_snapshots.get(day) == snapshot:
+                continue
+            region.clear()
+            with region:
+                self.render_timed_day(day, entries, today)
+            self._timed_snapshots[day] = snapshot
+
+    def render_week(self, week, columns, today):
+        segments = week_event_segments(week, self.events_by_day)
+        lanes = max((s[3] + 1 for s in segments), default=0)
+        with ui.element('div').classes(f'relative grid {columns} w-full isolate').style(
+                f'grid-template-rows:auto {"32px " * lanes}auto') as week_grid:
+            self.bind_week_interactions(week_grid, week)
+            with ui.element('div').classes(f'absolute inset-0 grid {columns} pointer-events-none -z-10'):
+                for day in week:
+                    selection = ('ring-2 ring-inset app-primary-ring'
+                                 if day == self.selected else '')
+                    ui.element('div').classes(f'border border-slate-200 bg-white {selection}')
+            for col, day in enumerate(week):
+                with ui.column().classes('min-w-0 p-2 gap-1').style(f'grid-column:{col + 1}; grid-row:1'):
+                    label = f'{day.month}/{day.day}' + (' · 오늘' if day == today else '')
+                    button = ui.button(label).props(
+                        f'flat dense data-calendar-date aria-pressed={str(day == self.selected).lower()}').classes('w-full')
+                    button.on('click', lambda e, day=day: self.choose(day), js_handler='''event => {
+                        const button = event.currentTarget;
+                        clearTimeout(button.calendarClickTimer);
+                        button.calendarClickTimer = setTimeout(() => emit({}), 350);
+                    }''')
+                    if day.weekday() == 6 or day in self.holiday_days:
+                        button.props('color=red-7')
+                    elif day.weekday() == 5:
+                        button.props('color=blue-7')
+                    if day.month != self.anchor.month and self.mode.value == 'month' and day != self.selected:
+                        button.classes('opacity-50')
+                    if day in self.holiday_days and any(item.visible and item.source == 'holidays' for item in self.calendars):
+                        ui.label(self.holiday_days[day]).classes('w-full text-xs break-words').style(f'color:{HOLIDAY_COLOR}')
+            for entry, col, span, lane, first, last in segments:
+                name = event_name(entry, hide_names=self.hide_names.value)
+                caption = event_caption(entry, hide_names=self.hide_names.value)
+                style = (f'grid-column:{col + 1} / span {span}; grid-row:{lane + 2}; '
+                         f'margin:2px {"4px" if last else "0"} 2px {"4px" if first else "0"}; '
+                         f'border-radius:{"6px" if first else "0"} {"6px" if last else "0"} '
+                         f'{"6px" if last else "0"} {"6px" if first else "0"};')
+                if entry.all_day:
+                    foreground = contrasting_text_color(entry.color)
+                    style += f'background:{entry.color} !important; color:{foreground} !important;'
+                else:
+                    style += f'color:var(--app-calendar-timed-text, #000000) !important; border:1px solid {entry.color};'
+                with ui.button(on_click=lambda entry=entry: self.open_event(entry)).props(
+                        'unelevated dense no-caps align=left' if entry.all_day else 'flat dense no-caps align=left').classes(
+                            'min-w-0 text-xs h-7').style(style) as bar:
+                    if event_dates(entry)[1] < today:
+                        bar.classes('opacity-60')
+                    if name:
+                        bar.tooltip(name)
+                    bar.props['aria-label'] = caption
+                    self.bind_event_drag(bar, entry)
+                    if first:
+                        ui.label(caption).classes('flex-1 min-w-0 truncate text-left')
+                        render_event_icons(entry)
+            for col, day in enumerate(week):
+                height = 'min-h-64' if self.mode.value == 'week' else 'min-h-20'
+                # Reserve only the spanning-event lanes that actually cover this date.
+                day_lanes = max((lane + 1 for _, left, span, lane, _, _ in segments
+                                 if left <= col < left + span), default=0)
+                region = ui.column().classes(f'min-w-0 p-2 gap-1 {height} max-h-96 overflow-y-auto').style(
+                    f'grid-column:{col + 1}; grid-row:{day_lanes + 2} / {lanes + 3}')
+                self._timed_regions[day] = region
+                self._timed_snapshots.pop(day, None)
+
+    def render_timed_day(self, day, entries, today):
+        limit = len(entries) if day == self.selected else (10 if self.mode.value == 'week' else 3)
+        for entry in entries[:limit]:
+            caption = event_caption(entry, hide_names=self.hide_names.value)
+            with ui.button(on_click=lambda entry=entry: self.open_event(entry)).props('flat dense no-caps align=left').classes(
+                    'w-full text-xs').style(f'border-left:3px solid {entry.color}; color:var(--app-calendar-timed-text, #000000) !important') as event_button:
+                if day < today:
+                    event_button.classes('opacity-60')
+                self.bind_event_drag(event_button, entry)
+                ui.label(caption).classes('flex-1 min-w-0 break-words text-left')
+                render_event_icons(entry)
+        if len(entries) > limit:
+            ui.button(f'+{len(entries) - limit}개 더 보기', on_click=lambda day=day: self.choose(day)).props('flat dense').classes('text-xs')
 
     def bind_week_interactions(self, element, week):
         dates = json.dumps([day.isoformat() for day in week])

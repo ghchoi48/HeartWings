@@ -107,24 +107,41 @@ class CalendarWidget:
                 events = self.repository.events(days[0], days[-1], ids)
                 holidays = korean_holidays(days[0], days[-1]) if any(
                     item.visible and item.source == 'holidays' for item in calendars) else {}
-                school_events, school_message = load_school_events(self.repository.database, calendars, days[0], days[-1])
-                events.extend(school_events)
-                google_events, google_message = load_google_events(self.repository.database, calendars, days[0], days[-1], force)
-                events.extend(google_events)
-                return calendars, events, holidays, ' · '.join(m for m in (school_message, google_message) if m)
+                google_events, google_message = load_google_events(
+                    self.repository.database, calendars, days[0], days[-1], cache_only=True)
+                return calendars, events, holidays, google_events, google_message
 
-            calendars, events, holidays, school_message = await run.io_bound(load)
-            if request != self.request or not self.is_active() or self.body.is_deleted or self.repository.database.is_locked:
+            def current():
+                return (request == self.request and self.is_active()
+                        and not self.body.is_deleted and not self.repository.database.is_locked)
+
+            calendars, local, holidays, google, message = await run.io_bound(load)
+            if not current():
                 return
+            school = {(e.calendar_id, e.id): e for entries in self.events.values()
+                      for e in entries if e.source == 'neis'} if any(
+                          c.visible and c.source == 'neis' for c in calendars) else {}
             self.calendars = calendars
-            self.events = events_by_date(events, days)
             self.holidays = holidays
-            self.today_date = datetime.now(KST).date()
-            self.message.text = school_message
+            self.events = events_by_date(local + list(school.values()) + google, days)
+            self.message.text = ' · '.join(m for m in (message, '연동 일정을 확인하는 중입니다…') if m)
+            self.render()
+
+            def refresh():
+                google, google_message = load_google_events(
+                    self.repository.database, calendars, days[0], days[-1], force)
+                school, school_message = load_school_events(
+                    self.repository.database, calendars, days[0], days[-1])
+                return google + school, ' · '.join(m for m in (school_message, google_message) if m)
+
+            remote, message = await run.io_bound(refresh)
+            if not current():
+                return
+            self.events = events_by_date(local + remote, days)
+            self.message.text = message
             self.render()
         except DatabaseError as error:
             if request == self.request and not self.body.is_deleted:
-                self.body.clear()
                 self.message.text = f'{error} · 새로고침을 눌러 다시 시도해 주세요.'
         finally:
             if request == self.request:
@@ -137,48 +154,79 @@ class CalendarWidget:
             return
         self.today_date = datetime.now(KST).date()
         self.heading.text = f'{self.anchor:%Y년 %m월}'
-        self.body.clear()
-        with self.body:
-            with ui.element('div').classes('w-full grid grid-cols-7 gap-1'):
-                for label in '일월화수목금토':
-                    ui.label(label).classes('text-center text-xs')
-                for day in visible_days(self.anchor, 'month'):
-                    classes = 'w-full min-w-0 p-0 rounded-lg '
-                    if day == self.selected:
-                        classes += 'app-primary-soft text-primary '
-                    if day == self.today_date:
-                        classes += 'ring-2 ring-inset app-primary-ring '
-                    if day.month != self.anchor.month:
-                        classes += 'opacity-50 '
-                    with ui.button(on_click=lambda day=day: self.choose(day)).props(
-                            f'flat dense no-caps aria-label="{day.isoformat()}" aria-pressed={str(day == self.selected).lower()}').classes(classes):
-                        with ui.column().classes('items-center gap-0 w-full'):
-                            color = ('text-red-600 dark:text-red-400' if day.weekday() == 6 or day in self.holidays
-                                     else 'text-blue-600 dark:text-blue-400' if day.weekday() == 5
-                                     else 'text-slate-800 dark:text-slate-200')
-                            ui.label(str(day.day)).classes(color)
-                            with ui.row().classes('h-2 gap-1 justify-center'):
-                                colors = list(dict.fromkeys(
-                                    (e.color, event_dates(e)[1] < self.today_date)
-                                    for e in self.events.get(day, [])))[:3]
-                                for color, past in colors:
-                                    ui.element('span').classes(
-                                        'w-1 h-1 rounded-full' + (' opacity-60' if past else '')
-                                    ).style(f'background:{color}')
-            ui.label(f'{self.selected:%m월 %d일}').classes('font-semibold')
-            if self.selected in self.holidays:
-                ui.label(self.holidays[self.selected]).classes('text-sm text-red-600 dark:text-red-400')
-            entries = sorted(self.events.get(self.selected, []), key=lambda e: (not e.all_day, e.starts_at, e.source, e.id))
-            if not entries:
-                ui.label('일정이 없습니다').classes('text-sm')
-            for entry in entries:
-                with ui.button(on_click=lambda entry=entry: self.open_event(entry)).props('flat no-caps align=left').classes(
-                        'w-full min-w-0' + (' opacity-60' if event_dates(entry)[1] < self.today_date else '')
-                ).style('color:var(--app-calendar-timed-text, #000000) !important'):
-                    with ui.row().classes('w-full items-center gap-1 flex-nowrap'):
-                        ui.element('span').classes('w-2 h-2 rounded-full shrink-0').style(f'background:{entry.color}')
-                        ui.label(event_caption(entry)).classes('truncate min-w-0').tooltip(event_name(entry))
-                        render_event_icons(entry)
+        days = visible_days(self.anchor, 'month')
+        layout = (tuple(days), self.anchor.month)
+        if getattr(self, '_body_layout', None) != layout:
+            self.body.clear()
+            self._body_layout = layout
+            self._day_regions = {}
+            self._day_snapshots = {}
+            self._agenda_snapshot = None
+            with self.body:
+                with ui.element('div').classes('w-full grid grid-cols-7 gap-1'):
+                    for label in '일월화수목금토':
+                        ui.label(label).classes('text-center text-xs')
+                    for day in days:
+                        self._day_regions[day] = ui.element('div').classes('min-w-0')
+                self._agenda_region = ui.column().classes('w-full gap-2')
+        for day, region in self._day_regions.items():
+            colors = list(dict.fromkeys((e.color, event_dates(e)[1] < self.today_date)
+                                       for e in self.events.get(day, [])))[:3]
+            snapshot = (day == self.selected, day == self.today_date,
+                        self.holidays.get(day), colors)
+            if self._day_snapshots.get(day) == snapshot:
+                continue
+            region.clear()
+            with region:
+                self.render_day(day)
+            self._day_snapshots[day] = snapshot
+        snapshot = (self.selected, self.today_date, self.holidays.get(self.selected),
+                    [e.model_dump() for e in self.events.get(self.selected, [])])
+        if self._agenda_snapshot != snapshot:
+            self._agenda_region.clear()
+            with self._agenda_region:
+                self.render_agenda()
+            self._agenda_snapshot = snapshot
+
+    def render_day(self, day):
+        classes = 'w-full min-w-0 p-0 rounded-lg '
+        if day == self.selected:
+            classes += 'app-primary-soft text-primary '
+        if day == self.today_date:
+            classes += 'ring-2 ring-inset app-primary-ring '
+        if day.month != self.anchor.month:
+            classes += 'opacity-50 '
+        with ui.button(on_click=lambda day=day: self.choose(day)).props(
+                f'flat dense no-caps aria-label="{day.isoformat()}" aria-pressed={str(day == self.selected).lower()}').classes(classes):
+            with ui.column().classes('items-center gap-0 w-full'):
+                color = ('text-red-600 dark:text-red-400' if day.weekday() == 6 or day in self.holidays
+                         else 'text-blue-600 dark:text-blue-400' if day.weekday() == 5
+                         else 'text-slate-800 dark:text-slate-200')
+                ui.label(str(day.day)).classes(color)
+                with ui.row().classes('h-2 gap-1 justify-center'):
+                    colors = list(dict.fromkeys(
+                        (e.color, event_dates(e)[1] < self.today_date)
+                        for e in self.events.get(day, [])))[:3]
+                    for color, past in colors:
+                        ui.element('span').classes(
+                            'w-1 h-1 rounded-full' + (' opacity-60' if past else '')
+                        ).style(f'background:{color}')
+
+    def render_agenda(self):
+        ui.label(f'{self.selected:%m월 %d일}').classes('font-semibold')
+        if self.selected in self.holidays:
+            ui.label(self.holidays[self.selected]).classes('text-sm text-red-600 dark:text-red-400')
+        entries = sorted(self.events.get(self.selected, []), key=lambda e: (not e.all_day, e.starts_at, e.source, e.id))
+        if not entries:
+            ui.label('일정이 없습니다').classes('text-sm')
+        for entry in entries:
+            with ui.button(on_click=lambda entry=entry: self.open_event(entry)).props('flat no-caps align=left').classes(
+                    'w-full min-w-0' + (' opacity-60' if event_dates(entry)[1] < self.today_date else '')
+            ).style('color:var(--app-calendar-timed-text, #000000) !important'):
+                with ui.row().classes('w-full items-center gap-1 flex-nowrap'):
+                    ui.element('span').classes('w-2 h-2 rounded-full shrink-0').style(f'background:{entry.color}')
+                    ui.label(event_caption(entry)).classes('truncate min-w-0').tooltip(event_name(entry))
+                    render_event_icons(entry)
 
     async def open_event(self, entry):
         if entry.source == 'google_ics':

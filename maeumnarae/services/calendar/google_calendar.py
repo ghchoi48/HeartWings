@@ -1,9 +1,11 @@
 """Bounded, read-only ICS downloads with an encrypted last-good snapshot."""
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import nullcontext
 from datetime import date, datetime, time, timedelta, timezone
 from hashlib import sha256
 from math import ceil
 import ssl
-from threading import Lock
+from threading import BoundedSemaphore, Lock
 from time import monotonic
 from urllib.error import HTTPError, URLError
 from urllib.request import HTTPSHandler, HTTPRedirectHandler, build_opener
@@ -20,6 +22,8 @@ from maeumnarae.services.system.tls import ssl_context
 
 REFRESH_SECONDS = 900
 MAX_BYTES = 5_000_000
+MAX_CONCURRENT_DOWNLOADS = 4
+_download_slots = BoundedSemaphore(MAX_CONCURRENT_DOWNLOADS)
 _locks = WeakKeyDictionary()
 _guard = Lock()
 
@@ -47,6 +51,12 @@ def parse_calendar(raw):
 
 
 def download(url):
+    # Share the limit across views, widgets, and connection checks.
+    with _download_slots:
+        return _download(url)
+
+
+def _download(url):
     url = validate_url(url)
     try:
         opener = build_opener(NoRedirect(), HTTPSHandler(context=ssl_context()))
@@ -126,21 +136,23 @@ def events_from_ics(raw, row, start: date, end: date):
         raise GoogleCalendarError('캘린더 일정 형식을 읽지 못했습니다. 비공개 주소를 확인하고 새로고침해 주세요.') from None
 
 
-def load_google_events(database, calendars, start, end, force=False):
+def load_google_events(database, calendars, start, end, force=False, *, cache_only=False):
     repository = GoogleCalendarRepository(database)
     ids = {-c.id - 2 for c in calendars if c.source == 'google_ics' and c.visible}
-    result, messages = [], []
     requested_at = datetime.now(timezone.utc)
-    for subscription_id in sorted(ids):
+
+    def load_subscription(subscription_id):
+        result, messages = [], []
         with _guard:
             lock = _locks.setdefault(database._state, {}).setdefault(subscription_id, Lock())
-        with lock:
+        # Cached rendering must not wait for an in-flight network request.
+        with nullcontext() if cache_only else lock:
             row = repository.get(subscription_id)
             if not row or not row['visible']:
-                continue
+                return result, messages
             checked = datetime.fromisoformat(row['checked_at']) if row['checked_at'] else None
             due = checked is None or (requested_at - checked).total_seconds() >= REFRESH_SECONDS
-            if due or (force and checked < requested_at):
+            if not cache_only and (due or (force and checked < requested_at)):
                 try:
                     raw = download(row['url'])
                     events_from_ics(raw, row, start, end)
@@ -149,7 +161,7 @@ def load_google_events(database, calendars, start, end, force=False):
                     repository.store_result(row, datetime.now(timezone.utc).isoformat(), error=str(error))
                 current = repository.get(subscription_id)
                 if not current or current['revision'] != row['revision'] or not current['visible']:
-                    continue
+                    return result, messages
                 row = current
             if row['ics'] is not None:
                 try:
@@ -158,4 +170,14 @@ def load_google_events(database, calendars, start, end, force=False):
                     messages.append(f"{row['name']}: {error}")
             if row['error']:
                 messages.append(f"{row['name']} · {row['error']} (마지막 정상 일정 표시)")
+        return result, messages
+
+    result, messages = [], []
+    if ids:
+        with ThreadPoolExecutor(max_workers=min(len(ids), MAX_CONCURRENT_DOWNLOADS),
+                                thread_name_prefix='google-calendar') as executor:
+            # map preserves subscription order even when downloads finish out of order.
+            for events, errors in executor.map(load_subscription, sorted(ids)):
+                result.extend(events)
+                messages.extend(errors)
     return result, ' · '.join(messages)
