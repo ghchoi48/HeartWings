@@ -276,10 +276,10 @@ class CounselingReport:
     completed: int
     students: int
     minutes: int
-    statuses: tuple[ReportBucket, ...]
     categories: tuple[ReportBucket, ...]
     months: tuple[ReportBucket, ...]
     grades: tuple[ReportBucket, ...]
+    areas: tuple[tuple[str, tuple[ReportBucket, ...]], ...] = ()
 
 
 class GroupCounselingInput(InputModel):

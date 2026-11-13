@@ -6,7 +6,7 @@ from datetime import date, datetime, timedelta
 from nicegui import run, ui
 
 from maeumnarae.core.database import DatabaseError
-from maeumnarae.services.reports.reporting import KST, STATUS_LABELS, date_bounds
+from maeumnarae.services.reports.reporting import KST, date_bounds
 from maeumnarae.repositories.reports.reporting_repo import ReportingRepository
 from maeumnarae.views.settings.display_settings import DEFAULT_PRIMARY, DisplaySettings
 
@@ -19,6 +19,7 @@ class StatisticsView:
         self.request = 0
         self.reload_timer = None
         self.setting_period = False
+        self.area_kind = '개인상담'
         self.primary = display.values['primary'] if display else DEFAULT_PRIMARY
         self.charts: list[ui.echart] = []
         if display:
@@ -48,7 +49,8 @@ class StatisticsView:
                             'outline dense no-caps').style(
                             'width: 56px; height: 18px; min-height: 18px; padding: 0; font-size: 10px; line-height: 1;')
                 self.message = ui.label().classes('text-sm text-slate-500')
-                ui.label('종료일 포함 · 상담 시작일 기준(KST) · 유형/월/학년은 완료 상담 기준 · 학년은 현재 학생 정보 기준').classes('text-sm text-slate-500')
+                ui.label('종료일 포함 · 한국 시간 기준 · 유형/월/학년/분야는 완료 일지 기준').classes('text-sm text-slate-500')
+                ui.label('심리검사·교육/행사는 등록 건을 집계합니다. 학년은 현재 학생 정보 기준이며, 집단상담은 출석 학생의 학년별로 회기당 1건을 집계합니다.').classes('text-xs text-slate-500')
             self.results = ui.column().classes('w-full gap-5')
         self.start.on_value_change(self.period_changed)
         self.end.on_value_change(self.period_changed)
@@ -114,28 +116,63 @@ class StatisticsView:
             return
         self.message.text = f'조회 기간: {start} ~ {end} · 전체 {report.total}건'
         with self.results:
-            with ui.element('div').classes('grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full'):
-                for label, value in [('전체 일정', f'{report.total}건'), ('완료 상담', f'{report.completed}건'),
-                                     ('상담 학생 (중복 제외)', f'{report.students}명'), ('완료 상담 시간', f'{report.minutes}분')]:
-                    with ui.card().classes('p-5 rounded-2xl shadow-sm'):
-                        ui.label(label).classes('text-slate-500')
+            with ui.element('div').classes('grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-4 w-full items-stretch'):
+                for label, value, icon in [
+                    ('전체 일정', f'{report.total}건', 'event_note'),
+                    ('완료 상담', f'{report.completed}건', 'task_alt'),
+                    ('상담 학생 (중복 제외)', f'{report.students}명', 'groups'),
+                    ('완료 상담 시간', f'{report.minutes:,}분', 'schedule'),
+                ]:
+                    with ui.card().classes('min-w-0 p-5 rounded-2xl shadow-sm xl:col-span-3 gap-3'):
+                        with ui.row().classes('w-full items-center justify-between'):
+                            ui.label(label).classes('text-sm text-slate-500')
+                            ui.icon(icon).classes('text-primary text-xl')
                         ui.label(value).classes('text-3xl font-bold text-primary')
-            if not report.completed:
-                ui.label('선택 기간에 완료된 상담이 없습니다.').classes('text-slate-500')
-            with ui.row().classes('w-full items-start gap-4'):
-                for title, buckets in [('상태별 전체 일정', report.statuses), ('유형별 완료 상담', report.categories),
-                                       ('월별 완료 상담', report.months), ('현재 학년별 완료 상담', report.grades)]:
-                    with ui.card().classes('w-full lg:w-[48%] p-5 rounded-2xl shadow-sm'):
+                for title, buckets, span in [
+                    ('유형별 상담 건수', report.categories, 'md:col-span-2 xl:col-span-12'),
+                    ('월별 상담 건수', report.months, 'xl:col-span-8'),
+                    ('학년별 상담 건수', report.grades, 'xl:col-span-4'),
+                ]:
+                    with ui.card().classes(f'min-w-0 w-full p-5 rounded-2xl shadow-sm gap-3 {span}'):
                         ui.label(title).classes('text-lg font-bold')
-                        labels = [STATUS_LABELS.get(b.label, b.label) if title == '상태별 전체 일정' else b.label for b in buckets]
-                        if buckets:
-                            chart = ui.echart({'animation': False, 'xAxis': {'type': 'category', 'data': labels, 'axisLabel': {'interval': 0, 'width': 90, 'overflow': 'truncate'}},
-                                'yAxis': {'type': 'value', 'minInterval': 1},
-                                'grid': {'left': 45, 'right': 15, 'bottom': 60},
-                                'series': [{'type': 'bar', 'data': [b.count for b in buckets], 'itemStyle': {'color': self.primary}}],
-                                'dataZoom': [{'type': 'inside'}]}).classes('w-full h-64')
-                            self.charts.append(chart)
-                        ui.table(columns=[dict(name='label', label='구분', field='label', align='left'),
-                                          dict(name='count', label='건수', field='count')],
-                                 rows=[dict(label=label, count=b.count) for label, b in zip(labels, buckets)],
-                                 row_key='label', pagination=10).classes('w-full').props('flat')
+                        self.render_buckets(buckets, horizontal=title == '유형별 상담 건수')
+                with ui.card().classes('min-w-0 w-full p-5 rounded-2xl shadow-sm gap-3 md:col-span-2 xl:col-span-12'):
+                    with ui.row().classes('w-full items-center justify-between flex-nowrap gap-3'):
+                        ui.label('상담 분야별 상담 건수').classes('text-base md:text-lg font-bold min-w-0')
+                        selector = ui.select(['개인상담', '학부모상담', '집단상담', '자문'],
+                                             value=self.area_kind, label='상담 유형').props('outlined dense').classes('w-32 shrink-0')
+                    area_body = ui.column().classes('w-full min-w-0 gap-3')
+                    areas = dict(report.areas)
+
+                    def render_areas():
+                        self.area_kind = selector.value
+                        area_body.clear()
+                        self.charts = [chart for chart in self.charts if not chart.is_deleted]
+                        with area_body:
+                            self.render_buckets(areas.get(self.area_kind, ()), horizontal=True)
+
+                    selector.on_value_change(render_areas)
+                    render_areas()
+
+    def render_buckets(self, buckets, *, horizontal=False):
+        """벤토 카드의 집계 차트 또는 빈 결과 안내를 표시한다."""
+        labels = [b.label for b in buckets]
+        if any(bucket.count for bucket in buckets):
+            chart = ui.echart({
+                'animation': False,
+                'tooltip': {'trigger': 'axis', 'axisPointer': {'type': 'shadow'}},
+                'xAxis': {'type': 'value', 'minInterval': 1} if horizontal else {
+                    'type': 'category', 'data': labels, 'axisLabel': {'hideOverlap': True}},
+                'yAxis': {'type': 'category', 'data': labels, 'inverse': True,
+                          'axisLabel': {'width': 110, 'overflow': 'truncate'}} if horizontal else {
+                    'type': 'value', 'minInterval': 1},
+                'grid': {'left': 12, 'right': 12, 'top': 20, 'bottom': 20, 'containLabel': True},
+                'series': [{'type': 'bar', 'barMaxWidth': 48, 'data': [b.count for b in buckets],
+                            'itemStyle': {'color': self.primary,
+                                          'borderRadius': [0, 6, 6, 0] if horizontal else [6, 6, 0, 0]}}],
+            }).classes('w-full').style(f'height: {max(256, len(buckets) * 34) if horizontal else 256}px')
+            self.charts.append(chart)
+        else:
+            with ui.column().classes('w-full h-64 items-center justify-center gap-2'):
+                ui.icon('bar_chart', size='36px').classes('text-slate-400')
+                ui.label('선택 기간에 집계된 내역이 없습니다.').classes('text-sm text-slate-500')
