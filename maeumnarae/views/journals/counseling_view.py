@@ -485,7 +485,7 @@ class CounselingView:
             else:
                 self.journal_selection.select(entry.id)
                 self.editor_original = {key: field.value for key, field in fields.items()}
-                message.text = '상담 일지를 저장했습니다.'
+                message.text = ''
                 ui.notify(f'{self.log_name}를 저장했습니다.', type='positive')
                 self.log_offset = 0
                 await self.load_logs()

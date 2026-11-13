@@ -2,6 +2,29 @@
 from nicegui import ui
 
 
+def calendar_refresh_button(*, on_click, compact=False):
+    ui.add_css('''
+        @keyframes calendar-refresh-spin {
+            to { transform: rotate(360deg); }
+        }
+        .calendar-refreshing .q-icon {
+            animation: calendar-refresh-spin 1s linear infinite;
+        }
+    ''')
+    return ui.button('' if compact else '새로고침', icon='refresh', on_click=on_click).props(
+        'flat round dense aria-label="캘린더 새로고침"' if compact else 'flat aria-label="캘린더 새로고침"'
+    ).tooltip('새로고침')
+
+
+def set_calendar_refreshing(button, busy):
+    if button is None or button.is_deleted:
+        return
+    button.classes(add='calendar-refreshing' if busy else '',
+                   remove='' if busy else 'calendar-refreshing')
+    button.props(f'aria-busy={str(busy).lower()}')
+    button.set_enabled(not busy)
+
+
 def show_calendar_skeleton(container, days, *, compact=False):
     container.clear()
     container.props('aria-busy=true')

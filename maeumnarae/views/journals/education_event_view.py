@@ -266,7 +266,7 @@ class EducationEventView:
             else:
                 self.selected = entry
                 self.editor_original = self.editor_values()
-                message.text = '교육/행사를 저장했습니다.'
+                message.text = ''
                 await self.reload()
                 ui.notify('교육/행사를 저장했습니다.', type='positive')
             finally:

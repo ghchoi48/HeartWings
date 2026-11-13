@@ -266,7 +266,7 @@ class PsychologicalTestView:
             else:
                 self.journal_selection.select(entry.id)
                 self.editor_original = current_values()
-                message.text = '심리검사 일지를 저장했습니다.'
+                message.text = ''
                 ui.notify('심리검사 일지를 저장했습니다.', type='positive')
                 self.offset = 0
                 await self.load_logs()

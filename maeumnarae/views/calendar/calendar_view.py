@@ -7,7 +7,7 @@ from datetime import date, datetime, timedelta
 from nicegui import run, ui
 
 from maeumnarae.views.calendar.calendar_event_editor import open_event_editor
-from maeumnarae.views.calendar.calendar_loading import show_calendar_skeleton
+from maeumnarae.views.calendar.calendar_loading import show_calendar_skeleton, calendar_refresh_button, set_calendar_refreshing
 from maeumnarae.services.calendar.calendar_dates import visible_days, event_dates, events_by_date
 
 from pydantic import ValidationError
@@ -123,6 +123,7 @@ class CalendarView:
         self.editor_open = False
         self.loaded_revision = None
         self.refreshing = False
+        self.refresh_button = None
         self.moving_event = False
         self._initial_loading = False
 
@@ -134,7 +135,7 @@ class CalendarView:
                     self.heading = ui.label().classes('text-xl font-bold')
                     self.next_button = ui.button('다음 달', icon='chevron_right', on_click=lambda: self.shift(1)).props('flat dense')
                     ui.button('오늘', on_click=self.today).props('outline')
-                    ui.button('새로고침', icon='refresh', on_click=self.force_reload).props('flat')
+                    self.refresh_button = calendar_refresh_button(on_click=self.force_reload)
                     ui.space()
                     self.hide_names = ui.switch(
                         '이름 감추기', value=False, on_change=lambda: self.render_grid(),
@@ -156,7 +157,6 @@ class CalendarView:
                     self.mode = ui.toggle({'month': '월간', 'week': '주간'}, value='month', on_change=self.change_mode)
                     self.add_event = ui.button('일정 추가', icon='add', on_click=lambda: self.open_event_editor())
                     self.add_event.disable()
-                self.message = ui.label().classes('text-sm text-slate-500')
                 with ui.element('div').classes('w-full overflow-x-auto'):
                     self.grid = ui.column().classes('w-full gap-0').style('min-width:700px')
                     self._initial_loading = True
@@ -250,7 +250,7 @@ class CalendarView:
             if not 2 <= day.year <= 9998:
                 raise ValueError
         except (ValueError, OverflowError):
-            self.message.text = '이동 가능한 날짜 범위를 벗어났습니다.'
+            ui.notify('이동 가능한 날짜 범위를 벗어났습니다.', type='warning')
             return
         self.anchor = self.selected = day
         await self.reload()
@@ -261,6 +261,7 @@ class CalendarView:
         self.count_request += 1
         request = self.count_request
         self.refreshing = True
+        set_calendar_refreshing(self.refresh_button, True)
         days = visible_days(self.anchor, self.mode.value)
         revision = self.repository.database.write_revision
         if self._initial_loading and not self.grid.default_slot.children:
@@ -273,7 +274,7 @@ class CalendarView:
             return (request == self.count_request and self.is_active()
                     and not self.grid.is_deleted and not self.repository.database.is_locked)
 
-        def display(events, message):
+        def display(events):
             if self.calendars != calendars or not self.calendar_list.default_slot.children:
                 self.calendars = calendars
                 self.render_calendars()
@@ -287,11 +288,6 @@ class CalendarView:
             self._initial_loading = False
             self.render_grid()
             self.grid.props('aria-busy=false')
-            count = sum(item.visible for item in calendars)
-            self.message.text = (f'선택한 캘린더 {count}개 · 표시 기간 일정 {len(events)}건'
-                                 if count else '캘린더 목록 버튼에서 표시할 캘린더를 선택해 주세요.')
-            if message:
-                self.message.text += ' · ' + message
 
         try:
             def cached():
@@ -310,8 +306,7 @@ class CalendarView:
             school = {(e.calendar_id, e.id): e for entries in self.events_by_day.values()
                       for e in entries if e.source == 'neis'} if any(
                           c.visible and c.source == 'neis' for c in calendars) else {}
-            display(local + list(school.values()) + google,
-                    ' · '.join(m for m in (message, '연동 일정을 확인하는 중입니다…') if m))
+            display(local + list(school.values()) + google)
 
             def refresh():
                 google, google_message = load_google_events(
@@ -324,16 +319,19 @@ class CalendarView:
             if not current():
                 return
             self.loaded_revision = revision
-            display(local + remote, message)
+            display(local + remote)
+            if message:
+                ui.notify(message, type='warning')
         except DatabaseError as error:
             if current():
                 if self._initial_loading:
                     self.grid.clear()
                     self.grid.props('aria-busy=false')
-                self.message.text = str(error)
+                ui.notify(str(error), type='negative')
         finally:
             if request == self.count_request:
                 self.refreshing = False
+                set_calendar_refreshing(self.refresh_button, False)
 
     def render_grid(self):
         if self._initial_loading:

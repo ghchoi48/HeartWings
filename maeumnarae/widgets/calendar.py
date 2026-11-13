@@ -12,7 +12,7 @@ from maeumnarae.services.calendar.school_calendar import load_school_events
 from maeumnarae.services.calendar.google_calendar import load_google_events
 from maeumnarae.views.calendar.google_calendar_editor import show_google_event
 from maeumnarae.views.calendar.calendar_event_editor import open_event_editor
-from maeumnarae.views.calendar.calendar_loading import show_calendar_skeleton
+from maeumnarae.views.calendar.calendar_loading import show_calendar_skeleton, calendar_refresh_button, set_calendar_refreshing
 from maeumnarae.views.calendar.calendar_view import event_caption, event_name, render_event_icons, show_school_event
 
 REFRESH_SECONDS = 15 * 60
@@ -36,14 +36,15 @@ class CalendarWidget:
         self.holidays = {}
         self.request = 0
         self.loading = False
+        self.refresh_button = None
         self.editor_open = False
         self._initial_loading = False
 
     def build_header_actions(self):
         ui.button('전체 캘린더', icon='open_in_new', on_click=self.on_calendar).props(
             'flat dense').classes('shrink-0').set_enabled(self.on_calendar is not None)
-        ui.button(icon='refresh', on_click=self.force_reload).props(
-            'flat round dense aria-label="캘린더 새로고침"').classes('shrink-0').tooltip('새로고침')
+        self.refresh_button = calendar_refresh_button(on_click=self.force_reload, compact=True).classes('shrink-0')
+        set_calendar_refreshing(self.refresh_button, self.loading)
 
     def build(self):
         with ui.row().classes('w-full items-center gap-1'):
@@ -54,8 +55,6 @@ class CalendarWidget:
             ui.space()
             self.add = ui.button('일정 추가', icon='add', on_click=lambda: self.edit()).props('flat dense')
             self.update_add_state()
-        self.message = ui.label().classes('text-xs')
-        self.message.bind_visibility_from(self.message, 'text', backward=lambda text: bool(text))
         self.body = ui.column().classes('w-full gap-2')
         self._initial_loading = True
         show_calendar_skeleton(self.body, visible_days(self.anchor, 'month'), compact=True)
@@ -101,10 +100,10 @@ class CalendarWidget:
         self.request += 1
         request = self.request
         self.loading = True
+        set_calendar_refreshing(self.refresh_button, True)
         days = visible_days(self.anchor, 'month')
         if self._initial_loading and not self.body.default_slot.children:
             show_calendar_skeleton(self.body, days, compact=True)
-        self.message.text = '일정을 불러오는 중입니다…'
         self.add.disable()
         try:
             def load():
@@ -130,7 +129,6 @@ class CalendarWidget:
             self.calendars = calendars
             self.holidays = holidays
             self.events = events_by_date(local + list(school.values()) + google, days)
-            self.message.text = ' · '.join(m for m in (message, '연동 일정을 확인하는 중입니다…') if m)
             self._initial_loading = False
             self.render()
             self.body.props('aria-busy=false')
@@ -146,17 +144,19 @@ class CalendarWidget:
             if not current():
                 return
             self.events = events_by_date(local + remote, days)
-            self.message.text = message
+            if message:
+                ui.notify(message, type='warning')
             self.render()
         except DatabaseError as error:
             if request == self.request and not self.body.is_deleted:
                 if self._initial_loading:
                     self.body.clear()
                     self.body.props('aria-busy=false')
-                self.message.text = f'{error} · 새로고침을 눌러 다시 시도해 주세요.'
+                ui.notify(f'{error} · 새로고침을 눌러 다시 시도해 주세요.', type='negative')
         finally:
             if request == self.request:
                 self.loading = False
+                set_calendar_refreshing(self.refresh_button, False)
                 if not self.body.is_deleted:
                     self.update_add_state()
 

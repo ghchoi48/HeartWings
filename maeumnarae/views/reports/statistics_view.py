@@ -17,6 +17,8 @@ class StatisticsView:
     def __init__(self, repository: ReportingRepository, display: DisplaySettings | None = None):
         self.repository = repository
         self.request = 0
+        self.reload_timer = None
+        self.setting_period = False
         self.primary = display.values['primary'] if display else DEFAULT_PRIMARY
         self.charts: list[ui.echart] = []
         if display:
@@ -39,7 +41,6 @@ class StatisticsView:
                 with ui.row().classes('w-full items-end'):
                     self.start = ui.date_input('통계 시작일', value=str(today.replace(day=1))).props('outlined')
                     self.end = ui.date_input('통계 종료일', value=str(today)).props('outlined')
-                    ui.button('통계 조회', icon='search', on_click=self.load)
                 with ui.row().classes('w-full gap-2'):
                     for label, period in [('학년도', 'school_year'), ('지난달', 'last_month'),
                                           ('이번 달', 'this_month'), ('오늘', 'today')]:
@@ -49,9 +50,9 @@ class StatisticsView:
                 self.message = ui.label().classes('text-sm text-slate-500')
                 ui.label('종료일 포함 · 상담 시작일 기준(KST) · 유형/월/학년은 완료 상담 기준 · 학년은 현재 학생 정보 기준').classes('text-sm text-slate-500')
             self.results = ui.column().classes('w-full gap-5')
-        self.start.on_value_change(self.invalidate)
-        self.end.on_value_change(self.invalidate)
-        ui.timer(0.01, self.load, once=True)
+        self.start.on_value_change(self.period_changed)
+        self.end.on_value_change(self.period_changed)
+        self.reload_timer = ui.timer(0.01, self.load, once=True)
 
     def set_period(self, period: str) -> None:
         """한국 시간의 오늘을 기준으로 조회 기간을 입력한다."""
@@ -68,15 +69,29 @@ class StatisticsView:
             end = today.replace(day=monthrange(today.year, today.month)[1])
         else:
             start = end = today
-        self.start.set_value(start.isoformat())
-        self.end.set_value(end.isoformat())
+        self.setting_period = True
+        try:
+            self.start.set_value(start.isoformat())
+            self.end.set_value(end.isoformat())
+        finally:
+            self.setting_period = False
+        self.period_changed()
+
+    def period_changed(self) -> None:
+        """연속 입력을 모아 마지막으로 지정한 기간을 자동 조회한다."""
+        if self.setting_period:
+            return
+        self.invalidate()
+        if self.reload_timer is not None:
+            self.reload_timer.deactivate()
+        self.reload_timer = ui.timer(0.2, self.load, once=True)
 
     def invalidate(self) -> None:
         """입력 기간이 바뀌면 이전 결과와 진행 중인 조회를 무효화한다."""
         self.request += 1
         self.results.clear()
         self.charts.clear()
-        self.message.text = '기간이 변경되었습니다. 통계 조회를 눌러 주세요.'
+        self.message.text = ''
 
     async def load(self) -> None:
         """전체 기간을 SQL에서 집계하며 페이지 제한으로 잘라 집계하지 않는다."""
