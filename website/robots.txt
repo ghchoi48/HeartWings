@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /HeartWings/
+
+Sitemap: https://ghchoi48.github.io/HeartWings/sitemap.xml
