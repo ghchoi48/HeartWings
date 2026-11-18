@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>시작하기 | 마음나래 사용 설명서</title>
+  <meta name="description" content="앱을 설치하고 학교 정보를 준비한 뒤, 첫 상담 기록을 남겨 보세요.">
+  <meta name="theme-color" content="#27685d">
+  <link rel="canonical" href="https://ghchoi48.github.io/HeartWings/wiki/getting-started.html">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="ko_KR">
+  <meta property="og:title" content="시작하기 | 마음나래 사용 설명서">
+  <meta property="og:description" content="앱을 설치하고 학교 정보를 준비한 뒤, 첫 상담 기록을 남겨 보세요.">
+  <meta property="og:url" content="https://ghchoi48.github.io/HeartWings/wiki/getting-started.html">
+  <meta property="og:image" content="https://ghchoi48.github.io/HeartWings/assets/share.png">
+  <meta property="og:image:alt" content="마음나래 금빛 날개 로고">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="../assets/favicon.png" type="image/png">
+  <link rel="preconnect" href="https://spoqa.github.io" crossorigin>
+  <link rel="stylesheet" href="https://spoqa.github.io/spoqa-han-sans/css/SpoqaHanSansNeo.css">
+  <link rel="stylesheet" href="wiki.css">
+  <script src="wiki.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">본문으로 건너뛰기</a>
+  <header class="wiki-header"><div class="wiki-header-inner">
+    <a class="wiki-brand" href="index.html"><img src="../assets/logo.png" width="40" height="40" alt="">마음나래 사용 설명서</a>
+    <nav aria-label="사이트 메뉴"><a href="../index.html">홈페이지</a><a href="../index.html#download">다운로드</a></nav>
+  </div></header>
+  <div class="wiki-shell">
+    <aside class="wiki-sidebar" aria-label="사용 설명서 탐색">
+      <form class="wiki-search" role="search" hidden>
+        <label for="wiki-query">사용 설명서 검색</label>
+        <div class="search-controls"><input id="wiki-query" name="q" type="search" placeholder="예: 백업, 집단 상담" autocomplete="off" maxlength="200" aria-controls="search-results"><button type="submit">검색</button></div>
+        <p role="status" aria-live="polite"></p><ul id="search-results" class="search-results"></ul>
+      </form>
+      <details class="wiki-navigation" open><summary>문서 목록</summary><nav aria-label="문서 목록"><a href="index.html">마음나래 사용 설명서</a><a href="getting-started.html" aria-current="page">시작하기</a><a href="home.html">홈 화면</a><a href="students.html">학생·교사 관리</a><a href="journals.html">상담 일지</a><a href="calendar.html">일정 관리</a><a href="reports.html">통계·내보내기</a><a href="import.html">기존 자료 가져오기</a><a href="data.html">설정·데이터 관리</a><a href="troubleshooting.html">문제 해결</a></nav></details>
+    </aside>
+    <main id="main" class="wiki-main">
+      <nav class="breadcrumbs" aria-label="현재 위치"><a href="../index.html">홈</a><span aria-hidden="true">/</span><a href="index.html">사용 설명서</a><span aria-hidden="true">/</span><span>시작하기</span></nav>
+      <article class="wiki-article"><header><h1>시작하기</h1><p class="wiki-lead">앱을 설치하고 학교 정보를 준비한 뒤, 첫 상담 기록을 남겨 보세요.</p></header>
+<section aria-labelledby="install"><h2 id="install">앱 설치하기</h2><p><a href="https://github.com/ghchoi48/HeartWings/releases/latest">최신 릴리스</a>에서 자신의 운영체제에 맞는 설치 파일을 선택합니다. 릴리스에 첨부된 파일과 변경 사항을 함께 확인하세요.</p><h3>Windows</h3><ol><li>이름이 <code>windows-x64-setup.exe</code>로 끝나는 설치 파일을 내려받습니다.</li><li>설치 파일을 실행하고 설치 마법사의 안내를 따릅니다. WebView2 Runtime이 없으면 설치 과정에서 내려받으므로 인터넷 연결이 필요합니다.</li><li>설치된 마음나래를 실행합니다. 최초 실행 시 ‘마음나래 시작 준비’가 나타납니다.</li></ol><h3>macOS</h3><ol><li>Mac의 CPU에 맞는 DMG 파일을 내려받습니다. Apple Silicon과 Intel용 파일은 릴리스에서 구분해 확인합니다.</li><li>DMG를 열고 마음나래 앱을 Applications 바로가기로 드래그합니다.</li><li>응용 프로그램 폴더에서 마음나래를 실행합니다.</li></ol><p>소스 실행이나 개발 환경이 필요하면 <a href="https://github.com/ghchoi48/HeartWings/blob/main/BUILDING.md">빌드 안내</a>를 참고하세요.</p></section>
+<section aria-labelledby="first-run"><h2 id="first-run">비밀번호와 학교 정보 설정하기</h2><ol><li>DB 비밀번호를 4글자 이상 입력하고 확인란에 같은 값을 입력한 뒤 ‘다음’을 누릅니다.</li><li>교육청과 학교급을 선택하고 학교명을 입력합니다. ‘불러오기’에서 학교를 선택하면 학교 나이스 번호가 저장됩니다.</li><li>상담교사 이름과 필요한 사무실 번호를 입력합니다. 교육청·학교명·상담교사 이름은 필수입니다.</li><li>‘저장하고 다음’을 누릅니다. 나이스 번호와 사무실 번호는 나중에 설정할 수도 있습니다.</li><li>기존 자료가 있으면 ‘울산형 DB 마이그레이션’ 또는 ‘교사·학생 일괄 등록’을 선택합니다. 나중에 등록하려면 ‘건너뛰기’를 선택합니다.</li></ol><figure hidden data-screenshot="../assets/wiki/first-run.png"><a href="../assets/wiki/first-run.png" aria-label="첫 실행의 학교 정보 설정 원본 보기"><img alt="가상 데이터로 구성한 첫 실행의 학교 정보 설정" decoding="async"></a><figcaption>첫 실행의 학교 정보 설정. 예시 데이터로 촬영한 화면이며, 누르면 원본을 볼 수 있습니다.</figcaption></figure><aside class="note"><p>DB 비밀번호는 기록을 여는 데 필요합니다. 백업 복원에는 현재 비밀번호가 아니라 백업을 만들 당시의 비밀번호가 필요할 수 있습니다.</p></aside></section>
+<section aria-labelledby="first-journal"><h2 id="first-journal">첫 상담 기록 남기기</h2><ol><li>‘학생 관리’에서 학생을 등록하거나 기존 학생을 선택합니다.</li><li>학생 상세 화면의 ‘상담 일지’를 눌러 일지 관리로 이동합니다.</li><li>‘새 상담 사례’를 만들고 사례명을 입력한 뒤 ‘사례 저장’을 누릅니다.</li><li>‘새 상담 일지’를 눌러 일시·소요 시간·상담 상태와 내용을 입력하고 ‘일지 저장’을 누릅니다.</li><li>저장한 일지를 다시 열어 내용과 대상 학생을 확인합니다. 상담을 마친 기록은 상태가 ‘완료’인지 확인합니다.</li></ol><p>상세한 작성 방법은 <a href="journals.html#individual">개인 상담 작성</a>, 명부 준비는 <a href="students.html#roster">명부 일괄 등록</a>을 참고하세요.</p></section>
+<section aria-labelledby="routine"><h2 id="routine">하루를 마무리할 때</h2><ol><li>홈의 미작성 일지 건수와 캘린더를 살펴보고 작성할 기록이 남아 있는지 확인합니다.</li><li>‘설정 → DB → DB 관리’에서 ‘전체 DB 백업’을 내려받습니다.</li><li>자리를 비울 때는 상단 ‘DB 잠금’을 누릅니다. ‘설정 → 시스템’에서 자동 잠금도 설정할 수 있습니다.</li></ol><p>컴퓨터를 바꾸기 전에는 <a href="data.html#restore">전체 DB 복원 절차</a>까지 확인하세요.</p></section>
+      </article>
+      <nav class="page-turn" aria-label="이전 및 다음 문서"><a href="index.html"><span>이전 문서</span>마음나래 사용 설명서</a><a href="home.html"><span>다음 문서</span>홈 화면</a></nav>
+    </main>
+    <details class="wiki-toc" open><summary>이 문서의 목차</summary><nav aria-label="이 문서의 목차"><ul><li><a href="#install">앱 설치하기</a></li><li><a href="#first-run">비밀번호와 학교 정보 설정하기</a></li><li><a href="#first-journal">첫 상담 기록 남기기</a></li><li><a href="#routine">하루를 마무리할 때</a></li></ul></nav></details>
+  </div>
+  <footer class="wiki-footer"><span>마음나래 · 학교 상담을 위한 사용 설명서</span><a href="troubleshooting.html#contact">문의 및 문제 제보</a></footer>
+</body>
+</html>

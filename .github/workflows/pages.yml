@@ -6,6 +6,8 @@ on:
         paths:
             - "website/**"
             - "scripts/generate_sitemap.py"
+            - "scripts/generate_wiki_search.py"
+            - "scripts/check_wiki.py"
             - ".github/workflows/pages.yml"
 
     workflow_dispatch:
@@ -41,8 +43,14 @@ jobs:
               with:
                   python-version: "3.13"
 
+            - name: Generate wiki search index
+              run: python scripts/generate_wiki_search.py
+
             - name: Generate sitemap
               run: python scripts/generate_sitemap.py
+
+            - name: Check wiki links and search index
+              run: python scripts/check_wiki.py
 
             - name: Configure Pages
               uses: actions/configure-pages@v5

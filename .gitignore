@@ -47,6 +47,8 @@
 !/scripts/build_splash.py
 !/scripts/convert_ridibatang.py
 !/scripts/generate_sitemap.py
+!/scripts/generate_wiki_search.py
+!/scripts/check_wiki.py
 # Local data and generated files are excluded even inside allowed folders.
 __pycache__/
 *.py[cod]

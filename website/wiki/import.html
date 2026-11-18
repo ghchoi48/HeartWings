@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>기존 자료 가져오기 | 마음나래 사용 설명서</title>
+  <meta name="description" content="울산형 상담기록관리 XLSB 파일을 검사하고, 연결 대상과 오류를 확인한 뒤 DB에 추가합니다.">
+  <meta name="theme-color" content="#27685d">
+  <link rel="canonical" href="https://ghchoi48.github.io/HeartWings/wiki/import.html">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="ko_KR">
+  <meta property="og:title" content="기존 자료 가져오기 | 마음나래 사용 설명서">
+  <meta property="og:description" content="울산형 상담기록관리 XLSB 파일을 검사하고, 연결 대상과 오류를 확인한 뒤 DB에 추가합니다.">
+  <meta property="og:url" content="https://ghchoi48.github.io/HeartWings/wiki/import.html">
+  <meta property="og:image" content="https://ghchoi48.github.io/HeartWings/assets/share.png">
+  <meta property="og:image:alt" content="마음나래 금빛 날개 로고">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="../assets/favicon.png" type="image/png">
+  <link rel="preconnect" href="https://spoqa.github.io" crossorigin>
+  <link rel="stylesheet" href="https://spoqa.github.io/spoqa-han-sans/css/SpoqaHanSansNeo.css">
+  <link rel="stylesheet" href="wiki.css">
+  <script src="wiki.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">본문으로 건너뛰기</a>
+  <header class="wiki-header"><div class="wiki-header-inner">
+    <a class="wiki-brand" href="index.html"><img src="../assets/logo.png" width="40" height="40" alt="">마음나래 사용 설명서</a>
+    <nav aria-label="사이트 메뉴"><a href="../index.html">홈페이지</a><a href="../index.html#download">다운로드</a></nav>
+  </div></header>
+  <div class="wiki-shell">
+    <aside class="wiki-sidebar" aria-label="사용 설명서 탐색">
+      <form class="wiki-search" role="search" hidden>
+        <label for="wiki-query">사용 설명서 검색</label>
+        <div class="search-controls"><input id="wiki-query" name="q" type="search" placeholder="예: 백업, 집단 상담" autocomplete="off" maxlength="200" aria-controls="search-results"><button type="submit">검색</button></div>
+        <p role="status" aria-live="polite"></p><ul id="search-results" class="search-results"></ul>
+      </form>
+      <details class="wiki-navigation" open><summary>문서 목록</summary><nav aria-label="문서 목록"><a href="index.html">마음나래 사용 설명서</a><a href="getting-started.html">시작하기</a><a href="home.html">홈 화면</a><a href="students.html">학생·교사 관리</a><a href="journals.html">상담 일지</a><a href="calendar.html">일정 관리</a><a href="reports.html">통계·내보내기</a><a href="import.html" aria-current="page">기존 자료 가져오기</a><a href="data.html">설정·데이터 관리</a><a href="troubleshooting.html">문제 해결</a></nav></details>
+    </aside>
+    <main id="main" class="wiki-main">
+      <nav class="breadcrumbs" aria-label="현재 위치"><a href="../index.html">홈</a><span aria-hidden="true">/</span><a href="index.html">사용 설명서</a><span aria-hidden="true">/</span><span>기존 자료 가져오기</span></nav>
+      <article class="wiki-article"><header><h1>기존 자료 가져오기</h1><p class="wiki-lead">울산형 상담기록관리 XLSB 파일을 검사하고, 연결 대상과 오류를 확인한 뒤 DB에 추가합니다.</p></header>
+<section aria-labelledby="prepare"><h2 id="prepare">가져오기 전에 준비하기</h2><p class="menu-path"><strong>메뉴 위치</strong> 설정 → DB → 울산형 상담기록관리 DB 가져오기</p><ol><li>현재 마음나래 자료가 있으면 먼저 <a href="data.html#backup">전체 DB 백업</a>을 내려받습니다.</li><li>원본 XLSB 파일을 Excel에서 열어 수식 계산을 완료하고 저장합니다. 가져오기는 수식 자체를 계산하지 않고 저장된 값을 읽습니다.</li><li>10MB 이하 XLSB 파일 하나를 준비합니다. 일반 학생·교사 XLSX 명부는 <a href="students.html#roster">일괄 등록</a>에서 처리합니다.</li><li>자료의 학년도와 원본에서 사용한 교시별 시작 시간을 확인합니다.</li></ol><p>인적사항등록·상담대장 자료는 사례번호로 연결하며, 식별 정보가 일치하는 기존 대상이 있으면 연결합니다. 대분류가 자문인 경우 인적사항의 성명은 교사로 등록됩니다.</p></section>
+<section aria-labelledby="inspect"><h2 id="inspect">파일 검사와 오류 수정</h2><ol><li>‘자료의 학년도’를 지정하고 ‘교시별 시작 시간 설정’에서 원본의 시간을 입력합니다.</li><li>‘상담기록관리 XLSB 파일’에 파일을 선택하고 검사 결과를 기다립니다.</li><li>대상별 건수와 오류를 확인합니다. 시작 시각에는 교시별 설정이 적용되며 소요 시간은 원본 시간(시) × 60 + 시간(분)으로 계산합니다.</li><li>오류가 있으면 ‘행 수정 / 일지 지정 / 제외’에서 해당 행을 확인합니다. 값이나 등록할 일지를 수정하고 ‘수정사항 저장 후 다음 오류’를 진행합니다.</li><li>설정을 바꾼 경우 ‘설정 적용 후 다시 검사’를 누릅니다. 제외한 행이 있으면 제외 건수와 대상을 확인합니다.</li></ol><figure hidden data-screenshot="../assets/wiki/legacy-import.png"><a href="../assets/wiki/legacy-import.png" aria-label="기존 XLSB 자료 검사 결과 원본 보기"><img alt="가상 데이터로 구성한 기존 XLSB 자료 검사 결과" decoding="async"></a><figcaption>기존 XLSB 자료 검사 결과. 예시 데이터로 촬영한 화면이며, 누르면 원본을 볼 수 있습니다.</figcaption></figure><aside class="note"><p>검사와 화면에서의 수정만으로 DB에 등록되지는 않습니다. 최종 추가 전에 연결 대상과 제외 행을 확인하세요.</p></aside></section>
+<section aria-labelledby="save"><h2 id="save">검사한 자료 추가하고 확인하기</h2><ol><li>오류와 등록 대상 검토가 끝나면 ‘검사한 자료를 DB에 추가’를 누릅니다.</li><li>처리 결과를 확인한 뒤 학생 관리와 해당 유형의 일지 화면으로 이동합니다.</li><li>대표 학생 또는 교사를 선택해 상담 일시·유형·내용이 의도한 기록에 연결되었는지 확인합니다.</li><li>통계에서도 이관한 기간을 선택해 기록을 점검하고, 확인을 마친 상태를 다시 백업합니다.</li></ol><p>이미 가져온 자료라는 안내가 나오면 같은 파일을 반복 등록하기 전에 기존 이관 결과를 확인하세요. 원본 자료는 검증이 끝날 때까지 보관합니다.</p></section>
+<section aria-labelledby="errors"><h2 id="errors">가져오기가 멈추거나 거부될 때</h2><ul><li>파일 확장자가 XLSB인지, 10MB 이하인지 확인합니다. 확장자 이름만 바꾼 파일은 사용할 수 없습니다.</li><li>수식 결과가 비어 있다면 Excel에서 계산하고 저장한 파일로 다시 검사합니다.</li><li>학년도·날짜·시간·대상 연결 오류는 검사 화면의 구체적인 오류 메시지에 따라 수정합니다.</li><li>다른 파일 업로드가 진행 중이면 완료 후 다시 시도합니다.</li></ul><p>계속 실패하면 <a href="troubleshooting.html#contact">문의에 필요한 정보</a>를 정리하세요.</p></section>
+      </article>
+      <nav class="page-turn" aria-label="이전 및 다음 문서"><a href="reports.html"><span>이전 문서</span>통계·내보내기</a><a href="data.html"><span>다음 문서</span>설정·데이터 관리</a></nav>
+    </main>
+    <details class="wiki-toc" open><summary>이 문서의 목차</summary><nav aria-label="이 문서의 목차"><ul><li><a href="#prepare">가져오기 전에 준비하기</a></li><li><a href="#inspect">파일 검사와 오류 수정</a></li><li><a href="#save">검사한 자료 추가하고 확인하기</a></li><li><a href="#errors">가져오기가 멈추거나 거부될 때</a></li></ul></nav></details>
+  </div>
+  <footer class="wiki-footer"><span>마음나래 · 학교 상담을 위한 사용 설명서</span><a href="troubleshooting.html#contact">문의 및 문제 제보</a></footer>
+</body>
+</html>

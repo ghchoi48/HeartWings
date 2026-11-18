@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>설정·데이터 관리 | 마음나래 사용 설명서</title>
+  <meta name="description" content="사용 환경을 맞추고, 기록을 안전하게 옮기거나 다음 담당자에게 인계하세요.">
+  <meta name="theme-color" content="#27685d">
+  <link rel="canonical" href="https://ghchoi48.github.io/HeartWings/wiki/data.html">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="ko_KR">
+  <meta property="og:title" content="설정·데이터 관리 | 마음나래 사용 설명서">
+  <meta property="og:description" content="사용 환경을 맞추고, 기록을 안전하게 옮기거나 다음 담당자에게 인계하세요.">
+  <meta property="og:url" content="https://ghchoi48.github.io/HeartWings/wiki/data.html">
+  <meta property="og:image" content="https://ghchoi48.github.io/HeartWings/assets/share.png">
+  <meta property="og:image:alt" content="마음나래 금빛 날개 로고">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="../assets/favicon.png" type="image/png">
+  <link rel="preconnect" href="https://spoqa.github.io" crossorigin>
+  <link rel="stylesheet" href="https://spoqa.github.io/spoqa-han-sans/css/SpoqaHanSansNeo.css">
+  <link rel="stylesheet" href="wiki.css">
+  <script src="wiki.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">본문으로 건너뛰기</a>
+  <header class="wiki-header"><div class="wiki-header-inner">
+    <a class="wiki-brand" href="index.html"><img src="../assets/logo.png" width="40" height="40" alt="">마음나래 사용 설명서</a>
+    <nav aria-label="사이트 메뉴"><a href="../index.html">홈페이지</a><a href="../index.html#download">다운로드</a></nav>
+  </div></header>
+  <div class="wiki-shell">
+    <aside class="wiki-sidebar" aria-label="사용 설명서 탐색">
+      <form class="wiki-search" role="search" hidden>
+        <label for="wiki-query">사용 설명서 검색</label>
+        <div class="search-controls"><input id="wiki-query" name="q" type="search" placeholder="예: 백업, 집단 상담" autocomplete="off" maxlength="200" aria-controls="search-results"><button type="submit">검색</button></div>
+        <p role="status" aria-live="polite"></p><ul id="search-results" class="search-results"></ul>
+      </form>
+      <details class="wiki-navigation" open><summary>문서 목록</summary><nav aria-label="문서 목록"><a href="index.html">마음나래 사용 설명서</a><a href="getting-started.html">시작하기</a><a href="home.html">홈 화면</a><a href="students.html">학생·교사 관리</a><a href="journals.html">상담 일지</a><a href="calendar.html">일정 관리</a><a href="reports.html">통계·내보내기</a><a href="import.html">기존 자료 가져오기</a><a href="data.html" aria-current="page">설정·데이터 관리</a><a href="troubleshooting.html">문제 해결</a></nav></details>
+    </aside>
+    <main id="main" class="wiki-main">
+      <nav class="breadcrumbs" aria-label="현재 위치"><a href="../index.html">홈</a><span aria-hidden="true">/</span><a href="index.html">사용 설명서</a><span aria-hidden="true">/</span><span>설정·데이터 관리</span></nav>
+      <article class="wiki-article"><header><h1>설정·데이터 관리</h1><p class="wiki-lead">사용 환경을 맞추고, 기록을 안전하게 옮기거나 다음 담당자에게 인계하세요.</p></header>
+<section aria-labelledby="preferences"><h2 id="preferences">학교 정보와 화면 설정</h2><p class="menu-path"><strong>메뉴 위치</strong> 설정 → 일반 / 화면</p><p>‘일반’에서는 학교 정보와 상담교사 이름, 나이스 연동 정보를 관리합니다. 변경 후 저장하고 실제 화면에 적용되었는지 확인합니다. 학교를 바꿀 때는 이름뿐 아니라 교육청과 학교 나이스 번호도 확인하세요.</p><p>‘화면’에서는 제공되는 테마와 글꼴 등 표시 설정을 조절합니다. 화면 설정은 즉시 적용되며 전체 DB 백업에 테마·글꼴이 포함되지는 않습니다.</p></section>
+<section aria-labelledby="lock"><h2 id="lock">DB 잠금과 비밀번호 변경</h2><p class="menu-path"><strong>메뉴 위치</strong> 상단 DB 잠금 / 설정 → 시스템</p><ol><li>자리를 비울 때 상단 ‘DB 잠금’을 누릅니다. 다시 사용할 때 DB 비밀번호로 엽니다.</li><li>‘설정 → 시스템 → 자동 잠금’에서 조작이 없을 때 잠기는 시간을 설정합니다.</li><li>비밀번호를 바꾸려면 ‘비밀번호 설정’에서 현재 비밀번호와 새 비밀번호를 입력하고 화면의 확인 절차를 완료합니다.</li><li>변경 후 새 비밀번호로 DB가 열리는지 확인하고 새로운 백업을 만듭니다.</li></ol><aside class="note"><p>비밀번호를 변경해도 이미 만들어 둔 백업 파일의 비밀번호는 바뀌지 않습니다. 이전 백업을 복원하려면 그 백업을 만들 당시의 비밀번호가 필요합니다.</p></aside></section>
+<section aria-labelledby="backup"><h2 id="backup">백업 범위 선택과 다운로드</h2><p class="menu-path"><strong>메뉴 위치</strong> 설정 → DB → DB 관리</p><div class="table-scroll" role="region" aria-label="비교 표" tabindex="0"><table><thead><tr><th scope="col">백업 종류</th><th scope="col">사용할 때</th></tr></thead><tbody><tr><td>전체 DB</td><td>컴퓨터 이동이나 전체 복구를 위해 DB의 모든 데이터를 보관할 때</td></tr><tr><td>사용자 개인 데이터</td><td>담당자의 위젯·개인 일정·연결 설정 등 개인 사용 환경을 옮길 때</td></tr><tr><td>상담 데이터 및 학교 정보</td><td>명부·상담 기록·학교 정보를 따로 보관하거나 옮길 때</td></tr></tbody></table></div><ol><li>목적에 맞는 백업 종류를 선택합니다. 전체 복구를 준비할 때는 ‘전체 DB 백업’을 누릅니다.</li><li>다운로드가 완료되었는지 파일을 확인하고 날짜와 용도를 구분해 보관합니다.</li><li>백업 당시 비밀번호를 기억하거나 별도의 안전한 방법으로 관리합니다. 백업 파일과 비밀번호가 모두 필요합니다.</li></ol><figure hidden data-screenshot="../assets/wiki/backup-restore.png"><a href="../assets/wiki/backup-restore.png" aria-label="전체 DB 및 부분 백업·복원 원본 보기"><img alt="가상 데이터로 구성한 전체 DB 및 부분 백업·복원" decoding="async"></a><figcaption>전체 DB 및 부분 백업·복원. 예시 데이터로 촬영한 화면이며, 누르면 원본을 볼 수 있습니다.</figcaption></figure><p>상담 데이터와 첨부파일은 로컬 암호화 DB에 보관됩니다. 앱 설치 파일을 복사하는 것으로 사용자 기록이 옮겨지지는 않습니다.</p></section>
+<section aria-labelledby="restore"><h2 id="restore">전체 DB 복원과 컴퓨터 이동</h2><ol><li>기존 컴퓨터에서 전체 DB 백업을 내려받고 백업 당시 비밀번호를 준비합니다.</li><li>새 컴퓨터에 앱을 설치하고 초기 설정을 마쳐 ‘설정 → DB → DB 관리’로 들어갑니다. 기존 컴퓨터에서 복구하는 경우 현재 자료도 먼저 백업합니다.</li><li>‘전체 DB 복원’에서 256MB 이하의 전체 DB 백업 파일을 선택합니다.</li><li>‘백업 파일 비밀번호’를 입력하고 현재 데이터를 교체한다는 확인 항목을 체크한 뒤 ‘복원’을 누릅니다.</li><li>완료 화면에서 복원 전 DB 자동 백업 위치를 확인합니다.</li><li>‘DB 다시 열기’를 누르고 백업 당시 비밀번호로 엽니다. 학생·일지·첨부파일과 설정을 확인합니다.</li></ol><aside class="note"><p>전체 복원은 현재 데이터에 추가하는 작업이 아니라 백업 내용으로 교체하는 작업입니다. DB 비밀번호도 백업 당시 비밀번호로 바뀝니다.</p></aside></section>
+<section aria-labelledby="partial"><h2 id="partial">부분 백업 복원하기</h2><ol><li>복원할 범위와 같은 종류의 전용 부분 백업 파일을 준비합니다. 전체 DB 백업과 부분 백업은 서로 다른 파일입니다.</li><li>해당 항목의 ‘복원’을 열어 파일과 백업 당시 비밀번호를 입력합니다.</li><li>현재 해당 범위를 백업 내용으로 교체한다는 확인 항목을 읽고 복원합니다. 빈 항목도 반영됩니다.</li><li>완료 후 현재 DB 비밀번호로 다시 엽니다. 부분 복원은 현재 DB 비밀번호를 바꾸지 않습니다.</li></ol><p>부분 복원 전에도 전체 DB 자동 백업이 생성됩니다. 복원할 범위의 상세 설명을 읽고, 유지해야 할 다른 자료가 있는지 먼저 확인하세요.</p></section>
+<section aria-labelledby="reset"><h2 id="reset">인수인계와 초기화 구분하기</h2><p class="menu-path"><strong>메뉴 위치</strong> 설정 → DB → DB 관리 → 위험 구역</p><div class="table-scroll" role="region" aria-label="비교 표" tabindex="0"><table><thead><tr><th scope="col">기능</th><th scope="col">변경 범위</th></tr></thead><tbody><tr><td>인수인계 초기화 (Soft Reset)</td><td>위젯 데이터, NEIS 인증키, Google 연결과 저장된 일정, 사용자 캘린더·일정을 삭제하고 상담교사 이름을 변경합니다. 학생·교사 명부와 상담 기록, 기존 일지 작성자 이름은 유지합니다.</td></tr><tr><td>상담데이터 초기화</td><td>학생·교사 명부, 상담 관련 기록·첨부파일·상담 일정·이관 이력 등을 삭제합니다. 학교 정보와 개인 데이터는 유지합니다.</td></tr><tr><td>DB 전체 초기화 (Hard Reset)</td><td>현재 DB 파일을 삭제하고 첫 실행 화면으로 돌아갑니다.</td></tr></tbody></table></div><ol><li>필요한 자료를 백업합니다. 인수인계 전에 자신의 개인 환경을 보관하려면 사용자 개인 데이터 백업도 내려받습니다.</li><li>원하는 초기화의 삭제·유지 범위를 화면에서 확인합니다.</li><li>인수인계 초기화에서는 새 상담교사 이름을 입력합니다. 의도한 작업인지 확인한 뒤 실행합니다.</li><li>인수인계 또는 상담데이터 초기화 후 현재 DB 비밀번호로 다시 엽니다. DB 전체 초기화 후에는 첫 실행 설정부터 진행합니다.</li></ol><aside class="note"><p>백업이 없으면 삭제한 자료를 복구할 수 없습니다. 인수인계 초기화가 Google 원본 캘린더를 삭제하지는 않습니다.</p></aside></section>
+      </article>
+      <nav class="page-turn" aria-label="이전 및 다음 문서"><a href="import.html"><span>이전 문서</span>기존 자료 가져오기</a><a href="troubleshooting.html"><span>다음 문서</span>문제 해결</a></nav>
+    </main>
+    <details class="wiki-toc" open><summary>이 문서의 목차</summary><nav aria-label="이 문서의 목차"><ul><li><a href="#preferences">학교 정보와 화면 설정</a></li><li><a href="#lock">DB 잠금과 비밀번호 변경</a></li><li><a href="#backup">백업 범위 선택과 다운로드</a></li><li><a href="#restore">전체 DB 복원과 컴퓨터 이동</a></li><li><a href="#partial">부분 백업 복원하기</a></li><li><a href="#reset">인수인계와 초기화 구분하기</a></li></ul></nav></details>
+  </div>
+  <footer class="wiki-footer"><span>마음나래 · 학교 상담을 위한 사용 설명서</span><a href="troubleshooting.html#contact">문의 및 문제 제보</a></footer>
+</body>
+</html>
