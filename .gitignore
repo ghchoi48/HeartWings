@@ -46,7 +46,7 @@
 !/scripts/build_icons.py
 !/scripts/build_splash.py
 !/scripts/convert_ridibatang.py
-
+!/scripts/generate_sitemap.py
 # Local data and generated files are excluded even inside allowed folders.
 __pycache__/
 *.py[cod]
