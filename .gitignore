@@ -12,6 +12,14 @@
 !/resources/
 !/requirements/
 !/scripts/
+!/website/
+!/.github/
+
+# Publish only the dedicated Pages workflow from this directory.
+/.github/*
+!/.github/workflows/
+/.github/workflows/*
+!/.github/workflows/pages.yml
 
 # Keep the entire test suite local and untracked.
 /tests/
