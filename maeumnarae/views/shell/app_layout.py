@@ -75,6 +75,10 @@ class AppLayout:
                                       ('settings', '설정', 'settings')]:
                 if page == 'settings':
                     ui.space().classes('min-h-4')
+                    ui.button('도움말', icon='help_outline').props(
+                        'flat align=left href=https://ghchoi48.github.com/HeartWings/wiki '
+                        'target=_blank rel=noopener'
+                    ).classes('w-full rounded-lg')
                 self.buttons[page] = ui.button(
                     title, icon=icon, on_click=lambda page=page: self.navigate(page),
                 ).props('flat align=left').classes('w-full rounded-lg')
