@@ -17,6 +17,27 @@ class Release:
     version: str
     notes: str
     url: str
+    download_url: str | None = None
+
+
+def _exe_download_url(assets: object) -> str | None:
+    """Windows x64 설치 파일을 우선하여 공식 릴리스의 exe 주소를 고른다."""
+    if not isinstance(assets, list):
+        return None
+    executables = []
+    for asset in assets:
+        if not isinstance(asset, dict):
+            continue
+        name = asset.get('name')
+        url = asset.get('browser_download_url')
+        if (isinstance(name, str) and name.lower().endswith('.exe')
+                and isinstance(url, str) and url.startswith(f'{GITHUB_URL}/releases/download/')):
+            executables.append((name.lower(), url))
+    for suffix in ('windows-x64-setup.exe', '-setup.exe', '.exe'):
+        for name, url in executables:
+            if name.endswith(suffix):
+                return url
+    return None
 
 
 def version_numbers(value: str) -> tuple[int, int, int] | None:
@@ -53,7 +74,8 @@ def fetch_update(current_version: str = PROGRAM_VERSION) -> Release | None:
         notes = data.get('body')
         if not isinstance(notes, str) or not notes.strip():
             notes = '등록된 변경사항이 없습니다.'
-        return Release(tag, notes, f'{GITHUB_URL}/releases/tag/{quote(tag, safe="")}')
+        return Release(tag, notes, f'{GITHUB_URL}/releases/tag/{quote(tag, safe="")}',
+                       _exe_download_url(data.get('assets')))
     except (OSError, ValueError):
         # 오프라인, 시간 초과, API 제한, 릴리스 없음은 앱 시작을 방해하지 않는다.
         return None

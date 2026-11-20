@@ -10,7 +10,10 @@ from maeumnarae.services.system.updates import Release, fetch_update
 
 def show_update_dialog(release: Release) -> None:
     async def download():
-        await run.io_bound(webbrowser.open, release.url)
+        if release.download_url is None:
+            ui.notify('이 릴리스에 다운로드할 Windows 설치 파일이 없습니다.', type='warning')
+            return
+        await run.io_bound(webbrowser.open, release.download_url)
 
     with ui.dialog() as dialog, ui.card().classes('w-[640px] max-w-full max-h-[85vh] flex-nowrap'):
         ui.label('새 버전 알림').classes('text-xl font-bold')
@@ -22,7 +25,7 @@ def show_update_dialog(release: Release) -> None:
         ui.separator()
         with ui.row().classes('w-full justify-end shrink-0'):
             ui.button('취소', on_click=dialog.close).props('flat')
-            ui.button('다운로드 페이지 이동', icon='open_in_new', on_click=download)
+            ui.button('다운로드', icon='download', on_click=download)
     dialog.open()
 
 
