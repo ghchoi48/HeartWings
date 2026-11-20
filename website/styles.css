@@ -94,6 +94,12 @@ details p { font-size: 16px; color: var(--muted); padding-bottom: 24px; padding-
 .download-inner { display: flex; justify-content: space-between; align-items: center; gap: 48px; }
 .download-inner p { margin-top: 16px; color: var(--muted); font-size: 15px; }
 .download-action { display: flex; flex-direction: column; align-items: center; gap: 16px; flex-shrink: 0; }
+.install-help { margin-top: 48px; padding-top: 32px; border-top: 1px solid var(--line); scroll-margin-top: 24px; }
+.install-help-intro { margin-block: 16px 24px; max-width: 80ch; font-size: 16px; color: var(--muted); }
+.install-help details p { max-width: 80ch; padding-bottom: 12px; }
+.install-help ol { margin: 0; padding: 0 24px 24px 24px; font-size: 16px; }
+.install-help li + li { margin-top: 8px; }
+.install-help-note { margin-top: 20px; max-width: 90ch; font-size: 14px; color: var(--muted); }
 .site-footer { display: flex; justify-content: space-between; gap: 48px; padding-block: 48px; }
 .site-footer .brand { font-size: 20px; }
 .site-footer p { font-size: 13px; color: var(--muted); margin-top: 12px; }
