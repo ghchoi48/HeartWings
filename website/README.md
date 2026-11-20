@@ -20,7 +20,7 @@
 - `styles.css`: 반응형 레이아웃과 색상·글꼴.
 - `wiki/`: 사용 설명서 홈과 주제별 HTML 문서, 위키 전용 CSS·JavaScript와 검색 색인.
 - `assets/wiki/`: 나중에 추가할 가상 데이터 스크린샷. [파일명별 촬영 안내](assets/wiki/README.md)에 맞는 PNG를 추가하면 해당 문서에 자동 표시됩니다. 파일이 없거나 손상된 경우 이미지 영역 전체를 숨깁니다.
-- 다운로드는 GitHub의 `releases/latest`를 사용합니다. 지원 운영체제 안내는 실제 릴리스 파일이 바뀔 때 함께 갱신합니다.
+- `download.js`: GitHub API로 최신 릴리스의 `.exe` 다운로드 주소를 조회합니다. Windows x64 설치 파일을 우선 선택하며, 조회 실패·8초 시간 초과·파일 없음 또는 JavaScript 비활성 시 최신 릴리스 페이지로 연결합니다. 지원 운영체제 안내는 실제 릴리스 파일이 바뀔 때 함께 갱신합니다.
 - 공식 웹폰트: https://spoqa.github.io/spoqa-han-sans/css/SpoqaHanSansNeo.css. Regular(400), Bold(700)를 사용하며 외부 폰트를 불러오지 못하면 시스템 글꼴로 표시합니다. 폰트는 이 사이트에 재배포하지 않습니다.
 - `assets/logo.png`는 프로젝트의 기존 로고입니다. `favicon.png`와 `share.png`도 기존 로고를 사용합니다.
 - 앱 화면은 별도 데모 DB에 만든 가상 학생·상담 기록으로 촬영했습니다. 실제 학생 자료로 교체하지 마세요. 캡션과 대체 텍스트도 함께 갱신합니다.
