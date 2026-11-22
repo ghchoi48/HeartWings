@@ -12,6 +12,7 @@ FORMATS = {'.ttf': 'truetype', '.otf': 'opentype', '.woff': 'woff', '.woff2': 'w
 LABELS = {
     'PretendardVariable.ttf': 'Pretendard',
     'NotoSansKR-VariableFont_wght.ttf': 'Noto Sans KR',
+    'NotoSerifKR-VariableFont_wght.ttf': 'Noto Serif KR',
     'SpoqaHanSansNeo': 'Spoqa Han Sans Neo',
 }
 SPOQA_WEIGHTS = {'Thin': 250, 'Light': 300, 'Regular': 400, 'Medium': 500, 'Bold': 700}

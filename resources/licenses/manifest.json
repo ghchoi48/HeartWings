@@ -10122,6 +10122,13 @@
       "text_file": "fonts/noto.txt"
     },
     {
+      "name": "Noto Serif KR",
+      "license": "OFL-1.1",
+      "source": "https://github.com/notofonts/noto-cjk",
+      "license_source": "https://raw.githubusercontent.com/google/fonts/main/ofl/notoserifkr/OFL.txt",
+      "text_file": "fonts/noto-serif-kr.txt"
+    },
+    {
       "name": "Spoqa Han Sans Neo",
       "license": "OFL-1.1",
       "source": "https://github.com/spoqa/spoqa-han-sans",
