@@ -48,6 +48,10 @@ def register_page(path: Path, *, native_window: bool = False) -> None:
             .nicegui-content { flex: 1; min-height: 0; flex-wrap: nowrap; }
             .app-content > * { flex-shrink: 0; }
             .nicegui-drawer > .q-btn { flex-shrink: 0; }
+            .q-dialog__backdrop {
+                -webkit-backdrop-filter: blur(4px);
+                backdrop-filter: blur(4px);
+            }
 
             /* 라이트 모드 */
             body:not(.body--dark) input,
