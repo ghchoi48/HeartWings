@@ -86,6 +86,46 @@ INSTALL_LINK_CURSOR = '''(() => {
 })();'''
 
 
+AUTO_LINK_ON_SPACE = r'''event => {
+    if (event.key !== ' ' || event.isComposing || event.keyCode === 229 ||
+        event.ctrlKey || event.altKey || event.metaKey || event.defaultPrevented) return;
+    const content = event.target.closest?.('.q-editor__content');
+    if (!content || !content.isContentEditable) return;
+    const selection = window.getSelection();
+    if (!selection || !selection.isCollapsed || selection.rangeCount !== 1) return;
+    const node = selection.anchorNode;
+    const offset = selection.anchorOffset;
+    if (node?.nodeType !== Node.TEXT_NODE || !content.contains(node) ||
+        node.parentElement.closest('a, pre, code')) return;
+    if (offset < node.length && !/\s/.test(node.textContent[offset])) return;
+
+    const match = node.textContent.slice(0, offset).match(/(?:^|\s)((?:https?:\/\/|www\.)[^\s<>]+)$/i);
+    if (!match) return;
+    const text = match[1];
+    let url;
+    try {
+        url = new URL(/^www\./i.test(text) ? 'https://' + text : text);
+    } catch {
+        return;
+    }
+    if (!['http:', 'https:'].includes(url.protocol) || !url.hostname) return;
+
+    const link = document.createElement('a');
+    link.href = url.href;
+    link.textContent = text;
+    const range = selection.getRangeAt(0);
+    range.setStart(node, offset - text.length);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    // 편집 명령으로 삽입하여 input 이벤트와 실행 취소 기록을 유지한다.
+    if (document.execCommand('insertHTML', false, link.outerHTML + '&nbsp;')) {
+        event.preventDefault();
+    } else {
+        selection.collapse(node, offset);
+    }
+}'''
+
+
 OPEN_LINK_ON_CTRL_CLICK = '''event => {
     if (!event.ctrlKey || event.button !== 0) return;
     const link = event.target.closest?.('.q-editor__content a[href]');
@@ -109,4 +149,5 @@ def rich_text_editor(*args, **kwargs) -> ui.editor:
     ui.run_javascript(INSTALL_LINK_CURSOR)
     editor = ui.editor(*args, **kwargs).classes('ctrl-link-editor')
     editor.on('click', js_handler=OPEN_LINK_ON_CTRL_CLICK)
+    editor.on('keydown.capture', js_handler=AUTO_LINK_ON_SPACE)
     return editor
