@@ -5,6 +5,7 @@ from datetime import datetime
 from maeumnarae.views.journals.journal_pagination import PAGE_SIZE, load_page
 
 from nicegui import run, ui
+from maeumnarae.views.shared.rich_text_editor import rich_text_editor
 from maeumnarae.views.journals.journal_defaults import default_duration_minutes
 from maeumnarae.views.reports.journal_print_view import list_print_tools
 
@@ -361,10 +362,10 @@ class SpecialEducationView(CounselingView):
                 ui.label(f'기존 교육 대상: {target}. 교육 대상을 다시 선택해 주세요.').classes('text-sm text-amber-700')
             with ui.column().classes('w-full gap-3'):
                 ui.label('교육 내용').classes('font-semibold')
-                fields['content_markdown'] = ui.editor(
+                fields['content_markdown'] = rich_text_editor(
                     value=editor_html(initial['content_markdown'], initial.get('content_format', 'markdown')),
                     placeholder='교육 내용을 입력하세요.',
-                ).classes('w-full').props("""min-height=320px :toolbar='[["bold", "italic", "underline", "strike"], ["unordered", "ordered"], ["left", "center", "right"], ["undo", "redo"]]'""")
+                ).classes('w-full').props("""min-height=320px :toolbar='[["bold", "italic", "underline", "strike"], ["unordered", "ordered"], ["indent", "outdent"], ["link"], ["left", "center", "right"], ["undo", "redo"]]'""")
             fields['follow_up'] = ui.textarea('후속 조치', value=initial['follow_up']).props('outlined rows=2 maxlength=20000').classes('w-full')
             message = ui.label().classes('text-sm text-red-700')
             for field in fields.values():

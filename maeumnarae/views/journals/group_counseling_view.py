@@ -7,6 +7,7 @@ from collections.abc import Awaitable, Callable
 from maeumnarae.views.journals.journal_pagination import PAGE_SIZE, load_page
 
 from nicegui import run, ui
+from maeumnarae.views.shared.rich_text_editor import rich_text_editor
 from maeumnarae.views.shared.search_fields import search_input, search_select
 from maeumnarae.views.journals.journal_defaults import default_duration_minutes
 from maeumnarae.views.reports.journal_print_view import list_print_tools
@@ -301,7 +302,7 @@ class GroupCounselingView:
 
                         attendance_table.on('attendance_change', update_attendance)
                         ui.label('상담 내용').classes('font-semibold')
-                        fields['content_html'] = ui.editor(value=clean_html(entry.content_html) if entry else '').classes('w-full').props("""min-height=320px :toolbar='[[{"label": "머릿말", "list": "no-icons", "options": ["p", "h1", "h2", "h3"]}], ["bold", "italic", "underline", "strike"], ["unordered", "ordered"], ["left", "center", "right"], ["undo", "redo"]]'""")
+                        fields['content_html'] = rich_text_editor(value=clean_html(entry.content_html) if entry else '').classes('w-full').props("""min-height=320px :toolbar='[[{"label": "머릿말", "list": "no-icons", "options": ["p", "h1", "h2", "h3"]}], ["bold", "italic", "underline", "strike"], ["unordered", "ordered"], ["indent", "outdent"], ["link"], ["left", "center", "right"], ["undo", "redo"]]'""")
                         fields['follow_up'] = ui.textarea('후속 조치', value=entry.follow_up if entry else '').props('outlined maxlength=20000').classes('w-full')
                     else:
                         fields['name'] = ui.input('집단명', value=group.name if group else '').props(

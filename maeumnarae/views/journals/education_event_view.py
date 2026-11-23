@@ -2,6 +2,7 @@
 from datetime import datetime
 
 from nicegui import run, ui
+from maeumnarae.views.shared.rich_text_editor import rich_text_editor
 from maeumnarae.views.shared.search_fields import search_input
 from maeumnarae.views.journals.journal_defaults import default_duration_minutes
 from maeumnarae.views.reports.journal_print_view import print_dialog
@@ -231,8 +232,8 @@ class EducationEventView:
                     fields[key] = ui.input(label, value=initial[key]).props(f'outlined maxlength={maximum}').classes('w-full min-w-0')
                 fields['participant_count'] = ui.number('참여인원(명)', value=initial.get('participant_count'), min=0, max=2147483647, step=1).props('outlined clearable').classes('w-full min-w-0')
             ui.label('상세 내용').classes('font-semibold')
-            fields['content'] = ui.editor(value=editor_html(initial['content'], initial.get('content_format', 'text')),
-                                          placeholder='상세 내용을 입력하세요.').classes('w-full').props("""min-height=320px :toolbar='[["bold", "italic", "underline", "strike"], ["unordered", "ordered"], ["left", "center", "right"], ["undo", "redo"]]'""")
+            fields['content'] = rich_text_editor(value=editor_html(initial['content'], initial.get('content_format', 'text')),
+                                          placeholder='상세 내용을 입력하세요.').classes('w-full').props("""min-height=320px :toolbar='[["bold", "italic", "underline", "strike"], ["unordered", "ordered"], ["indent", "outdent"], ["link"], ["left", "center", "right"], ["undo", "redo"]]'""")
             message = ui.label().classes('text-sm text-red-700')
             with ui.row().classes('w-full items-center'):
                 files = attachment_button(self.repository.database, 'education', entry.id if entry else None)

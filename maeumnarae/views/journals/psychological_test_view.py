@@ -4,6 +4,7 @@ from datetime import datetime
 from maeumnarae.views.journals.journal_pagination import PAGE_SIZE, load_page
 
 from nicegui import run, ui
+from maeumnarae.views.shared.rich_text_editor import rich_text_editor
 from maeumnarae.views.journals.journal_selection import JournalSelection
 from maeumnarae.views.shared.search_fields import search_select
 from maeumnarae.views.journals.journal_defaults import default_duration_minutes
@@ -227,8 +228,8 @@ class PsychologicalTestView:
                 duration = ui.number('시간(분)', value=entry.duration_minutes if entry else default_duration_minutes(self.repository.database, fallback=60),
                                      min=1, max=1440, step=1).props('outlined').classes('w-36')
             ui.label('검사 결과 및 소견').classes('font-semibold')
-            content = ui.editor(value=editor_html(entry.content, entry.content_format) if entry else '',
-                                placeholder='검사 결과 및 소견을 입력하세요.').classes('w-full').props("""min-height=320px :toolbar='[["bold", "italic", "underline", "strike"], ["unordered", "ordered"], ["left", "center", "right"], ["undo", "redo"]]'""")
+            content = rich_text_editor(value=editor_html(entry.content, entry.content_format) if entry else '',
+                                placeholder='검사 결과 및 소견을 입력하세요.').classes('w-full').props("""min-height=320px :toolbar='[["bold", "italic", "underline", "strike"], ["unordered", "ordered"], ["indent", "outdent"], ["link"], ["left", "center", "right"], ["undo", "redo"]]'""")
             message = ui.label().classes('text-sm text-red-700')
             with ui.row().classes('w-full items-center'):
                 files = attachment_button(self.repository.database, 'test', entry.id if entry else None)

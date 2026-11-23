@@ -5,6 +5,7 @@ from datetime import date, datetime, timedelta, timezone
 from maeumnarae.views.journals.journal_pagination import PAGE_SIZE, load_page
 
 from nicegui import run, ui
+from maeumnarae.views.shared.rich_text_editor import rich_text_editor
 from maeumnarae.views.shared.search_fields import search_input
 from maeumnarae.views.journals.journal_defaults import default_duration_minutes
 from maeumnarae.views.reports.journal_print_view import list_print_tools
@@ -303,8 +304,8 @@ class ConsultationView:
                 fields['duration_minutes'] = ui.number('자문 시간 (분)', value=initial['duration_minutes'], min=1, max=1440, step=1).props('outlined').classes('w-full min-w-0')
                 fields['status'] = ui.select(STATUSES, label='자문 상태', value=initial['status']).props('outlined').classes('w-full min-w-0')
             ui.label('자문 내용').classes('font-semibold')
-            fields['content_html'] = ui.editor(value=clean_html(initial['content_html']), placeholder='자문 내용을 입력하세요.').classes('w-full').props(
-                """min-height=320px :toolbar='[["bold", "italic", "underline", "strike"], ["unordered", "ordered"], ["left", "center", "right"], ["undo", "redo"]]'""")
+            fields['content_html'] = rich_text_editor(value=clean_html(initial['content_html']), placeholder='자문 내용을 입력하세요.').classes('w-full').props(
+                """min-height=320px :toolbar='[["bold", "italic", "underline", "strike"], ["unordered", "ordered"], ["indent", "outdent"], ["link"], ["left", "center", "right"], ["undo", "redo"]]'""")
             fields['follow_up'] = ui.textarea('후속 조치', value=initial['follow_up']).props('outlined rows=2 maxlength=20000').classes('w-full')
             message = ui.label().classes('text-sm text-red-700')
             with ui.row().classes('w-full items-center'):

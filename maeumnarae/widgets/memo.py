@@ -1,6 +1,7 @@
 """인스턴스별 서식 있는 메모. 변경 즉시 현재 암호화 DB에 저장한다."""
 
 from nicegui import ui
+from maeumnarae.views.shared.rich_text_editor import rich_text_editor
 
 from maeumnarae.core.database import DatabaseError
 
@@ -25,10 +26,10 @@ class Memo:
             .memo-editor .q-editor__content { flex: 1 1 0%; min-height: 0 !important;
                 overflow: auto; overflow-wrap: anywhere; }
         ''')
-        self.editor = ui.editor(placeholder='메모를 입력하세요.', on_change=self.changed).classes('memo-editor').props("""
+        self.editor = rich_text_editor(placeholder='메모를 입력하세요.', on_change=self.changed).classes('memo-editor').props("""
             min-height=0
             :toolbar='[["bold", "italic", "underline", "strike"],
-                       ["unordered", "ordered"], ["left", "center", "right"], ["undo", "redo"]]'
+                       ["unordered", "ordered"], ["indent", "outdent"], ["link"], ["left", "center", "right"], ["undo", "redo"]]'
         """.replace("\n", " "))
         self.editor.disable()
         with ui.row().classes('w-full shrink-0 items-center justify-between gap-2'):

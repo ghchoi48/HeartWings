@@ -6,6 +6,7 @@ from datetime import date, datetime, timedelta, timezone
 from maeumnarae.views.journals.journal_pagination import PAGE_SIZE, load_page
 
 from nicegui import run, ui
+from maeumnarae.views.shared.rich_text_editor import rich_text_editor
 from maeumnarae.views.journals.journal_selection import JournalSelection
 from maeumnarae.views.journals.journal_defaults import default_duration_minutes
 from maeumnarae.views.reports.journal_print_view import list_print_tools
@@ -319,8 +320,8 @@ class CounselingView:
                     ui.label(student.name).classes('text-slate-500')
                     title = ui.input('사례명', value=case.title if case else '').props('outlined maxlength=200').classes('w-full')
                     ui.label(report_name).classes('font-semibold')
-                    report = ui.editor(value=clean_html(getattr(case, report_field)) if case else '',
-                                       placeholder=placeholder).classes('w-full').props("""min-height=360px :toolbar='[["bold", "italic", "underline", "strike"], ["unordered", "ordered"], ["left", "center", "right"], ["undo", "redo"]]'""")
+                    report = rich_text_editor(value=clean_html(getattr(case, report_field)) if case else '',
+                                       placeholder=placeholder).classes('w-full').props("""min-height=360px :toolbar='[["bold", "italic", "underline", "strike"], ["unordered", "ordered"], ["indent", "outdent"], ["link"], ["left", "center", "right"], ["undo", "redo"]]'""")
                     message = ui.label().classes('text-sm text-red-700')
                     with ui.row().classes('w-full justify-end'):
                         cancel_button = ui.button('취소').props('flat')
@@ -588,16 +589,16 @@ class CounselingView:
             with ui.element('div').classes('w-full grid grid-cols-1 lg:grid-cols-2 gap-4 items-start'):
                 with ui.column().classes('w-full min-w-0 gap-3'):
                     ui.label('상담 내용').classes('font-semibold')
-                    fields['content_markdown'] = ui.editor(
+                    fields['content_markdown'] = rich_text_editor(
                         value=editor_html(initial['content_markdown'], initial.get('content_format', 'markdown')),
                         placeholder='상담 내용을 입력하세요.',
-                    ).classes('w-full').props("""min-height=320px :toolbar='[["bold", "italic", "underline", "strike"], ["unordered", "ordered"], ["left", "center", "right"], ["undo", "redo"]]'""")
+                    ).classes('w-full').props("""min-height=320px :toolbar='[["bold", "italic", "underline", "strike"], ["unordered", "ordered"], ["indent", "outdent"], ["link"], ["left", "center", "right"], ["undo", "redo"]]'""")
                 with ui.column().classes('w-full min-w-0 gap-3'):
                     ui.label('비밀 메모').classes('font-semibold')
-                    fields['private_note_html'] = ui.editor(
+                    fields['private_note_html'] = rich_text_editor(
                         value=clean_html(initial.get('private_note_html', '')),
                         placeholder='비밀 메모를 입력하세요.',
-                    ).classes('w-full').props("""min-height=320px :toolbar='[["bold", "italic", "underline", "strike"], ["unordered", "ordered"], ["left", "center", "right"], ["undo", "redo"]]'""")
+                    ).classes('w-full').props("""min-height=320px :toolbar='[["bold", "italic", "underline", "strike"], ["unordered", "ordered"], ["indent", "outdent"], ["link"], ["left", "center", "right"], ["undo", "redo"]]'""")
             fields['follow_up'] = ui.textarea('후속 조치', value=initial['follow_up']).props('outlined rows=2 maxlength=20000').classes('w-full')
             message = ui.label().classes('text-sm text-red-700')
             for field in fields.values():
