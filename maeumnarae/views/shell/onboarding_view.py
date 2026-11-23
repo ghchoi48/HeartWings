@@ -61,7 +61,7 @@ class OnboardingView:
                         self.controls.append(field)
                     for key in ('neis_office_code', 'school_level'):
                         self.fields[key].on_value_change(self.invalidate_school)
-                    ui.label('학교 찾기에서 학교를 선택하고 상담교사 이름을 입력해 주세요. 사무실 번호는 선택 사항입니다.').classes('text-sm text-slate-500')
+                    ui.label('학교는 학교 찾기에서 선택하고, Wee센터는 센터명을 직접 입력해 주세요. 사무실 번호는 선택 사항입니다.').classes('text-sm text-slate-500')
                     self.button('저장하고 다음', self.save_school, icon='arrow_forward')
                 with ui.tab_panel('choice'):
                     ui.label('어떻게 자료를 준비할까요?').classes('text-xl font-bold')
@@ -163,7 +163,7 @@ class OnboardingView:
         if self.busy:
             return
         if any(not (self.fields[key].value or '').strip() for key in ('neis_office_code', 'school_name', 'counselor_name')):
-            self.message.set_text('학교 찾기에서 학교를 선택하고 상담교사 이름을 입력해 주세요.')
+            self.message.set_text('교육청, 학교명 또는 센터명, 상담교사 이름을 확인해 주세요.')
             return
         self.set_busy(True)
         try:

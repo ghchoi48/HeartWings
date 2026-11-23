@@ -60,10 +60,14 @@ def request_rows(service: str, parameters: dict, api_key: str = '') -> list[dict
         raise NeisError('나이스 응답을 읽지 못했습니다. 잠시 후 다시 시도해 주세요.') from None
 
 
-def find_schools(office: str, name: str, api_key: str = '') -> list[dict]:
+def find_schools(office: str, name: str, api_key: str = '', school_level: str = '') -> list[dict]:
     if office not in OFFICES or not name.strip():
         raise NeisError('학교명과 시도교육청을 먼저 입력해 주세요.')
-    return request_rows('schoolInfo', {'ATPT_OFCDC_SC_CODE': office, 'SCHUL_NM': name.strip()}, api_key)
+    params = {'ATPT_OFCDC_SC_CODE': office, 'SCHUL_NM': name.strip()}
+    if school_level:
+        params['SCHUL_KND_SC_NM'] = school_level
+    rows = request_rows('schoolInfo', params, api_key)
+    return [row for row in rows if row.get('SCHUL_KND_SC_NM') == school_level] if school_level else rows
 
 
 def fetch_meals(office: str, school_code: str, day: date, meal: str, api_key: str = '') -> list[dict]:
