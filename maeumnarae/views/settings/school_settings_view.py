@@ -26,8 +26,10 @@ def build_school_settings(repository: SchoolSettingsRepository,
         search_button = build_school_picker(fields, lambda: fields['neis_api_key'].value or '')
     ui.separator()
     ui.label('상담실 정보').classes('font-semibold text-slate-700')
-    fields['counselor_name'] = ui.input('상담교사 이름').props('outlined maxlength=100').classes('w-full')
-    fields['office_number'] = ui.input('사무실 번호').props('outlined maxlength=50').classes('w-full')
+    fields['office_number'] = ui.input('사무실 전화번호').props('outlined maxlength=50').classes('w-full')
+    fields['counselor_name'] = ui.input('상담교사 이름').props(
+        'outlined maxlength=100 hide-hint hint="실명으로 입력해주세요. 일지 인쇄시 작성자 이름으로 사용됩니다."'
+    ).classes('w-full')
     ui.separator()
     ui.label('나이스 연동').classes('font-semibold text-slate-700')
     fields['neis_api_key'] = ui.input('NEIS API 인증키', password=True, password_toggle_button=True).props(

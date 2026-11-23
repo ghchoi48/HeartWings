@@ -17,7 +17,7 @@ class OnboardingView:
     def __init__(self, path, on_start, database=None, step='password', settings=None):
         self.path, self.on_start, self.database = path, on_start, database
         self.step = step
-        self.settings = settings or SchoolSettings(school_level='초등학교')
+        self.settings = settings or SchoolSettings()
         self.busy = False
         self.controls, self.import_views = [], []
         self.import_hosts = {}
@@ -49,19 +49,22 @@ class OnboardingView:
                     ui.label('학교 정보를 알려주세요').classes('text-xl font-bold')
                     self.fields = {}
                     self.fields['neis_office_code'] = ui.select(OFFICES, value=self.settings.neis_office_code or None, label='교육청')
-                    self.fields['school_level'] = ui.select(['초등학교', '중학교', '고등학교', 'Wee센터'], value=self.settings.school_level, label='학교급')
+                    self.fields['school_level'] = ui.select(
+                        ['초등학교', '중학교', '고등학교', 'Wee센터'], label='학교급',
+                        value=self.settings.school_level if self.settings.school_name else None)
                     self.controls.append(build_school_picker(self.fields, lambda: self.settings.neis_api_key))
                     self.fields['school_name'].value = self.settings.school_name
                     self.fields['neis_school_code'].value = self.settings.neis_school_code
-                    self.fields['counselor_name'] = ui.input('상담교사 이름', value=self.settings.counselor_name).props('maxlength=100')
-                    self.fields['office_number'] = ui.input('사무실 번호', value=self.settings.office_number).props('maxlength=50')
-                    for key in ('neis_office_code', 'school_level', 'counselor_name', 'office_number'):
+                    self.fields['office_number'] = ui.input('사무실 전화번호', value=self.settings.office_number).props('maxlength=50')
+                    self.fields['counselor_name'] = ui.input('상담교사 이름', value=self.settings.counselor_name).props(
+                        'maxlength=100 hide-hint hint="실명으로 입력해주세요. 일지 인쇄시 작성자 이름으로 사용됩니다."')
+                    for key in ('neis_office_code', 'school_level', 'office_number', 'counselor_name'):
                         field = self.fields[key]
                         field.props('outlined').classes('w-full')
                         self.controls.append(field)
                     for key in ('neis_office_code', 'school_level'):
                         self.fields[key].on_value_change(self.invalidate_school)
-                    ui.label('학교는 학교 찾기에서 선택하고, Wee센터는 센터명을 직접 입력해 주세요. 사무실 번호는 선택 사항입니다.').classes('text-sm text-slate-500')
+                    ui.label('학교는 학교 찾기에서 선택하고, Wee센터는 센터명을 직접 입력해 주세요. 사무실 전화번호는 선택 사항입니다.').classes('text-sm text-slate-500')
                     self.button('저장하고 다음', self.save_school, icon='arrow_forward')
                 with ui.tab_panel('choice'):
                     ui.label('어떻게 자료를 준비할까요?').classes('text-xl font-bold')
@@ -161,6 +164,9 @@ class OnboardingView:
 
     async def save_school(self):
         if self.busy:
+            return
+        if not self.fields['school_level'].value:
+            self.message.set_text('학교급을 선택해 주세요.')
             return
         if any(not (self.fields[key].value or '').strip() for key in ('neis_office_code', 'school_name', 'counselor_name')):
             self.message.set_text('교육청, 학교명 또는 센터명, 상담교사 이름을 확인해 주세요.')
