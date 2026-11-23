@@ -28,7 +28,7 @@ class AutoLock:
             logging.getLogger(__name__).warning('자동 잠금 설정을 읽을 수 없어 기본값을 사용합니다.')
         self.last_activity = clock()
         self.locked = False
-        self.label = None
+        self.lock_button: ui.button | None = None
         self.timer = None
 
     @property
@@ -36,9 +36,9 @@ class AutoLock:
         return max(0, math.ceil(self.minutes * 60 - (self.clock() - self.last_activity)))
 
     def update_label(self) -> None:
-        if self.label is not None:
+        if self.lock_button is not None:
             minutes, seconds = divmod(self.remaining, 60)
-            self.label.set_text(f'자동 잠금 {minutes:02d}:{seconds:02d}')
+            self.lock_button.set_text(f'{minutes:02d}:{seconds:02d}')
 
     async def activity(self) -> None:
         if self.locked:
@@ -85,11 +85,9 @@ class AutoLock:
                   on_change=lambda e: self.change_minutes(e.value)).props('outlined').classes('w-full')
         ui.label('기본값은 20분이며, 변경 사항은 즉시 적용되고 자동으로 저장됩니다.').classes('text-sm text-slate-500')
 
-    def install(self) -> None:
+    def install(self, lock_button: ui.button) -> None:
         self.last_activity = self.clock()
-        self.label = ui.label().classes('text-sm tabular-nums whitespace-nowrap').props(
-            'aria-label="자동 잠금까지 남은 시간"')
-        self.label.tooltip('마우스, 키보드, 터치 또는 스크롤 조작 시 시간이 다시 시작됩니다.')
+        self.lock_button = lock_button
         self.update_label()
         ui.on('app_user_activity', self.activity, args=[], throttle=0.25)
         ui.run_javascript('''

@@ -20,7 +20,7 @@ from maeumnarae.core.app_fonts import register_fonts
 from maeumnarae.views.shell.update_notification import StartupUpdateCheck
 
 
-def register_page(path: Path) -> None:
+def register_page(path: Path, *, native_window: bool = False) -> None:
     """페이지마다 비밀번호를 입력받는다. 전역으로 잠금 해제된 저장소를 공유하지 않는다."""
     register_fonts()
 
@@ -66,9 +66,38 @@ def register_page(path: Path) -> None:
         drawer = ui.left_drawer(value=False, bordered=True).props('width=200').classes('bg-white p-4')
         drawer.set_visibility(False)
         with ui.header().classes('items-center justify-between px-6') as header:
-            with ui.row().classes('items-center gap-3'):
+            with ui.row().classes('items-center gap-3') as title:
                 ui.image('/app-assets/logo.png').classes('app-logo w-9 h-9').props('no-spinner')
                 school_heading = ui.label('마음나래 · Wee클래스').classes('text-lg font-bold')
+            if native_window:
+                ui.add_css('''
+                    html:not(.window-maximized) .window-restore-icon,
+                    html.window-maximized .window-maximize-icon { display: none; }
+                ''')
+                header.classes('flex-nowrap')
+                title.classes('pywebview-drag-region flex-1 self-stretch select-none')
+                title.on('dblclick', js_handler='() => window.pywebview?.api.toggle_maximize()')
+                with ui.dialog().props('aria-labelledby="exit-dialog-title"') as exit_dialog, ui.card():
+                    ui.label('마음나래를 종료할까요?').props('id=exit-dialog-title').classes('text-lg font-bold')
+                    ui.label('저장하지 않은 내용은 사라집니다.')
+                    with ui.row().classes('w-full justify-end'):
+                        ui.button('취소', on_click=exit_dialog.close).props('flat autofocus')
+                        ui.button('종료', color='negative').on(
+                            'click', js_handler='() => window.pywebview.api.close_after_confirmation()')
+                with ui.row().classes('order-last items-center flex-nowrap gap-0'):
+                    for label, icon, method in (
+                        ('최소화', 'minimize', 'minimize_window'),
+                        ('최대화 또는 이전 크기로 복원', None, 'toggle_maximize'),
+                    ):
+                        button = ui.button(icon=icon, color=None).props(f'flat dense aria-label="{label}"')
+                        if method == 'toggle_maximize':
+                            with button:
+                                ui.icon('crop_square').classes('window-maximize-icon')
+                                ui.icon('filter_none').classes('window-restore-icon')
+                        button.classes('w-10').tooltip(label)
+                        button.on('click', js_handler=f'() => window.pywebview?.api.{method}()')
+                    ui.button(icon='close', color=None, on_click=exit_dialog.open).props(
+                        'flat dense aria-label="종료"').classes('w-10').tooltip('종료')
         display = DisplaySettings(path.parent / 'display-settings.json')
         display.install()
         ui.context.client.content.classes('bg-slate-50')
@@ -162,7 +191,7 @@ def main() -> None:
     if args.native:
         configure_native(args.db.parent / 'window-settings.json')
     port = args.port if args.port is not None else native.find_open_port() if args.native else 8080
-    register_page(args.db)
+    register_page(args.db, native_window=args.native)
     ui.run(title='마음나래', favicon=str(ICON_PATH), host='127.0.0.1', port=port,
            native=args.native, window_size=(1440, 1000) if args.native else None,
            reload=not args.native and not getattr(sys, 'frozen', False), language='ko-KR',

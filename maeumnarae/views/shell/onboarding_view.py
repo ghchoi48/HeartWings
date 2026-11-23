@@ -7,7 +7,8 @@ from maeumnarae.core.database import Database, DatabaseError, validate_new_passw
 from maeumnarae.core.models import SchoolSettings
 from maeumnarae.repositories.settings.onboarding_repo import OnboardingRepository
 from maeumnarae.repositories.settings.school_settings_repo import SchoolSettingsRepository
-from maeumnarae.services.school.neis import OFFICES, NeisError, find_schools
+from maeumnarae.services.school.neis import OFFICES
+from maeumnarae.views.shared.school_picker import build_school_picker
 from maeumnarae.views.data_management.legacy_import_view import LegacyImportView
 from maeumnarae.views.students.roster_import_view import RosterImportView
 
@@ -21,7 +22,6 @@ class OnboardingView:
         self.controls, self.import_views = [], []
         self.import_hosts = {}
         self.built_imports = set()
-        self.choosing_school = False
 
     def button(self, text, callback, **kwargs):
         control = ui.button(text, on_click=callback, **kwargs)
@@ -50,20 +50,18 @@ class OnboardingView:
                     self.fields = {}
                     self.fields['neis_office_code'] = ui.select(OFFICES, value=self.settings.neis_office_code or None, label='교육청')
                     self.fields['school_level'] = ui.select(['초등학교', '중학교', '고등학교', 'Wee센터'], value=self.settings.school_level, label='학교급')
-                    self.fields['school_name'] = ui.input('학교명', value=self.settings.school_name).props('maxlength=100')
-                    self.fields['school_name'].bind_label_from(
-                        self.fields['school_level'], 'value', backward=lambda level: '센터명' if level == 'Wee센터' else '학교명')
-                    self.fields['neis_school_code'] = ui.input('학교 나이스 번호', value=self.settings.neis_school_code).props('readonly')
-                    self.button('불러오기', self.search_school, icon='search').props('outline')
-                    ui.label('검색 결과에서 학교를 선택하면 나이스 번호가 자동 저장됩니다.').classes('text-sm text-slate-500')
+                    self.controls.append(build_school_picker(self.fields, lambda: self.settings.neis_api_key))
+                    self.fields['school_name'].value = self.settings.school_name
+                    self.fields['neis_school_code'].value = self.settings.neis_school_code
                     self.fields['counselor_name'] = ui.input('상담교사 이름', value=self.settings.counselor_name).props('maxlength=100')
                     self.fields['office_number'] = ui.input('사무실 번호', value=self.settings.office_number).props('maxlength=50')
-                    for field in self.fields.values():
+                    for key in ('neis_office_code', 'school_level', 'counselor_name', 'office_number'):
+                        field = self.fields[key]
                         field.props('outlined').classes('w-full')
                         self.controls.append(field)
-                    for key in ('neis_office_code', 'school_level', 'school_name'):
+                    for key in ('neis_office_code', 'school_level'):
                         self.fields[key].on_value_change(self.invalidate_school)
-                    ui.label('교육청, 학교명, 상담교사 이름은 필수입니다. 나이스 번호와 사무실 번호는 나중에 설정할 수도 있습니다.').classes('text-sm text-slate-500')
+                    ui.label('학교 찾기에서 학교를 선택하고 상담교사 이름을 입력해 주세요. 사무실 번호는 선택 사항입니다.').classes('text-sm text-slate-500')
                     self.button('저장하고 다음', self.save_school, icon='arrow_forward')
                 with ui.tab_panel('choice'):
                     ui.label('어떻게 자료를 준비할까요?').classes('text-xl font-bold')
@@ -155,64 +153,17 @@ class OnboardingView:
             self.set_busy(False)
 
     def invalidate_school(self):
-        if not self.choosing_school:
-            self.fields['neis_school_code'].value = ''
+        self.fields['neis_school_code'].value = ''
 
     def school_settings(self):
         return SchoolSettings(neis_api_key=self.settings.neis_api_key,
                               **{key: field.value or '' for key, field in self.fields.items()})
 
-    async def search_school(self):
-        if self.busy:
-            return
-        self.set_busy(True)
-        self.message.set_text('')
-        try:
-            rows = await run.io_bound(find_schools, self.fields['neis_office_code'].value or '',
-                                      self.fields['school_name'].value or '', self.settings.neis_api_key)
-            rows = [row for row in rows if row.get('SCHUL_KND_SC_NM') == self.fields['school_level'].value]
-            if not rows:
-                self.message.set_text('일치하는 학교가 없습니다. 교육청, 학교급과 학교명을 확인해 주세요.')
-                return
-            with ui.dialog().props('persistent') as dialog, ui.card().classes('w-full max-w-xl max-h-[80vh] overflow-auto'):
-                ui.label('학교 선택').classes('text-xl font-bold')
-                ui.label('학교명과 주소를 확인해 주세요. 선택하면 자동 저장됩니다.')
-                for row in rows:
-                    async def choose(row=row):
-                        if self.busy:
-                            return
-                        self.set_busy(True)
-                        try:
-                            settings = self.school_settings().model_copy(update={
-                                'school_name': row['SCHUL_NM'], 'neis_office_code': row['ATPT_OFCDC_SC_CODE'],
-                                'neis_school_code': row['SD_SCHUL_CODE'], 'school_level': row['SCHUL_KND_SC_NM'],
-                            })
-                            self.settings = await run.io_bound(SchoolSettingsRepository(self.database).save, settings)
-                            self.choosing_school = True
-                            try:
-                                for key, field in self.fields.items():
-                                    field.value = getattr(self.settings, key)
-                            finally:
-                                self.choosing_school = False
-                            dialog.close()
-                            ui.notify('학교와 나이스 번호를 자동 저장했습니다.', type='positive')
-                        except (DatabaseError, ValidationError):
-                            ui.notify('학교 정보를 저장하지 못했습니다. 입력 내용을 확인하고 다시 선택해 주세요.', type='negative')
-                        finally:
-                            self.set_busy(False)
-                    ui.button(f"{row['SCHUL_NM']} · {row.get('ORG_RDNMA', '')}", on_click=choose).props('flat align=left').classes('w-full')
-                ui.button('닫기', on_click=dialog.close).props('flat')
-            dialog.open()
-        except NeisError as error:
-            self.message.set_text(str(error))
-        finally:
-            self.set_busy(False)
-
     async def save_school(self):
         if self.busy:
             return
         if any(not (self.fields[key].value or '').strip() for key in ('neis_office_code', 'school_name', 'counselor_name')):
-            self.message.set_text('교육청, 학교명, 상담교사 이름을 입력해 주세요.')
+            self.message.set_text('학교 찾기에서 학교를 선택하고 상담교사 이름을 입력해 주세요.')
             return
         self.set_busy(True)
         try:

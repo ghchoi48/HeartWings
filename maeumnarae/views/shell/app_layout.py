@@ -85,9 +85,10 @@ class AppLayout:
                 if page in ('students', 'consultation'):
                     ui.separator()
         with header:
-            with ui.row().classes('ml-auto items-center gap-3'):
-                self.auto_lock.install()
-                ui.button('DB 잠금', icon='lock', on_click=self.auto_lock.lock).props('flat color=white').classes('rounded-lg')
+            lock_button = ui.button(icon='lock', color=None, on_click=self.auto_lock.lock).props(
+                'flat padding="2px 10px" aria-label="DB 잠금"').classes('ml-auto rounded-lg tabular-nums')
+            lock_button.tooltip('DB 잠금')
+            self.auto_lock.install(lock_button)
         with content:
             self.panels['home'] = ui.column().classes('w-full')
             with self.panels['home']:

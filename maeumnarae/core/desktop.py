@@ -45,6 +45,8 @@ def _guarded_open_window(*args, **kwargs) -> None:
         def create_fitted_window(*window_args, **window_kwargs):
             state_path = window_kwargs.pop('_maeumnarae_state_path', None)
             window = create_window(*window_args, **window_kwargs)
+            if window is not None and window.frameless:
+                _install_window_controls(window)
             if sys.platform == 'win32' and window is not None:
                 if state_path:
                     from maeumnarae.core.window_state import install_window_state
@@ -63,6 +65,78 @@ def _guarded_open_window(*args, **kwargs) -> None:
         _exit_after_flush(1)
 
 
+def _install_window_controls(window) -> None:
+    """현재 웹뷰에서만 호출 가능한 창 제어 동작을 연결한다."""
+    def toggle_maximize():
+        if sys.platform == 'win32':
+            from System import Action
+            from System.Windows.Forms import FormWindowState, Screen
+
+            form = window.native
+
+            def toggle():
+                if form.WindowState == FormWindowState.Maximized:
+                    form.WindowState = FormWindowState.Normal
+                else:
+                    form.MaximizedBounds = Screen.FromControl(form).WorkingArea
+                    form.WindowState = FormWindowState.Maximized
+
+            form.Invoke(Action(toggle))
+        elif sys.platform == 'darwin':
+            from PyObjCTools import AppHelper
+            AppHelper.callAfter(window.native.zoom_, None)
+        elif hasattr(window.native, 'is_maximized'):
+            from gi.repository import GLib
+
+            def toggle():
+                if window.native.is_maximized():
+                    window.native.unmaximize()
+                else:
+                    window.native.maximize()
+
+            GLib.idle_add(toggle)
+        elif window.native.isMaximized():
+            window.restore()
+        else:
+            window.maximize()
+
+    def close_after_confirmation():
+        window.confirm_close = False
+        if sys.platform == 'darwin':
+            from PyObjCTools import AppHelper
+            AppHelper.callAfter(window.native.performClose_, None)
+        else:
+            window.destroy()
+
+    def minimize_window():
+        window.minimize()
+
+    def sync_maximize_icon():
+        if not window.events.before_load.is_set():
+            return
+        if sys.platform == 'win32':
+            from System.Windows.Forms import FormWindowState
+            maximized = window.native.WindowState == FormWindowState.Maximized
+        elif sys.platform == 'darwin':
+            maximized = window.native.isZoomed()
+        elif hasattr(window.native, 'is_maximized'):
+            maximized = window.native.is_maximized()
+        else:
+            maximized = window.native.isMaximized()
+        state = 'true' if maximized else 'false'
+        window.run_js(f'document.documentElement.classList.toggle("window-maximized", {state})')
+
+    window.events.loaded += sync_maximize_icon
+    window.events.maximized += sync_maximize_icon
+    window.events.restored += sync_maximize_icon
+    if sys.platform == 'darwin':
+        # Cocoa reports a zoom as a resize.
+        window.events.resized += lambda width, height: sync_maximize_icon()
+    window.expose(minimize_window, toggle_maximize, close_after_confirmation)
+    if sys.platform == 'win32' and window.resizable:
+        _install_resize_handles(window)
+
+
 def _fit_window_to_work_area(window, saved=None) -> None:
     """DPI 적용 후의 창 외곽을 작업 표시줄을 제외한 영역 안에 배치한다."""
     from System.Drawing import Point, Size
@@ -74,6 +148,7 @@ def _fit_window_to_work_area(window, saved=None) -> None:
         from System.Drawing import Rectangle
         area = Screen.FromRectangle(Rectangle(saved['x'], saved['y'],
                                               saved['width'], saved['height'])).WorkingArea
+    form.MaximizedBounds = area
     # 작은 화면/높은 배율에서는 최소 크기도 작업 영역보다 작아야 한다.
     form.MinimumSize = Size(min(form.MinimumSize.Width, area.Width),
                             min(form.MinimumSize.Height, area.Height))
@@ -84,6 +159,109 @@ def _fit_window_to_work_area(window, saved=None) -> None:
     x = min(max(saved['x'], area.X), area.X + area.Width - width) if saved else area.X + (area.Width - width) // 2
     y = min(max(saved['y'], area.Y), area.Y + area.Height - height) if saved else area.Y + (area.Height - height) // 2
     form.Location = Point(x, y)
+    if window.frameless:
+        _round_window_corners(form)
+
+
+def _round_window_corners(form) -> None:
+    """Windows 11에서는 DWM이 창의 모서리와 최대화 전환을 그린다."""
+    from webview.platforms.winforms import DwmSetWindowAttribute
+
+    hwnd = form.Handle.ToInt32()
+    if DwmSetWindowAttribute(hwnd, 33, 2) == 0:  # DWMWA_WINDOW_CORNER_PREFERENCE / DWMWCP_ROUND
+        DwmSetWindowAttribute(hwnd, 34, 0xFFFFFFFE)  # DWMWA_BORDER_COLOR / DWMWA_COLOR_NONE
+        return
+
+    # 이전 Windows에서는 크기와 DPI에 맞춘 창 영역을 사용한다.
+    from System.Drawing import Region
+    from System.Drawing.Drawing2D import GraphicsPath
+    from System.Windows.Forms import FormWindowState
+
+    def update_region(*_):
+        if form.WindowState != FormWindowState.Normal:
+            form.Region = None
+            return
+        width, height = form.ClientSize.Width, form.ClientSize.Height
+        diameter = min(width, height, round(16 * form.DeviceDpi / 96))
+        if diameter <= 0:
+            return
+        path = GraphicsPath()
+        try:
+            for x, y, angle in ((0, 0, 180), (width - diameter, 0, 270),
+                                (width - diameter, height - diameter, 0), (0, height - diameter, 90)):
+                path.AddArc(x, y, diameter, diameter, angle, 90)
+            path.CloseFigure()
+            form.Region = Region(path)
+        finally:
+            path.Dispose()
+
+    form.Resize += update_region
+    update_region()
+
+
+def _install_resize_handles(window) -> None:
+    """웹뷰 안쪽의 투명한 가장자리에서 Windows의 기본 크기 조절을 시작한다."""
+    from ctypes import c_void_p, windll
+
+    def start_resize(direction):
+        from System import Action
+        from System.Windows.Forms import Control, FormWindowState, MouseButtons
+
+        if type(direction) is not int or not 1 <= direction <= 8:
+            return
+        form = window.native
+
+        def begin():
+            if form.WindowState == FormWindowState.Normal and Control.MouseButtons == MouseButtons.Left:
+                windll.user32.ReleaseCapture()
+                # WM_SYSCOMMAND / SC_SIZE with a WMSZ edge or corner.
+                windll.user32.PostMessageW(c_void_p(form.Handle.ToInt64()), 0x0112, 0xF000 + direction, 0)
+
+        form.Invoke(Action(begin))
+
+    def update_handles():
+        from System.Windows.Forms import FormWindowState
+
+        if window.events.loaded.is_set():
+            hidden = 'false' if window.native.WindowState == FormWindowState.Normal else 'true'
+            window.run_js(f'document.getElementById("window-resize-handles")?.toggleAttribute("hidden", {hidden})')
+
+    def install():
+        window.run_js("""
+            (() => {
+                const group = document.createElement('div');
+                group.id = 'window-resize-handles';
+                group.setAttribute('aria-hidden', 'true');
+                const edges = [
+                    ['w', 'left:0;top:4px;bottom:4px;width:4px'],
+                    ['e', 'right:0;top:4px;bottom:4px;width:4px'],
+                    ['n', 'top:0;left:4px;right:4px;height:4px'],
+                    ['nw', 'top:0;left:0;width:4px;height:4px'],
+                    ['ne', 'top:0;right:0;width:4px;height:4px'],
+                    ['s', 'bottom:0;left:4px;right:4px;height:4px'],
+                    ['sw', 'bottom:0;left:0;width:4px;height:4px'],
+                    ['se', 'bottom:0;right:0;width:4px;height:4px'],
+                ];
+                edges.forEach(([edge, bounds], index) => {
+                    const handle = document.createElement('div');
+                    handle.style.cssText = 'position:fixed;z-index:2147483647;cursor:' + edge + '-resize;' + bounds;
+                    handle.onmousedown = event => {
+                        if (event.button === 0) {
+                            event.preventDefault();
+                            window.pywebview.api.start_resize(index + 1);
+                        }
+                    };
+                    group.appendChild(handle);
+                });
+                document.body.appendChild(group);
+            })();
+        """)
+        update_handles()
+
+    window.expose(start_resize)
+    window.events.loaded += install
+    window.events.maximized += update_handles
+    window.events.restored += update_handles
 
 
 def register_native_startup_guard() -> None:
@@ -244,7 +422,9 @@ def configure_native(state_path: Path | None = None) -> None:
     app.on_startup(guard.start)
     app.on_shutdown(guard.stop)
     app.native.on('shown', guard.shown)
-    app.native.window_args.update(min_size=(960, 700), confirm_close=True)
+    app.native.window_args.update(min_size=(960, 700), confirm_close=True, frameless=True, easy_drag=False)
+    if sys.platform == 'win32':
+        app.native.window_args['shadow'] = True
     if state_path is not None:
         app.native.window_args['_maeumnarae_state_path'] = str(state_path)
     app.native.settings['ALLOW_DOWNLOADS'] = True
