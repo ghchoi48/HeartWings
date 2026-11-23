@@ -50,7 +50,8 @@ class ImportBatch:
 
 def import_template(kind: ImportKind) -> bytes:
     """데이터 시트에는 실제 사람이나 예시 행을 넣지 않아 오등록을 방지한다."""
-    columns = COLUMNS[kind]
+    # 이전 서식의 보호자 연락처는 가져오기에서만 지원한다.
+    columns = [column for column in COLUMNS[kind] if column[0] != 'guardian_contact']
     workbook = Workbook()
     sheet = workbook.active
     sheet.title = TITLES[kind]
