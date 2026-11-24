@@ -48,11 +48,28 @@ def register_page(path: Path, *, native_window: bool = False) -> None:
             .nicegui-content { flex: 1; min-height: 0; flex-wrap: nowrap; }
             .app-content > * { flex-shrink: 0; }
             .nicegui-drawer > .q-btn { flex-shrink: 0; }
-            .sidebar-collapsed { padding: 16px 8px !important; }
-            .sidebar-collapsed .sidebar-label { display: none; }
-            .sidebar-collapsed .q-btn__content { justify-content: center; }
-            .sidebar-collapsed .q-btn { padding-left: 0; padding-right: 0; }
-            .sidebar-collapsed .q-icon { margin: 0; }
+            .app-sidebar {
+                padding: 16px 8px;
+                overflow-x: hidden;
+                clip-path: inset(0 8px 0 0);
+            }
+            .q-drawer:has(.app-sidebar) { transition: width 200ms ease; }
+            .q-page-container { transition: padding-left 200ms ease; }
+            @media (prefers-reduced-motion: reduce) {
+                .q-drawer:has(.app-sidebar), .q-page-container { transition: none; }
+            }
+            .app-sidebar > .q-btn {
+                width: 184px;
+                min-width: 184px;
+                padding-left: 12px;
+                padding-right: 12px;
+            }
+            .app-sidebar .q-btn__content {
+                justify-content: flex-start;
+                flex-wrap: nowrap;
+            }
+            .app-sidebar .q-icon { margin: 0; flex-shrink: 0; }
+            .sidebar-label { margin-left: 12px; white-space: nowrap; flex-shrink: 0; }
             .q-dialog__backdrop {
                 -webkit-backdrop-filter: blur(4px);
                 backdrop-filter: blur(4px);
@@ -73,7 +90,7 @@ def register_page(path: Path, *, native_window: bool = False) -> None:
             }
         ''')
         drawer = ui.left_drawer(value=False, bordered=True).props(
-            'width=200 mini-width=64 behavior=desktop').classes('bg-white p-4')
+            'width=200 behavior=desktop').classes('app-sidebar bg-white')
         drawer.set_visibility(False)
         sidebar_collapsed = False
 
@@ -81,9 +98,9 @@ def register_page(path: Path, *, native_window: bool = False) -> None:
             nonlocal sidebar_collapsed
             sidebar_collapsed = not sidebar_collapsed
             if sidebar_collapsed:
-                drawer.props('mini').classes(add='sidebar-collapsed')
+                drawer.props('width=64')
             else:
-                drawer.props(remove='mini').classes(remove='sidebar-collapsed')
+                drawer.props('width=200')
             sidebar_toggle.props(f'aria-expanded={str(not sidebar_collapsed).lower()}')
 
         with ui.header().classes('items-center justify-between flex-nowrap px-6') as header:
