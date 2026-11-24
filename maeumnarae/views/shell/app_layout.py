@@ -75,13 +75,18 @@ class AppLayout:
                                       ('settings', '설정', 'settings')]:
                 if page == 'settings':
                     ui.space().classes('min-h-4')
-                    ui.button('도움말', icon='help_outline').props(
+                    with ui.button(icon='help_outline').props(
                         'flat align=left href=https://ghchoi48.github.io/HeartWings/wiki '
-                        'target=_blank rel=noopener'
-                    ).classes('w-full rounded-lg')
+                        'target=_blank rel=noopener aria-label="도움말"'
+                    ).classes('w-full rounded-lg') as help_button:
+                        ui.label('도움말').classes('sidebar-label')
+                    help_button.tooltip('도움말')
                 self.buttons[page] = ui.button(
-                    title, icon=icon, on_click=lambda page=page: self.navigate(page),
-                ).props('flat align=left').classes('w-full rounded-lg')
+                    icon=icon, on_click=lambda page=page: self.navigate(page),
+                ).props(f'flat align=left aria-label="{title}"').classes('w-full rounded-lg')
+                with self.buttons[page]:
+                    ui.label(title).classes('sidebar-label')
+                self.buttons[page].tooltip(title)
                 if page in ('students', 'consultation'):
                     ui.separator()
         with header:

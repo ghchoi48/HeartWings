@@ -78,7 +78,7 @@ def _install_window_controls(window) -> None:
                 if form.WindowState == FormWindowState.Maximized:
                     form.WindowState = FormWindowState.Normal
                 else:
-                    form.MaximizedBounds = Screen.FromControl(form).WorkingArea
+                    form.MaximizedBounds = _maximized_work_area(Screen.FromControl(form))
                     form.WindowState = FormWindowState.Maximized
 
             form.Invoke(Action(toggle))
@@ -137,18 +137,28 @@ def _install_window_controls(window) -> None:
         _install_resize_handles(window)
 
 
+def _maximized_work_area(screen):
+    """최대화 위치는 가상 데스크톱 절대 좌표가 아닌 모니터 내부 좌표다."""
+    from System.Drawing import Rectangle
+
+    area = screen.WorkingArea
+    bounds = screen.Bounds
+    return Rectangle(area.X - bounds.X, area.Y - bounds.Y, area.Width, area.Height)
+
+
 def _fit_window_to_work_area(window, saved=None) -> None:
     """DPI 적용 후의 창 외곽을 작업 표시줄을 제외한 영역 안에 배치한다."""
     from System.Drawing import Point, Size
     from System.Windows.Forms import FormStartPosition, Screen
 
     form = window.native
-    area = Screen.FromControl(form).WorkingArea
+    screen = Screen.FromControl(form)
     if saved:
         from System.Drawing import Rectangle
-        area = Screen.FromRectangle(Rectangle(saved['x'], saved['y'],
-                                              saved['width'], saved['height'])).WorkingArea
-    form.MaximizedBounds = area
+        screen = Screen.FromRectangle(Rectangle(saved['x'], saved['y'],
+                                                 saved['width'], saved['height']))
+    area = screen.WorkingArea
+    form.MaximizedBounds = _maximized_work_area(screen)
     # 작은 화면/높은 배율에서는 최소 크기도 작업 영역보다 작아야 한다.
     form.MinimumSize = Size(min(form.MinimumSize.Width, area.Width),
                             min(form.MinimumSize.Height, area.Height))

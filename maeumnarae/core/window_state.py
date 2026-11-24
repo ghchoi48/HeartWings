@@ -22,16 +22,32 @@ def read_window_state(store: SettingsStore) -> dict | None:
         return None
 
 
+def visible_window_state(saved: dict | None, work_areas) -> dict | None:
+    """이전 모니터의 제목 표시줄을 잡을 수 없으면 최대화 상태도 버린다."""
+    if saved is None:
+        return None
+    for x, y, width, height in work_areas:
+        visible_width = min(saved['x'] + saved['width'], x + width) - max(saved['x'], x)
+        if visible_width >= 96 and y <= saved['y'] and saved['y'] + 32 <= y + height:
+            return saved
+    return None
+
+
 def install_window_state(window, path: Path, fit) -> None:
     store = SettingsStore(path)
     saved = read_window_state(store)
 
     def before_show():
-        from System.Windows.Forms import FormWindowState
+        from System.Windows.Forms import FormWindowState, Screen
 
         form = window.native
-        fit(window, saved)
-        maximized = bool(saved and saved['maximized'])
+        areas = [screen.WorkingArea for screen in Screen.AllScreens]
+        restored = visible_window_state(saved, [(a.X, a.Y, a.Width, a.Height) for a in areas])
+        if saved is not None and restored is None:
+            logging.getLogger('nicegui').warning(
+                '저장된 창 위치가 현재 화면 밖에 있어 기본 위치로 시작합니다: %s', path)
+        fit(window, restored)
+        maximized = bool(restored and restored['maximized'])
 
         def resized(sender, event):
             nonlocal maximized

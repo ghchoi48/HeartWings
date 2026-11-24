@@ -48,6 +48,11 @@ def register_page(path: Path, *, native_window: bool = False) -> None:
             .nicegui-content { flex: 1; min-height: 0; flex-wrap: nowrap; }
             .app-content > * { flex-shrink: 0; }
             .nicegui-drawer > .q-btn { flex-shrink: 0; }
+            .sidebar-collapsed { padding: 16px 8px !important; }
+            .sidebar-collapsed .sidebar-label { display: none; }
+            .sidebar-collapsed .q-btn__content { justify-content: center; }
+            .sidebar-collapsed .q-btn { padding-left: 0; padding-right: 0; }
+            .sidebar-collapsed .q-icon { margin: 0; }
             .q-dialog__backdrop {
                 -webkit-backdrop-filter: blur(4px);
                 backdrop-filter: blur(4px);
@@ -67,10 +72,26 @@ def register_page(path: Path, *, native_window: bool = False) -> None:
                 cursor: url('/app-cursors/text-dark.cur'), text !important;
             }
         ''')
-        drawer = ui.left_drawer(value=False, bordered=True).props('width=200').classes('bg-white p-4')
+        drawer = ui.left_drawer(value=False, bordered=True).props(
+            'width=200 mini-width=64 behavior=desktop').classes('bg-white p-4')
         drawer.set_visibility(False)
-        with ui.header().classes('items-center justify-between px-6') as header:
-            with ui.row().classes('items-center gap-3') as title:
+        sidebar_collapsed = False
+
+        def toggle_sidebar():
+            nonlocal sidebar_collapsed
+            sidebar_collapsed = not sidebar_collapsed
+            if sidebar_collapsed:
+                drawer.props('mini').classes(add='sidebar-collapsed')
+            else:
+                drawer.props(remove='mini').classes(remove='sidebar-collapsed')
+            sidebar_toggle.props(f'aria-expanded={str(not sidebar_collapsed).lower()}')
+
+        with ui.header().classes('items-center justify-between flex-nowrap px-6') as header:
+            sidebar_toggle = ui.button(icon='menu', color=None, on_click=toggle_sidebar).props(
+                'flat round dense aria-label="사이드바 접기/펼치기" aria-expanded=true')
+            sidebar_toggle.tooltip('사이드바 접기/펼치기')
+            sidebar_toggle.set_visibility(False)
+            with ui.row().classes('items-center gap-3 flex-1 flex-nowrap') as title:
                 ui.image('/app-assets/logo.png').classes('app-logo w-9 h-9').props('no-spinner')
                 school_heading = ui.label('마음나래 · Wee클래스').classes('text-lg font-bold')
             if native_window:
@@ -124,6 +145,7 @@ def register_page(path: Path, *, native_window: bool = False) -> None:
                       )).build(root, drawer, header)
             drawer.set_visibility(True)
             drawer.show()
+            sidebar_toggle.set_visibility(True)
 
         with root:
             if first_run:
