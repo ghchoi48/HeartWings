@@ -134,6 +134,8 @@ def _install_window_controls(window) -> None:
         window.events.resized += lambda width, height: sync_maximize_icon()
     window.expose(minimize_window, toggle_maximize, close_after_confirmation)
     if sys.platform == 'win32' and window.resizable:
+        from maeumnarae.core.windows_snap import install_windows_snap
+        install_windows_snap(window)
         _install_resize_handles(window)
 
 
