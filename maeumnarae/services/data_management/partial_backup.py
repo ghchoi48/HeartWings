@@ -13,7 +13,7 @@ from typing import Literal
 from uuid import uuid4
 
 from maeumnarae.core.database import (Database, DatabaseError, SCHEMA, SCHEMA_VERSION,
-                                     GOOGLE_CALENDAR_SCHEMA, LEGACY_IMPORT_SCHEMAS)
+                                     GOOGLE_CALENDAR_SCHEMA, SCHOOL_CALENDAR_SCHEMA, LEGACY_IMPORT_SCHEMAS)
 from maeumnarae.core.upload_limits import MAX_BACKUP_BYTES
 from maeumnarae.repositories.home.home_repo import HomeRepository
 from maeumnarae.services.data_management.database_maintenance import _snapshot
@@ -23,7 +23,8 @@ PartialBackupKind = Literal['personal', 'counseling_school']
 PERSONAL = {'home_preferences', 'home_todos', 'home_widget_state', 'google_calendar_subscriptions'}
 PERSONAL_SETTINGS = {'counselor_name', 'neis_api_key'}
 ONBOARDING = 'CREATE TABLE onboarding_state (id INTEGER PRIMARY KEY CHECK(id=1), step TEXT NOT NULL)'
-OPTIONAL_SCHEMAS = {'onboarding_state': ONBOARDING, **LEGACY_IMPORT_SCHEMAS}
+OPTIONAL_SCHEMAS = {'onboarding_state': ONBOARDING,
+                    'school_calendar_cache': SCHOOL_CALENDAR_SCHEMA, **LEGACY_IMPORT_SCHEMAS}
 FORMAT = 'maeumnarae-partial-backup'
 
 
@@ -128,6 +129,7 @@ def _validate(data, kind):
     if isinstance(data, dict) and kind == 'counseling_school':
         for table in LEGACY_IMPORT_SCHEMAS:
             data.setdefault(table, None)
+        data.setdefault('school_calendar_cache', None)
     if not isinstance(data, dict) or set(data) != _tables(kind):
         raise ValueError('잘못된 백업 테이블입니다.')
     for table, rows in data.items():
@@ -177,7 +179,7 @@ def _apply(connection, data, kind):
     if kind == 'counseling_school':
         for table, statement in OPTIONAL_SCHEMAS.items():
             connection.execute(f'DROP TABLE IF EXISTS "{table}"')
-            if data[table] is not None:
+            if data[table] is not None or table == 'school_calendar_cache':
                 connection.execute(statement)
     for table in reversed(ORDER):
         if table in selected and table not in {'school_settings', *OPTIONAL_SCHEMAS}:

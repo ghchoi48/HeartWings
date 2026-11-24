@@ -297,22 +297,20 @@ class CalendarView:
                 holidays = korean_holidays(days[0], days[-1])
                 google, message = load_google_events(
                     self.repository.database, calendars, days[0], days[-1], cache_only=True)
-                return calendars, local, holidays, google, message
+                school, _ = load_school_events(
+                    self.repository.database, calendars, days[0], days[-1], cache_only=True)
+                return calendars, local, holidays, google + school, message
 
             calendars, local, holiday_days, google, message = await run.io_bound(cached)
             if not current():
                 return
-            # Keep already displayed school events until their remote refresh completes.
-            school = {(e.calendar_id, e.id): e for entries in self.events_by_day.values()
-                      for e in entries if e.source == 'neis'} if any(
-                          c.visible and c.source == 'neis' for c in calendars) else {}
-            display(local + list(school.values()) + google)
+            display(local + google)
 
             def refresh():
                 google, google_message = load_google_events(
                     self.repository.database, calendars, days[0], days[-1], force)
                 school, school_message = load_school_events(
-                    self.repository.database, calendars, days[0], days[-1])
+                    self.repository.database, calendars, days[0], days[-1], force)
                 return google + school, ' · '.join(m for m in (school_message, google_message) if m)
 
             remote, message = await run.io_bound(refresh)

@@ -29,6 +29,14 @@ GOOGLE_CALENDAR_SCHEMA = """CREATE TABLE IF NOT EXISTS google_calendar_subscript
     fetched_at TEXT,
     error TEXT NOT NULL DEFAULT ''
 )"""
+SCHOOL_CALENDAR_SCHEMA = """CREATE TABLE IF NOT EXISTS school_calendar_cache (
+    office_code TEXT NOT NULL,
+    school_code TEXT NOT NULL,
+    day TEXT NOT NULL,
+    events TEXT NOT NULL,
+    fetched_at TEXT NOT NULL,
+    PRIMARY KEY (office_code, school_code, day)
+)"""
 WIDGET_SCHEMA = """CREATE TABLE IF NOT EXISTS home_widget_state (
     id INTEGER PRIMARY KEY CHECK(id = 1), payload TEXT NOT NULL
 )"""
@@ -683,6 +691,7 @@ class Database:
         with self._session_lock, self._transaction(write=True, rebuild_schema=True) as connection:
             version = connection.execute('PRAGMA user_version').fetchone()[0]
             if version == SCHEMA_VERSION:
+                connection.execute(SCHOOL_CALENDAR_SCHEMA)
                 return
             if version in (1, 2, 3, 4):
                 if version == 1:
@@ -693,6 +702,7 @@ class Database:
                     self._migrate_v3_to_v4(connection)
                 else:
                     self._migrate_v4_to_v5(connection)
+                connection.execute(SCHOOL_CALENDAR_SCHEMA)
                 if connection.execute('PRAGMA foreign_key_check').fetchone():
                     raise DatabaseError('DB 업그레이드 중 연결 관계의 무결성 검사에 실패했습니다.')
                 connection.execute(f'PRAGMA user_version = {SCHEMA_VERSION}')
@@ -706,6 +716,7 @@ class Database:
             for statement in SCHEMA:
                 connection.execute(statement)
             connection.execute(GOOGLE_CALENDAR_SCHEMA)
+            connection.execute(SCHOOL_CALENDAR_SCHEMA)
             if onboarding:
                 connection.execute('CREATE TABLE onboarding_state (id INTEGER PRIMARY KEY CHECK(id=1), step TEXT NOT NULL)')
                 connection.execute("INSERT INTO onboarding_state VALUES (1, 'school')")

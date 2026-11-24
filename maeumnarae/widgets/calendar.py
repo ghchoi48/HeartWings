@@ -114,7 +114,9 @@ class CalendarWidget:
                     item.visible and item.source == 'holidays' for item in calendars) else {}
                 google_events, google_message = load_google_events(
                     self.repository.database, calendars, days[0], days[-1], cache_only=True)
-                return calendars, events, holidays, google_events, google_message
+                school, _ = load_school_events(
+                    self.repository.database, calendars, days[0], days[-1], cache_only=True)
+                return calendars, events, holidays, google_events + school, google_message
 
             def current():
                 return (request == self.request and self.is_active()
@@ -123,12 +125,9 @@ class CalendarWidget:
             calendars, local, holidays, google, message = await run.io_bound(load)
             if not current():
                 return
-            school = {(e.calendar_id, e.id): e for entries in self.events.values()
-                      for e in entries if e.source == 'neis'} if any(
-                          c.visible and c.source == 'neis' for c in calendars) else {}
             self.calendars = calendars
             self.holidays = holidays
-            self.events = events_by_date(local + list(school.values()) + google, days)
+            self.events = events_by_date(local + google, days)
             self._initial_loading = False
             self.render()
             self.body.props('aria-busy=false')
@@ -137,7 +136,7 @@ class CalendarWidget:
                 google, google_message = load_google_events(
                     self.repository.database, calendars, days[0], days[-1], force)
                 school, school_message = load_school_events(
-                    self.repository.database, calendars, days[0], days[-1])
+                    self.repository.database, calendars, days[0], days[-1], force)
                 return google + school, ' · '.join(m for m in (school_message, google_message) if m)
 
             remote, message = await run.io_bound(refresh)
