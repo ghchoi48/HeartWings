@@ -7,7 +7,7 @@ import sys
 
 from nicegui import run, ui
 
-from maeumnarae.core.database import Database
+from maeumnarae.core.database import Database, default_database_path
 from maeumnarae.core.desktop import open_folder
 from maeumnarae.core.models import SchoolSettings
 from maeumnarae.core.paths import PROJECT_ROOT
@@ -43,6 +43,16 @@ def build_settings(display: DisplaySettings | None = None,
         finally:
             folder_button.enable()
 
+    async def open_data_folder():
+        data_folder_button.disable()
+        try:
+            folder = (database.path if database is not None else default_database_path()).resolve().parent
+            await run.io_bound(open_folder, folder)
+        except (OSError, SubprocessError):
+            ui.notify('데이터 폴더를 열지 못했습니다. 폴더 위치와 접근 권한을 확인해 주세요.', type='negative')
+        finally:
+            data_folder_button.enable()
+
     with ui.column().classes('w-full max-w-7xl mx-auto gap-6 p-4 md:p-8'):
         with ui.column().classes('gap-2'):
             ui.label('설정').classes('text-3xl font-bold text-slate-800')
@@ -66,10 +76,13 @@ def build_settings(display: DisplaySettings | None = None,
                                    '보기 편한 화면으로 맞춤 설정하세요.', '즉시 적용'):
                     display.build_controls()
             with ui.tab_panel('system').classes('p-0'):
-                with settings_card('설치 폴더', 'folder_open',
-                                   '마음나래 프로그램이 설치된 폴더를 엽니다.'):
-                    folder_button = ui.button('설치 폴더 열기', icon='folder_open',
-                                              on_click=open_installation_folder).props('outline')
+                with settings_card('설치 및 데이터 폴더', 'folder_open',
+                                   '마음나래 설치 폴더와 현재 DB가 저장된 데이터 폴더를 엽니다.'):
+                    with ui.row().classes('items-center gap-3'):
+                        folder_button = ui.button('설치 폴더 열기', icon='folder_open',
+                                                  on_click=open_installation_folder).props('outline')
+                        data_folder_button = ui.button('데이터 폴더 열기', icon='folder_open',
+                                                       on_click=open_data_folder).props('outline')
                 if auto_lock is not None:
                     with settings_card('자동 잠금', 'timer',
                                        '일정 시간 조작이 없으면 DB를 잠급니다.', '즉시 적용'):
