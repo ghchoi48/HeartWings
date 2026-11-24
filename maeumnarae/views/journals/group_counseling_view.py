@@ -282,8 +282,9 @@ class GroupCounselingView:
                         ''')
                         attendance_table.add_slot('body-cell-attitude', '''
                             <q-td :props="props" style="min-width: 240px; width: 100%">
-                                <q-input v-model="props.row.attitude" outlined dense autogrow
-                                    type="textarea" maxlength="2000" placeholder="참여 태도를 입력하세요"
+                                <q-input v-model="props.row.attitude" outlined dense
+                                    type="textarea" rows="1" input-style="resize: none"
+                                    maxlength="2000" placeholder="참여 태도를 입력하세요"
                                     :aria-label="props.row.name + ' 참여 태도'"
                                     @update:model-value="value => $parent.$emit('attendance_change', {student_id: props.row.student_id, field: 'attitude', value})" />
                             </q-td>
@@ -297,7 +298,10 @@ class GroupCounselingView:
                                 return
                             for row in attendance_table.rows:
                                 if row['student_id'] == args.get('student_id'):
-                                    row[args['field']] = args['value']
+                                    # v-model already updated the browser; echoing the table
+                                    # back rebuilds its inputs and interrupts focus/IME.
+                                    with attendance_table.props.suspend_updates():
+                                        row[args['field']] = args['value']
                                     break
 
                         attendance_table.on('attendance_change', update_attendance)
