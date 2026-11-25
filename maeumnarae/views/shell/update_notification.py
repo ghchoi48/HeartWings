@@ -29,6 +29,7 @@ def show_update_dialog(release: Release) -> None:
             # 릴리스 본문을 HTML로 실행하지 않고 줄바꿈을 유지한다.
             ui.label(release.notes).classes('w-full whitespace-pre-wrap break-words')
         ui.separator()
+        ui.label('업데이트 방법: 새 버전을 다운로드한 뒤 앱을 종료하고 설치해 주세요.').classes('text-sm text-slate-500')
         with ui.row().classes('w-full justify-end shrink-0'):
             ui.button('취소', on_click=dialog.close).props('flat')
             ui.button('다운로드 페이지 이동' if is_macos else '다운로드',
